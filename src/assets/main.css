@@ -1,0 +1,23 @@
+@import './base.css';
+
+/* Styles pour #app (lignes 3-8) supprimés car gérés par .app-layout dans App.vue */
+
+/* Styles généraux pour les liens commentés pour éviter les conflits avec la sidebar. */
+/* Si un style de lien global est nécessaire pour le contenu principal, il faudra le redéfinir ici de manière moins spécifique. */
+/*
+a,
+.green {
+  text-decoration: none;
+  color: hsla(160, 100%, 37%, 1);
+  transition: 0.4s;
+  padding: 3px;
+}
+
+@media (hover: hover) {
+  a:hover {
+    background-color: hsla(160, 100%, 37%, 0.2);
+  }
+}
+*/
+
+/* Styles @media (min-width: 1024px) (lignes 24-35) supprimés car obsolètes avec la nouvelle structure */
