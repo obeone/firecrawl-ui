@@ -3,6 +3,9 @@ import HomeView from '../views/HomeView.vue'
 import ScrapeView from '../views/ScrapeView.vue'
 import CrawlView from '../views/CrawlView.vue'
 import ApiConfigView from '../views/ApiConfigView.vue'
+import ExtractView from '../views/ExtractView.vue' // Import the new view
+import MapView from '../components/MapView.vue' // Import MapView component
+import SearchView from '../components/SearchView.vue' // Import SearchView component
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -26,6 +29,21 @@ const router = createRouter({
       path: '/api-config',
       name: 'ApiConfig',
       component: ApiConfigView
+    },
+    { // Add the route for ExtractView
+      path: '/extract',
+      name: 'extract',
+      component: ExtractView
+    },
+    { // Add the route for MapView
+      path: '/mapview',
+      name: 'mapview',
+      component: MapView
+    },
+    { // Add the route for SearchView
+      path: '/searchview',
+      name: 'searchview',
+      component: SearchView
     }
   ]
 })

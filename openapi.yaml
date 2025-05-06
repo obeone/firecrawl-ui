@@ -1,0 +1,1484 @@
+openapi: 3.1.0
+info:
+  title: Firecrawl API
+  version: '1.0.0' # Version not specified in docs, assuming 1.0.0
+  description: |-
+    API for scraping, crawling, mapping, extracting structured data, and searching the web.
+    Features:
+    - Scrape: Extract content from any webpage in markdown or json format.
+    - Crawl: Crawl entire websites, extract their content and metadata.
+    - Map: Get a complete list of URLs from any website quickly and reliably.
+    - Extract: Extract structured data from entire webpages using natural language.
+    - Search: Search the web and get full page content in any format.
+  contact: # Optional
+    name: Firecrawl Support
+    url: https://discord.gg/gSmWdAkdwd # Discord link from Extract page
+  license: # Optional, No specific license link found for the API itself
+    name: API License
+    url: https://firecrawl.dev/terms
+externalDocs:
+  description: Firecrawl API Documentation
+  url: https://docs.firecrawl.dev/api-reference/introduction
+servers:
+  - url: https://api.firecrawl.dev/v1
+    description: Production server
+components: # Start of the single 'components' block
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: API Key in the format 'Bearer fc-...'. Required for all endpoints.
+  schemas:
+    # Core Request Bodies
+    ScrapeRequest:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          # format: url # Removed due to validator issue
+          description: The URL to scrape.
+          examples:
+            ex1:
+              value: "https://example.com/product/123"
+        scrapeOptions:
+          $ref: '#/components/schemas/ScrapeOptionsCommon' # Scraping options including pageOptions and jsonOptions
+
+    BatchScrapeRequest:
+      type: object
+      required:
+        - urls
+      properties:
+        urls:
+          type: array
+          items:
+            type: string
+            # format: url # Removed due to validator issue
+            description: Should be a valid URL.
+          minItems: 1
+          description: Array of URLs to scrape.
+          examples:
+            ex1:
+              value: ["https://example.com/page1", "https://example.com/page2", "https://anothersite.com/"]
+        webhookOptions:
+          $ref: '#/components/schemas/WebhookOptions'
+        scrapeOptions:
+          $ref: '#/components/schemas/ScrapeOptionsCommon'
+        ignoreInvalidURLs:
+          type: boolean
+          default: false
+          description: If true, invalid URLs in the 'urls' array will be ignored and returned in the response, and the job will proceed with valid URLs.
+
+    CrawlRequest:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          # format: url # Removed due to validator issue
+          description: The base URL to start crawling from. Should be a valid URL.
+          examples:
+            ex1:
+              value: "https://firecrawl.dev"
+        crawlerOptions:
+          type: object
+          properties:
+            includes:
+              type: array
+              items:
+                type: string
+              description: URL pathname regex patterns. Only matching URLs will be included. Example ["blog/.*"].
+              examples:
+                ex1:
+                  value: ["blog/.", "/products/."]
+            excludes:
+              type: array
+              items:
+                type: string
+              description: URL pathname regex patterns to exclude matching URLs. Example ["/login", "private/.*"].
+              examples:
+                ex1:
+                  value: ["/login", "private/.", "/cart"]
+            maxDepth:
+              type: integer
+              description: Maximum depth relative to the base URL based on URL path segments (slashes).
+              examples:
+                ex1:
+                  value: 5
+            maxDepthDiscovery:
+              type: integer
+              description: Maximum depth based on discovery order. Root/sitemap pages are depth 0.
+              examples:
+                ex1:
+                  value: 2
+            ignoreSitemap:
+              type: boolean
+              default: false
+              description: Ignore the website sitemap when crawling.
+            allowPathRevisits:
+              type: boolean
+              default: false # Default inferred, not explicitly in docs
+              description: If false (default), do not re-scrape the same path with different query parameters.
+            limit:
+              type: integer
+              description: Maximum number of pages to crawl. Default limit is 10000.
+              examples:
+                ex1:
+                  value: 100
+            allowExternalLinks:
+              type: boolean
+              default: false
+              description: Allows the crawler to follow links to external websites.
+            navigateBacklinks:
+              type: boolean
+              default: false
+              description: Enables the crawler to navigate from a specific URL to previously linked pages.
+        scrapeOptions:
+          $ref: '#/components/schemas/ScrapeOptionsCommon'
+        webhookOptions:
+          $ref: '#/components/schemas/WebhookOptions' # Mentioned in docs for Crawl and Batch Scrape
+
+    MapRequest:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          # format: url # Removed due to validator issue
+          description: The base URL to start mapping from. Should be a valid URL.
+          examples:
+            ex1:
+              value: "https://firecrawl.dev"
+        query:
+          type: string
+          description: Search query to use for mapping. Smart search limited to 1000 results during Alpha phase.
+          examples:
+            ex1:
+              value: "documentation"
+        ignoreSitemap:
+          type: boolean
+          default: false
+          description: Ignore the website sitemap when mapping.
+        sitemapOnly:
+          type: boolean
+          default: false
+          description: Only return links found in the website sitemap.
+        includeSubdomains:
+          type: boolean
+          default: false
+          description: Include subdomains of the website.
+        limit:
+          type: integer
+          maximum: 5000
+          description: Maximum number of links to return (max 5000).
+          examples:
+            ex1:
+              value: 1000
+        pageOptions: # Docs only mention timeout, so defined inline
+          type: object
+          properties:
+            timeout:
+              type: integer
+              description: Timeout in milliseconds for the mapping request. No timeout by default.
+              examples:
+                ex1:
+                  value: 60000
+
+    ExtractRequest:
+      type: object
+      required:
+        - urls
+      properties:
+        urls:
+          type: array
+          items:
+            type: string
+            # pattern: Removed incorrect pattern
+            description: A URL in glob format (e.g., "https://example.com/docs/*").
+          description: The URLs (in glob format) to extract data from.
+          examples:
+            ex1:
+              value: ["https://firecrawl.dev/blog/", "https://example.com/news?id=*"]
+        extractionSchema: # Optional field for global extraction schema (if different from JSON)
+          type: object
+          description: JSON schema defining the structure of the data to extract globally (if different from jsonOptions.schema).
+          examples:
+            ex1:
+              value: {"title": "string", "author": "string", "publishedDate": "string"}
+        extractionPrompt: # Optional field for global extraction prompt
+          type: string
+          description: Prompt to guide the extraction process globally (if different from jsonOptions.prompt).
+          examples:
+            ex1:
+              value: "Extract the article title, author name, and publication date."
+        enableWebSearch:
+          type: boolean
+          default: false
+          description: When true, uses web search to find additional data.
+        showSources:
+          type: boolean
+          default: false
+          description: When true, includes source URLs used for extraction in the response sources key.
+        scanOptions:
+          type: object
+          properties:
+            ignoreSitemap:
+              type: boolean
+              default: false
+              description: When true, sitemap.xml files are ignored during website scanning.
+            includeSubdomains:
+              type: boolean
+              default: true # Default from doc
+              description: When true, subdomains are also scanned.
+        scrapeOptions: # Now contains pageOptions and jsonOptions
+          $ref: '#/components/schemas/ScrapeOptionsCommon'
+
+    SearchRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          description: The search query. Supports operators like "", -, site:, inurl:, allinurl:, intitle:, allintitle:, related:.
+          examples:
+            ex1:
+              value: '"Firecrawl API" -site:github.com intitle:guide'
+        searchOptions:
+          type: object
+          properties:
+            limit:
+              type: integer
+              minimum: 1
+              maximum: 50
+              default: 10
+              description: Maximum number of results to return (1-50).
+              examples:
+                ex1:
+                  value: 5
+            timeRange:
+              type: string
+              description: Time-based search parameter (e.g., 'past_day', 'past_week', 'past_month', 'past_year').
+              examples:
+                ex1:
+                  value: "past_month"
+            language:
+              type: string
+              description: Language code for search results (e.g., 'en', 'fr').
+              examples:
+                ex1:
+                  value: "en"
+            country:
+              type: string
+              description: Country code for search results (e.g., 'US', 'FR').
+              examples:
+                ex1:
+                  value: "US"
+            location:
+              type: string
+              description: Location parameter for search results.
+              examples:
+                ex1:
+                  value: "California"
+            timeout:
+              type: integer
+              description: Timeout in milliseconds for the search request.
+              examples:
+                ex1:
+                  value: 45000
+        scrapeOptions:
+          $ref: '#/components/schemas/ScrapeOptionsCommon'
+          description: Options for scraping the content of search results. If not provided or formats are empty, only SERP results (url, title, description) are returned.
+
+    # Reusable Option Objects
+    PageOptions:
+      type: object
+      properties:
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Headers to send (e.g., cookies, user-agent).
+          examples:
+            ex1:
+              value: {"Cookie": "session_id=12345; preferences=abc", "User-Agent": "MyScraperBot/1.0"}
+        waitFor:
+          type: integer
+          minimum: 0 # 0 means no wait
+          description: Delay in milliseconds before fetching content.
+          examples:
+            ex1:
+              value: 2500
+        mobile:
+          type: boolean
+          default: false
+          description: Emulate scraping from a mobile device.
+        skipTlsVerification:
+          type: boolean
+          default: false
+          description: Skip TLS certificate verification.
+        timeout:
+          type: integer
+          default: 30000
+          description: Timeout in milliseconds for the page request.
+          examples:
+            ex1:
+              value: 45000
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Action'
+          description: Actions to perform on the page before grabbing content.
+          examples:
+            ex1:
+              value: [{"type": "wait", "milliseconds": 1000, "selector": "#main-content"}]
+        location:
+          $ref: '#/components/schemas/Location' # Reference to Location schema
+        blockAds:
+          type: boolean
+          default: true # Default from doc
+          description: Enables ad-blocking and cookie popup blocking.
+        removeBase64Images:
+          type: boolean
+          default: true # Default from doc
+          description: Removes base64 images, replacing URL with placeholder but keeping alt text.
+        proxy:
+          type: string
+          enum: [basic, stealth]
+          description: Specifies proxy type. 'basic' for simple sites, 'stealth' for sites with advanced anti-bot. Auto-determined if not specified.
+          examples:
+            ex1:
+              value: "stealth"
+
+    JsonOptions: # Formerly ExtractorOptions, to match docs ('jsonOptions' under scrapeOptions)
+      type: object
+      description: Options for extracting structured data when json is included in formats. Matches 'jsonOptions' in docs.
+      properties:
+        prompt:
+          type: string
+          description: Prompt to guide the LLM extraction for JSON format.
+          examples:
+            ex1:
+              value: "Extract the product name, price, and availability status."
+        schema: # Named 'schema' in docs (not jsonSchema)
+          type: object
+          description: JSON schema for the desired output structure for JSON format.
+          examples:
+            ex1:
+              value: {"productName": "string", "price": "number", "availability": {"type": "string", "enum": ["In Stock", "Out of Stock"]}}
+        systemPrompt:
+          type: string
+          description: System prompt for the JSON extraction model.
+          examples:
+            ex1:
+              value: "You are an expert e-commerce data extractor. Only return valid JSON matching the provided schema."
+
+    ScrapeOptionsCommon:
+      type: object
+      description: Common options for controlling scraping behavior.
+      properties:
+        formats:
+          type: array
+          items:
+            type: string
+            enum: [markdown, html, rawHtml, links, screenshot, screenshot@fullPage, json, changeTracking]
+          description: Formats to include in the output. 'markdown' is required for 'changeTracking'.
+          examples:
+            ex1:
+              value: ["markdown", "json", "links"]
+        onlyMainContent:
+          type: boolean
+          default: true # Default from doc
+          description: Only return the main content, excluding headers, navs, footers, etc.
+        includeTags:
+          type: array
+          items:
+            type: string
+          description: HTML tags to include in the output.
+          examples:
+            ex1:
+              value: ["h1", "h2", "p", "table", "article"]
+        excludeTags:
+          type: array
+          items:
+            type: string
+          description: HTML tags to exclude from the output.
+          examples:
+            ex1:
+              value: ["script", "style", "nav", "footer", "aside"]
+        pageOptions:
+          $ref: '#/components/schemas/PageOptions' # Page options nested here
+        jsonOptions:
+          $ref: '#/components/schemas/JsonOptions' # JSON extraction options nested here, per /extract docs
+        changeTrackingOptions:
+          $ref: '#/components/schemas/ChangeTrackingOptions'
+
+    Action:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum: [wait] # Only 'wait' mentioned
+          description: Type of action to perform.
+          examples:
+            ex1:
+              value: "wait"
+        milliseconds:
+          type: integer
+          minimum: 1
+          description: Number of milliseconds to wait (required for type 'wait').
+          examples:
+            ex1:
+              value: 2000
+        selector:
+          type: string
+          description: CSS selector to wait for (optional for type 'wait').
+          examples:
+            ex1:
+              value: "#data-loaded"
+
+    Location:
+      type: object
+      properties:
+        country:
+          type: string
+          description: ISO 3166-1 alpha-2 country code (e.g., 'US', 'FR').
+          examples:
+            ex1:
+              value: "FR"
+        languages:
+          type: array
+          items:
+            type: string
+          description: Preferred languages/locales (e.g., 'en-US', 'fr-FR').
+          examples:
+            ex1:
+              value: ["fr-FR", "fr", "en-US"]
+
+    ChangeTrackingOptions: # Beta feature
+      type: object
+      description: Options for change tracking (Beta). Only applicable when 'changeTracking' is included in formats. The 'markdown' format must also be specified.
+      properties:
+        mode:
+          type: string
+          enum: [default, git-diff, json]
+          default: "git-diff" # Default confirmed in docs for batch-scrape/extract
+          description: "Mode for change tracking ('default', 'git-diff', or 'json'). Requires 'markdown' format."
+          examples:
+            ex1:
+              value: "json"
+        schema:
+          type: object
+          description: Schema for JSON extraction when using 'json' mode.
+          examples:
+            ex1:
+              value: {"price": "number", "stockLevel": "integer"}
+        prompt:
+          type: string
+          description: Prompt for change tracking when using 'json' mode.
+          examples:
+            ex1:
+              value: "Track changes in the product price and stock level."
+
+    WebhookOptions:
+      type: object
+      description: Configuration for sending a webhook upon job events. Referenced by Crawl and BatchScrape.
+      properties:
+        url:
+          type: string
+          # format: url # Removed due to validator issue
+          description: The URL to send the webhook POST request to. Should be a valid URL.
+          examples:
+            ex1:
+              value: "https://my-service.com/webhook/firecrawl-updates"
+        secret:
+          type: string
+          description: A secret string included in the X-Firecrawl-Secret header for verification.
+          examples:
+            ex1:
+              value: "mySuperSecretKeyForFirecrawlWebhooks"
+        event:
+          type: string
+          enum: [started, page, completed, failed] # Enum based on web search for Crawl, unconfirmed for BatchScrape in provided docs
+          description: The event type that triggers the webhook. Details primarily known for crawl jobs.
+          examples:
+            ex1:
+              value: completed
+        # filter: Not mentioned in current docs
+
+    # Core Response Bodies & Schemas
+    ScrapeResponseData:
+      type: object
+      description: Object containing the scraped data based on requested formats.
+      properties:
+        markdown:
+          type: string
+          description: Content in Markdown format.
+        html:
+          type: string
+          description: Rendered HTML content.
+        rawHtml:
+          type: string
+          description: Raw HTML source.
+        links:
+          type: array
+          items:
+            type: string
+            # format: url # Removed due to validator issue
+            description: Should be a valid URL.
+          description: List of links found on the page.
+        screenshot:
+          type: string
+          format: byte # Base64 encoded image data
+          description: Base64 encoded screenshot of the viewport.
+        screenshot_full_page: # Assuming format 'screenshot@fullPage' maps here
+          type: string
+          format: byte # Base64 encoded image data
+          description: Base64 encoded screenshot of the full page.
+        json:
+          type: object
+          description: Extracted data as JSON, based on jsonOptions.
+        changeTracking:
+          oneOf:
+            - type: string # For git-diff or default mode
+            - type: object # For json mode comparison result
+          description: Change tracking results.
+        metadata: # Exact structure not detailed in docs
+          type: object
+          description: Metadata extracted from the page. The exact fields might vary.
+          properties:
+            title:
+              type: string
+            description:
+              type: string
+            url:
+              type: string
+              # format: url # Removed due to validator issue
+              description: The canonical URL of the scraped page.
+            hostname:
+              type: string
+          additionalProperties: false # Kept false cautiously, but verify vs actual API
+
+    ScrapeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the scrape was successful.
+          examples:
+            ex1:
+              value: true
+        data:
+          $ref: '#/components/schemas/ScrapeResponseData'
+
+    SearchResponseData:
+      type: object
+      required:
+        - url
+        - title
+        - description
+      properties:
+        url:
+          type: string
+          # format: url # Removed due to validator issue
+          description: URL of the search result. Should be a valid URL.
+        title:
+          type: string
+          description: Title of the search result page.
+        description:
+          type: string
+          description: SERP description snippet.
+        markdown:
+          type: string
+        html:
+          type: string
+        rawHtml:
+          type: string
+        links:
+          type: array
+          items:
+            type: string
+            # format: url # Removed due to validator issue
+            description: Should be a valid URL.
+          description: List of links found on the page if scraped.
+        json:
+          type: object
+        metadata:
+          type: object # Simplified metadata example
+          properties:
+            ogTitle:
+              type: string
+            ogDescription:
+              type: string
+          additionalProperties: true # Allow other possible metadata
+
+    SearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the search was successful.
+          examples:
+            ex1:
+              value: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResponseData'
+          description: List of search results.
+
+    MapResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the map operation was successful.
+          examples:
+            ex1:
+              value: true
+        data:
+          type: array
+          items:
+            type: string
+            # format: url # Removed due to validator issue
+            description: Should be a valid URL.
+          description: List of URLs found on the website.
+          examples:
+            ex1:
+              value: ["https://firecrawl.dev/", "https://firecrawl.dev/blog", "https://firecrawl.dev/pricing"]
+
+    # Specific Job Status Responses
+    BatchScrapeStatusResponse: # Specific schema for Batch Scrape
+      type: object
+      properties:
+        jobId:
+          type: string
+          description: The ID of the batch scrape job being queried.
+        status:
+          type: string
+          enum: [scraping, completed, failed] # Specific statuses for Batch Scrape
+          description: The current status of the batch scrape job.
+          examples:
+            ex1:
+              value: "completed"
+        total:
+          type: integer
+          description: The total number of pages attempted.
+          examples:
+            ex1:
+              value: 100
+        processed:
+          type: integer
+          description: The number of pages successfully processed (scraped).
+          examples:
+            ex1:
+              value: 98
+        credits:
+          type: integer
+          description: The number of credits used for the job.
+          examples:
+            ex1:
+              value: 10
+        expiresAt:
+          type: string
+          format: date-time
+          description: The date and time when the job data will expire and be deleted.
+        next: # Key name assumed, not confirmed in docs
+          type: string
+          # format: url # Removed due to validator issue
+          description: URL to retrieve the next chunk of data if the job is not complete or the result set is large (>10MB). Call this URL to paginate. Should be a valid URL.
+        data:
+          type: array
+          description: Array containing the results of the job (scraped data). Structure not detailed in docs.
+          items:
+            $ref: '#/components/schemas/ScrapeResponseData' # Assumption
+
+    CrawlStatusResponse: # Specific schema for Crawl
+      type: object
+      properties:
+        jobId:
+          type: string
+          description: The ID of the crawl job being queried.
+        status:
+          type: string
+          enum: [crawling, completed, failed] # Specific statuses for Crawl (corrected 'scraping' to 'crawling')
+          description: The current status of the crawl job.
+          examples:
+            ex1:
+              value: "completed"
+        total:
+          type: integer
+          description: The total number of pages attempted.
+          examples:
+            ex1:
+              value: 100
+        processed:
+          type: integer
+          description: The number of pages successfully processed (crawled).
+          examples:
+            ex1:
+              value: 98
+        credits:
+          type: integer
+          description: The number of credits used for the job.
+          examples:
+            ex1:
+              value: 10
+        expiresAt:
+          type: string
+          format: date-time
+          description: The date and time when the job data will expire and be deleted.
+        next: # Key name assumed, not confirmed in docs
+          type: string
+          # format: url # Removed due to validator issue
+          description: URL to retrieve the next chunk of data if the job is not complete or the result set is large (>10MB). Call this URL to paginate. Should be a valid URL.
+        data:
+          type: array
+          description: Array containing the results of the job (crawled data/URLs). Structure not detailed in docs.
+          items:
+            $ref: '#/components/schemas/ScrapeResponseData' # Most common assumption
+
+    ExtractJobStatusResponse:
+      type: object
+      properties:
+        jobId: # Added for clarity, key name assumed 'jobId'
+          type: string
+          description: The ID of the extract job being queried.
+        status:
+          type: string
+          enum: [extracting, completed, failed] # Assumed statuses, not explicitly in docs
+          description: The current status of the extract job.
+          examples:
+            ex1:
+              value: "completed"
+        data:
+          type: object # The extracted data, structure depends on schema/prompt
+          description: The extracted data based on the extraction rules.
+          examples:
+            ex1:
+              value: {"title": "Software Engineer", "company": "Tech Corp", "location": "Remote"}
+        sources: # Conditionally present if showSources=true in request
+          type: array
+          items:
+            type: string
+            # format: url # Removed due to validator issue
+            description: Should be a valid URL.
+          description: Source URLs used for extraction (if requested).
+          examples:
+            ex1:
+              value: ["https://example.com/job/123"]
+
+    CreditUsageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          examples:
+            ex1:
+              value: true
+        data:
+          type: object
+          properties:
+            remaining_credits:
+              type: integer
+              description: Number of credits remaining for the team.
+              examples:
+                ex1:
+                  value: 9990
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          examples:
+            ex1:
+              value: false
+        error:
+          type: string
+          description: Description of the error.
+          examples:
+            ex1:
+              value: "Invalid URL format"
+
+    JobIdResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          examples:
+            ex1:
+              value: true
+        id: # Key 'id' confirmed for /extract, assumed for others
+          type: string
+          description: The ID of the initiated asynchronous job.
+          examples:
+            ex1:
+              value: "job_123abc456def"
+        invalidURLs: # Specific to Batch Scrape with ignoreInvalidURLs=true
+          type: array
+          items:
+            type: string
+            # format: url # Removed due to validator issue
+            description: Should be a valid URL.
+          description: List of invalid URLs provided in the request (only if ignoreInvalidURLs was true).
+          examples:
+            ex1:
+              value: ["htp://invalid-url", "example-no-scheme.com"]
+
+    CancelResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [cancelled] # Confirmed by docs
+          description: Indicates successful cancellation.
+          examples:
+            ex1:
+              value: "cancelled"
+
+    JobError: # Schema for errors returned by /errors endpoints
+      type: object
+      required:
+        - url
+        - error
+      properties:
+        url:
+          type: string
+          # format: url # Removed due to validator issue
+          description: The URL that encountered an error during the job. Should be a valid URL.
+        error:
+          type: string
+          description: The error message.
+        statusCode: # Potential additional field, unconfirmed
+          type: integer
+          description: HTTP status code related to the error, if applicable.
+
+    # Schema for Webhook Payload (Based on partial docs/assumptions)
+    WebhookPayload:
+      type: object
+      description: Payload sent by Firecrawl to the configured webhook URL for crawl events (structure unconfirmed for BatchScrape).
+      required:
+        - success
+        - type
+        - id
+        - data # Assuming data is always present, even if empty
+      properties:
+        success:
+          type: boolean
+          description: If the operation related to the event was successful.
+        type:
+          type: string
+          enum: [started, page, completed, failed] # Enum for Crawl, confirm for BatchScrape
+          description: The type of event that occurred.
+        id:
+          type: string
+          description: The ID of the job.
+        data:
+          type: array
+          description: "Contains scraped data. Only non-empty for 'page' events where the page was scraped successfully (contains 1 item). Empty otherwise."
+          items:
+            $ref: '#/components/schemas/ScrapeResponseData' # Assuming the data format matches scrape result
+        error:
+          type: string
+          description: Error message if the event type is 'failed' or a 'page' scrape failed.
+
+  # Shared Response definitions
+  responses:
+    BadRequest:
+      description: Bad Request. Verify the parameters provided in the request body or path/query parameters.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Unauthorized. The API key was not provided, is invalid, or does not have permission.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    PaymentRequired:
+      description: Payment Required. The account may be out of credits or inactive.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Not Found. The requested resource (e.g., job ID) could not be located.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RateLimitExceeded:
+      description: Rate Limit Exceeded. Too many requests have been sent in a given amount of time.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ServerError:
+      description: Server Error. An unexpected error occurred on Firecrawl's side.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  # Webhooks definition moved inside components
+  webhooks: # Callback structure for webhook events
+    firecrawlEvent: # Generic name, implicitly used by webhookOptions
+      description: Receives notifications about job events (started, page processed, completed, failed). Configure the target URL in the request body's webhookOptions. Supported for Crawl and BatchScrape.
+      post:
+        summary: Firecrawl Job Event Notification
+        operationId: handleFirecrawlJobEvent # ID for generated code
+        requestBody:
+          description: Payload containing information about the job event.
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookPayload' # Schema of the payload sent by Firecrawl
+        responses:
+          '200':
+            description: Acknowledge receipt of the webhook. No response body needed.
+          '4xx': # Generic client error if the webhook is malformed/unauthorized
+            description: Client error receiving webhook.
+          '5xx': # Generic server error if the webhook handler fails
+            description: Server error processing webhook.
+# End of the single 'components' block
+
+security:
+  - bearerAuth: []
+
+paths:
+  /scrape:
+    post:
+      summary: Scrape a single URL
+      description: Extract content from a single webpage synchronously.
+      operationId: scrapeUrl
+      tags: [Scrape]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScrapeRequest'
+            examples: # Note: Examples here apply to the requestBody, not individual fields
+              simpleMarkdown:
+                summary: Simple Markdown Scrape
+                value:
+                  url: "https://firecrawl.dev/blog/rag-comparison"
+                  scrapeOptions:
+                    formats: ["markdown"]
+              jsonExtract:
+                summary: Extract JSON with Options
+                value:
+                  url: "https://example.com/product/123"
+                  scrapeOptions:
+                    formats: ["json"]
+                    onlyMainContent: true
+                    jsonOptions:
+                      prompt: "Extract product name and price"
+                      schema: {"name": "string", "price": "number"}
+                    pageOptions:
+                      waitFor: 1500
+                      mobile: true
+                      location:
+                        country: "DE"
+      responses: # Corrected structure
+        '200':
+          description: Successful scrape operation. Returns the scraped data directly.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScrapeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        default: # Replaced '5xx' with 'default'
+          $ref: '#/components/responses/ServerError'
+
+  /batch-scrape:
+    post:
+      summary: Submit Batch Scrape Job
+      description: Submit an asynchronous job to scrape multiple URLs. Returns a job ID.
+      operationId: submitBatchScrape
+      tags: [Scrape]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchScrapeRequest'
+            examples: # Examples for requestBody
+              basicBatch:
+                summary: Basic Batch Scrape
+                value:
+                  urls: ["https://example.com/page1", "https://example.com/page2"]
+                  ignoreInvalidURLs: true
+                  scrapeOptions:
+                    formats: ["markdown"]
+              batchWithWebhook:
+                summary: Batch with Change Tracking and Webhook
+                value:
+                  urls: ["https://site1.com/product/a", "https://site2.com/article/b"]
+                  scrapeOptions:
+                    formats: ["markdown", "changeTracking"]
+                    changeTrackingOptions:
+                      mode: "git-diff"
+                  webhookOptions:
+                    url: "https://my-service.com/webhook/firecrawl-batch"
+                    secret: "batchSecret123"
+      responses: # Corrected structure
+        '200':
+          description: Batch scrape job successfully submitted. Returns Job ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobIdResponse' # Uses 'id' as key
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        default: # Replaced '5xx' with 'default'
+          $ref: '#/components/responses/ServerError'
+
+  /batch-scrape/{jobId}:
+    get:
+      summary: Get Batch Scrape Status
+      description: Check the status and retrieve results of a batch scrape job. Results are paginated if large using the next URL.
+      operationId: getBatchScrapeStatus
+      tags: [Scrape]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          description: The ID of the batch scrape job.
+          schema:
+            type: string
+            examples:
+              jobIdExample:
+                value: "job_123abc456def"
+      responses: # Corrected structure
+        '200':
+          description: Successful response with job status and data. Use the 'next' URL for pagination if present.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchScrapeStatusResponse' # Uses specific schema
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound' # Job not found
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        default: # Replaced '5xx' with 'default'
+          $ref: '#/components/responses/ServerError'
+
+  /batch-scrape/{jobId}/errors:
+    get:
+      summary: Get Batch Scrape Errors
+      description: Retrieve errors encountered during a specific batch scrape job.
+      operationId: getBatchScrapeErrors
+      tags: [Scrape]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          description: The ID of the batch scrape job.
+          schema:
+            type: string
+            examples:
+              jobIdExample:
+                value: "job_123abc456def"
+      responses: # Corrected structure
+        '200':
+          description: Successful response with list of errors.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JobError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound' # Job not found
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        default: # Replaced '5xx' with 'default'
+          $ref: '#/components/responses/ServerError'
+
+  /crawl:
+    post:
+      summary: Submit Crawl Job
+      description: Submit an asynchronous job to crawl a website. Returns a job ID. Supports webhooks.
+      operationId: submitCrawl
+      tags: [Crawl]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrawlRequest'
+            examples: # Examples for requestBody
+              simpleCrawl:
+                summary: Simple Crawl
+                value:
+                  url: "https://firecrawl.dev"
+                  crawlerOptions:
+                    limit: 50
+                  scrapeOptions:
+                    formats: ["markdown"]
+              advancedCrawl:
+                summary: Crawl with Options and Webhook
+                value:
+                  url: "https://example.com/docs"
+                  crawlerOptions:
+                    limit: 200
+                    includes: ["/guides/."]
+                    excludes: ["/api-reference/v1/."]
+                    maxDepth: 3
+                    ignoreSitemap: true
+                  scrapeOptions:
+                    formats: ["markdown", "links"]
+                    onlyMainContent: false
+                    pageOptions:
+                      location:
+                        country: "GB"
+                  webhookOptions:
+                    url: "https://my-webhook-handler.com/firecrawl-crawl"
+                    event: "completed"
+                    secret: "crawlSecret789"
+      responses: # Corrected structure
+        '200':
+          description: Crawl job successfully submitted. Returns Job ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobIdResponse' # Uses 'id' as key
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        default: # Replaced '5xx' with 'default'
+          $ref: '#/components/responses/ServerError'
+
+  /crawl/{jobId}:
+    get:
+      summary: Get Crawl Status
+      description: Check the status and retrieve results of a crawl job. Results are paginated if large using the next URL.
+      operationId: getCrawlStatus
+      tags: [Crawl]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          description: The ID of the crawl job.
+          schema:
+            type: string
+            examples:
+              jobIdExample:
+                value: "crawl_abcdef123456"
+      responses: # Corrected structure
+        '200':
+          description: Successful response with job status and data. Use the 'next' URL for pagination if present.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrawlStatusResponse' # Uses specific schema
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound' # Job not found
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        default: # Replaced '5xx' with 'default'
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Cancel Crawl Job
+      description: Cancel an ongoing crawl job.
+      operationId: cancelCrawl
+      tags: [Crawl]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          description: The ID of the crawl job to cancel.
+          schema:
+            type: string
+            examples:
+              jobIdExample:
+                value: "crawl_abcdef123456"
+      responses: # Corrected structure
+        '200':
+          description: Successful cancellation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound' # Job not found or already completed/failed/cancelled
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        default: # Replaced '5xx' with 'default'
+          $ref: '#/components/responses/ServerError'
+
+  /crawl/{jobId}/errors:
+    get:
+      summary: Get Crawl Errors
+      description: Retrieve errors encountered during a specific crawl job.
+      operationId: getCrawlErrors
+      tags: [Crawl]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          description: The ID of the crawl job.
+          schema:
+            type: string
+            examples:
+              jobIdExample:
+                value: "crawl_abcdef123456"
+      responses: # Corrected structure
+        '200':
+          description: Successful response with list of errors.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JobError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound' # Job not found
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        default: # Replaced '5xx' with 'default'
+          $ref: '#/components/responses/ServerError'
+
+  /map:
+    post:
+      summary: Map Website URLs
+      description: Get a list of URLs from a website, using sitemap and crawling. Returns the list directly.
+      operationId: mapWebsite
+      tags: [Map]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MapRequest'
+            examples: # Examples for requestBody
+              simpleMap:
+                summary: Simple Map
+                value:
+                  url: "https://firecrawl.dev"
+              mapWithOptions:
+                summary: Map with Options
+                value:
+                  url: "https://example.com"
+                  limit: 500
+                  includeSubdomains: true
+                  sitemapOnly: true
+                  pageOptions:
+                    timeout: 45000
+      responses: # Corrected structure
+        '200':
+          description: Successful mapping operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        default: # Replaced '5xx' with 'default'
+          $ref: '#/components/responses/ServerError'
+
+  /extract:
+    post:
+      summary: Submit Extract Job
+      description: Submit an asynchronous job to extract structured data from webpages using prompts/schemas. Returns a job ID.
+      operationId: submitExtract
+      tags: [Extract]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractRequest'
+            examples: # Examples for requestBody
+              extractSimple:
+                summary: Extract using Prompt
+                value:
+                  urls: ["https://firecrawl.dev/blog/"]
+                  extractionPrompt: "Extract the blog post title and publication date." # Using global prompt
+                  showSources: true
+                  scanOptions:
+                    ignoreSitemap: true
+              extractWithSchema:
+                summary: Extract using Schema via jsonOptions
+                value:
+                  urls: ["https://example.com/jobs/"]
+                  scrapeOptions:
+                    formats: ["json"] # Required for jsonOptions
+                    jsonOptions: # Schema specific to JSON format
+                      schema: {"jobTitle": "string", "company": "string", "location": "string", "applyUrl": "string"}
+                    pageOptions:
+                      proxy: "stealth"
+      responses: # Corrected structure
+        '200':
+          description: Extract job successfully submitted. Returns Job ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobIdResponse' # Uses 'id' as key
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        default: # Replaced '5xx' with 'default'
+          $ref: '#/components/responses/ServerError'
+
+  /extract/{jobId}:
+    get:
+      summary: Get Extract Job Status
+      description: Check the status and retrieve results of an extract job.
+      operationId: getExtractStatus
+      tags: [Extract]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          description: The ID of the extract job.
+          schema:
+            type: string
+            examples:
+              jobIdExample:
+                value: "extract_job_xyz789"
+      responses: # Corrected structure
+        '200':
+          description: Successful response with job status and extracted data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractJobStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound' # Job not found
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        default: # Replaced '5xx' with 'default'
+          $ref: '#/components/responses/ServerError'
+
+  /search:
+    post:
+      summary: Search and Scrape
+      description: Search the web and optionally scrape the content of results synchronously.
+      operationId: searchAndScrape
+      tags: [Search]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+            examples: # Examples for requestBody
+              searchOnly:
+                summary: Search Only (SERP results)
+                value:
+                  query: "Firecrawl API features"
+                  searchOptions:
+                    limit: 10
+                    country: "US"
+              searchAndScrape:
+                summary: Search and Scrape Markdown
+                value:
+                  query: "OpenAPI specification tools"
+                  searchOptions:
+                    limit: 3
+                    timeRange: "past_week"
+                  scrapeOptions:
+                    formats: ["markdown"] # Corrected: removed 'metadata' as it's not in the enum
+                    onlyMainContent: true
+      responses: # Corrected structure
+        '200':
+          description: Successful search operation. Returns search results, potentially with scraped content.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        default: # Replaced '5xx' with 'default'
+          $ref: '#/components/responses/ServerError'
+
+  /team/credit-usage:
+    get:
+      summary: Get Credit Usage
+      description: Get the number of remaining credits for the API key's team.
+      operationId: getCreditUsage
+      tags: [Account]
+      responses: # Corrected structure
+        '200':
+          description: Successful response containing remaining credits.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditUsageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded' # Potentially rate limited
+        default: # Replaced '5xx' with 'default'
+          $ref: '#/components/responses/ServerError'
+
+tags:
+  - name: Scrape
+    description: Operations for scraping single or multiple web pages.
+  - name: Crawl
+    description: Operations for crawling websites asynchronously.
+  - name: Map
+    description: Operations for mapping website structures (getting URLs).
+  - name: Extract
+    description: Operations for extracting structured data from web pages asynchronously.
+  - name: Search
+    description: Operations for performing web searches and retrieving content synchronously.
+  - name: Account
+    description: Operations related to account information like credit usage.

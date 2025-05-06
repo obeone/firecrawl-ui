@@ -1,351 +1,429 @@
 <template>
   <div class="crawl-view">
-    <h1>Configuration du Crawl</h1>
-    <div class="form-container">
-      <div class="input-group">
-        <label for="url">URL de départ :</label>
-        <input id="url" v-model="startUrl" type="text" placeholder="https://example.com">
+    <h1>Crawl Configuration</h1>
+    <form @submit.prevent="handleSubmit">
+      <!-- URL Section -->
+      <div class="form-group">
+        <label for="url">Base URL to Crawl:</label>
+        <input id="url" v-model="formData.url" type="text" required placeholder="https://example.com" />
       </div>
-      <div class="input-group">
-        <label for="depth">Profondeur :</label>
-        <input id="depth" v-model.number="depth" type="number" min="1" max="10">
-      </div>
-      <div class="input-group">
-        <label>Formats à inclure :</label>
-        <div class="formats-checkboxes">
-          <label v-for="format in availableFormats" :key="format.value">
-            <input type="checkbox" v-model="selectedFormats" :value="format.value">
-            {{ format.label }}
+
+      <!-- Crawler Options Section -->
+      <fieldset class="form-group options-fieldset">
+        <legend>Crawler Options</legend>
+        <div class="grid-layout">
+          <div class="form-group">
+            <label for="includes">Includes (Regex Patterns):</label>
+            <input id="includes" v-model="includesInput" type="text" placeholder="/blog/.*, /products/.*" @blur="parseIncludes" />
+            <small>Comma-separated regex patterns. Only matching URLs will be included.</small>
+          </div>
+          <div class="form-group">
+            <label for="excludes">Excludes (Regex Patterns):</label>
+            <input id="excludes" v-model="excludesInput" type="text" placeholder="/login, /private/.*" @blur="parseExcludes" />
+            <small>Comma-separated regex patterns to exclude URLs.</small>
+          </div>
+          <div class="form-group">
+            <label for="maxDepth">Max Depth:</label>
+            <input id="maxDepth" v-model.number="formData.crawlerOptions.maxDepth" type="number" min="1" placeholder="e.g. 3" />
+            <small>Maximum depth relative to the base URL (path segments).</small>
+          </div>
+          <div class="form-group">
+            <label for="maxDepthDiscovery">Max Discovery Depth:</label>
+            <input id="maxDepthDiscovery" v-model.number="formData.crawlerOptions.maxDepthDiscovery" type="number" min="1" placeholder="e.g. 2" />
+            <small>Maximum depth based on discovery order.</small>
+          </div>
+          <div class="form-group">
+            <label for="limit">Page Limit:</label>
+            <input id="limit" v-model.number="formData.crawlerOptions.limit" type="number" min="1" placeholder="e.g. 100" />
+            <small>Maximum number of pages to crawl (default: 10000).</small>
+          </div>
+        </div>
+        <div class="grid-layout">
+          <label class="checkbox-label">
+            <input type="checkbox" v-model="formData.crawlerOptions.ignoreSitemap" />
+            Ignore Sitemap
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" v-model="formData.crawlerOptions.allowPathRevisits" />
+            Allow Path Revisits
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" v-model="formData.crawlerOptions.allowExternalLinks" />
+            Allow External Links
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" v-model="formData.crawlerOptions.navigateBacklinks" />
+            Navigate Backlinks
           </label>
         </div>
-      </div>
-      <button 
-        @click="startCrawl" 
-        class="submit-btn"
-        :disabled="isLoading"
-      >
-        <span v-if="!isLoading">Démarrer le Crawl</span>
-        <span v-else>En cours...</span>
-      </button>
-    </div>
+      </fieldset>
 
-    <div v-if="crawlId" class="monitoring">
-      <h2>Suivi du crawl</h2>
-      <div>
-        <strong>ID :</strong> {{ crawlId }}
-      </div>
-      <div>
-        <strong>Statut :</strong> {{ crawlStatus }}
-      </div>
-      <div>
-        <strong>Progression :</strong>
-        <span v-if="totalPages > 0">{{ completedPages }} / {{ totalPages }}</span>
-        <span v-else>En attente...</span>
-        <div v-if="totalPages > 0" class="progressbar-container">
-          <div class="progressbar-bg">
-            <div
-              class="progressbar-fg"
-              :style="{ width: ((completedPages / totalPages) * 100) + '%' }"
-            ></div>
-          </div>
-          <span class="progressbar-percent">{{ Math.round((completedPages / totalPages) * 100) }}%</span>
+      <!-- Scrape Options Section -->
+      <fieldset class="form-group options-fieldset">
+        <legend>Scrape Options</legend>
+        <div class="form-group">
+          <label for="formats">Output Formats:</label>
+          <select id="formats" v-model="formData.scrapeOptions.formats" multiple>
+            <option value="markdown">Markdown</option>
+            <option value="html">HTML</option>
+            <option value="rawHtml">Raw HTML</option>
+            <option value="links">Links</option>
+            <option value="screenshot">Screenshot (Viewport)</option>
+            <option value="screenshot@fullPage">Screenshot (Full Page)</option>
+            <option value="json">JSON</option>
+            <option value="changeTracking">Change Tracking</option>
+          </select>
+          <small>Select one or more formats.</small>
         </div>
-      </div>
+        <label class="checkbox-label">
+          <input type="checkbox" v-model="formData.scrapeOptions.onlyMainContent" />
+          Only Main Content (exclude headers, footers, etc.)
+        </label>
+        <!-- TODO: Add includeTags and excludeTags if needed -->
+      </fieldset>
+
+      <!-- Webhook Options Section -->
+      <fieldset class="form-group options-fieldset">
+        <legend>Webhook Options (Optional)</legend>
+        <div class="grid-layout">
+          <div class="form-group">
+            <label for="webhookUrl">Webhook URL:</label>
+            <input id="webhookUrl" v-model="formData.webhookOptions.url" type="text" placeholder="https://your-service.com/webhook" />
+          </div>
+          <div class="form-group">
+            <label for="webhookSecret">Webhook Secret:</label>
+            <input id="webhookSecret" v-model="formData.webhookOptions.secret" type="text" placeholder="Secret for verification" />
+          </div>
+          <div class="form-group">
+            <label for="webhookEvent">Webhook Event:</label>
+            <select id="webhookEvent" v-model="formData.webhookOptions.event">
+              <option value="">Select event</option>
+              <option value="started">Started</option>
+              <option value="page">Page</option>
+              <option value="completed">Completed</option>
+              <option value="failed">Failed</option>
+            </select>
+          </div>
+        </div>
+      </fieldset>
+
+      <button type="submit">Submit Crawl</button>
+    </form>
+
+    <div v-if="loading" class="status loading">
+      <div class="spinner"></div>
+      <span>Processing your request...</span>
+    </div>
+
+    <div v-if="error" class="status error">
+      <div class="error-icon">!</div>
       <div>
-        <strong>Crédits utilisés :</strong> {{ creditsUsed }}
-      </div>
-      <button v-if="crawlStatus === 'scraping'" @click="cancelCrawl" class="cancel-btn">Annuler le crawl</button>
-    </div>
-
-    <div v-if="allCrawledData.length" class="results">
-      <h2>Résultats partiels</h2>
-      <div class="results-scrollbox">
-        <ul>
-          <li v-for="(item, idx) in allCrawledData" :key="idx">
-            <strong>{{ item.metadata?.title || 'Sans titre' }}</strong>
-            <br>
-            <span>{{ item.metadata?.sourceURL }}</span>
-            <span v-if="item.metadata?.statusCode"> - Code HTTP: {{ item.metadata.statusCode }}</span>
-            <span v-if="item.metadata?.error" class="error"> - Erreur: {{ item.metadata.error }}</span>
-          </li>
-        </ul>
+        <h3>Error occurred</h3>
+        <p>{{ error }}</p>
+        <button @click="error = ''">Try again</button>
       </div>
     </div>
 
-    <div v-if="crawlStatus === 'completed' && !nextPageUrl" class="download-section">
-      <button @click="downloadZip" class="download-btn">Télécharger les résultats (.zip)</button>
-    </div>
-
-    <div v-if="errorMsg" class="error-message">
-      {{ errorMsg }}
+    <div v-if="result" class="result">
+      <div class="result-header">
+        <h2>Crawl Job Submitted</h2>
+      </div>
+      <pre>{{ result }}</pre>
     </div>
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, inject, onUnmounted } from 'vue'
-import type { CrawlingApi } from '../api-client/api.js'
-import JSZip from 'jszip'
-import { saveAs } from 'file-saver'
-// @ts-ignore
-// eslint-disable-next-line
+<script lang="ts">
+import { defineComponent, ref, inject } from 'vue'
+import { useRouter } from 'vue-router'
+// Import the crawling API client (adjust import path as needed)
+import { type CrawlingApi } from '../api-client/api'
 
-const startUrl = ref('')
-const depth = ref(1)
-const availableFormats = [
-  { value: 'markdown', label: 'Markdown' },
-  { value: 'html', label: 'HTML' },
-  { value: 'rawHtml', label: 'Raw HTML' },
-  { value: 'links', label: 'Liens' },
-  { value: 'screenshot', label: 'Capture d\'écran' }
-]
-const selectedFormats = ref(['markdown'])
+/**
+ * Interface for Crawler Options section of the form.
+ */
+interface CrawlerOptions {
+  includes?: string[];
+  excludes?: string[];
+  maxDepth?: number;
+  maxDepthDiscovery?: number;
+  ignoreSitemap?: boolean;
+  allowPathRevisits?: boolean;
+  limit?: number;
+  allowExternalLinks?: boolean;
+  navigateBacklinks?: boolean;
+}
 
-const isLoading = ref(false)
-const crawlId = ref<string | null>(null)
-const crawlStatus = ref<string>('en attente')
-const totalPages = ref(0)
-const completedPages = ref(0)
-const creditsUsed = ref(0)
-const nextPageUrl = ref<string | null>(null)
-const allCrawledData = ref<any[]>([])
-const pollingInterval = ref<number | null>(null)
-const errorMsg = ref('')
+/**
+ * Interface for Scrape Options section of the form.
+ */
+interface ScrapeOptions {
+  formats: string[];
+  onlyMainContent?: boolean;
+  // includeTags?: string[];
+  // excludeTags?: string[];
+}
 
-const api = inject('api') as { crawling: CrawlingApi }
+/**
+ * Interface for Webhook Options section of the form.
+ */
+interface WebhookOptions {
+  url?: string;
+  secret?: string;
+  event?: string;
+}
 
-const startCrawl = async () => {
-  if (!startUrl.value) return
-  isLoading.value = true
-  crawlId.value = null
-  crawlStatus.value = 'en attente'
-  totalPages.value = 0
-  completedPages.value = 0
-  creditsUsed.value = 0
-  nextPageUrl.value = null
-  allCrawledData.value = []
-  errorMsg.value = ''
+/**
+ * Main form data interface for the CrawlView.
+ */
+interface FormData {
+  url: string;
+  crawlerOptions: CrawlerOptions;
+  scrapeOptions: ScrapeOptions;
+  webhookOptions: WebhookOptions;
+}
 
-  try {
-    const response = await api.crawling.crawlUrls({
-      url: startUrl.value,
-      maxDepth: depth.value,
+export default defineComponent({
+  name: 'CrawlView',
+  setup() {
+    const router = useRouter()
+    const api = inject('api') as { crawling: CrawlingApi }
+
+    // Reactive form data with default values
+    const formData = ref<FormData>({
+      url: '',
+      crawlerOptions: {
+        includes: [],
+        excludes: [],
+        maxDepth: undefined,
+        maxDepthDiscovery: undefined,
+        ignoreSitemap: false,
+        allowPathRevisits: false,
+        limit: undefined,
+        allowExternalLinks: false,
+        navigateBacklinks: false,
+      },
       scrapeOptions: {
-        formats: selectedFormats.value as any // Correction TS: cast en enum[]
+        formats: ['markdown'],
+        onlyMainContent: true,
+      },
+      webhookOptions: {
+        url: '',
+        secret: '',
+        event: '',
       }
     })
-    if (response.data?.success && response.data.id) {
-      crawlId.value = response.data.id
-      crawlStatus.value = 'scraping'
-      pollCrawlStatus()
-    } else {
-      errorMsg.value = 'Erreur lors du démarrage du crawl.'
-    }
-  } catch (error: any) {
-    errorMsg.value = 'Erreur de crawl: ' + (error?.message || error)
-  } finally {
-    isLoading.value = false
-  }
-}
 
-const pollCrawlStatus = async () => {
-  if (!crawlId.value) return
-  if (pollingInterval.value) clearInterval(pollingInterval.value)
-  const poll = async () => {
-    try {
-      const res = await api.crawling.getCrawlStatus(crawlId.value!) // Non-null assertion
-      const data = res.data
-      crawlStatus.value = data.status ?? 'en attente'
-      totalPages.value = data.total || 0
-      completedPages.value = data.completed || 0
-      creditsUsed.value = data.creditsUsed || 0
-      nextPageUrl.value = data.next || null
-      if (Array.isArray(data.data)) {
-        // Accumule sans doublons
-        const existingUrls = new Set(allCrawledData.value.map((item: any) => item.metadata?.sourceURL))
-        for (const item of data.data) {
-          if (!existingUrls.has(item.metadata?.sourceURL)) {
-            allCrawledData.value.push(item)
+    // Inputs for includes/excludes as comma-separated strings for user convenience
+    const includesInput = ref('')
+    const excludesInput = ref('')
+
+    /**
+     * Parse the includes input string into an array for the API payload.
+     */
+    const parseIncludes = () => {
+      formData.value.crawlerOptions.includes = includesInput.value
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean)
+    }
+
+    /**
+     * Parse the excludes input string into an array for the API payload.
+     */
+    const parseExcludes = () => {
+      formData.value.crawlerOptions.excludes = excludesInput.value
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean)
+    }
+
+    const loading = ref(false)
+    const error = ref('')
+    const result = ref<any>(null)
+
+    /**
+     * Validate a URL string.
+     * @param url - The URL to validate.
+     * @returns True if valid, false otherwise.
+     */
+    const isValidUrl = (url: string) => {
+      try {
+        new URL(url)
+        return true
+      } catch {
+        return false
+      }
+    }
+
+    /**
+     * Handle form submission: validate, build payload, call API, handle result.
+     */
+    const handleSubmit = async () => {
+      parseIncludes()
+      parseExcludes()
+
+      if (!isValidUrl(formData.value.url)) {
+        error.value = 'Please enter a valid URL (e.g. https://example.com)'
+        return
+      }
+      if (!formData.value.scrapeOptions.formats || formData.value.scrapeOptions.formats.length === 0) {
+        error.value = 'Please select at least one output format'
+        return
+      }
+
+      // Build the request payload according to the OpenAPI CrawlRequest schema
+      const payload: any = {
+        url: formData.value.url,
+        crawlerOptions: {
+          ...formData.value.crawlerOptions,
+        },
+        scrapeOptions: {
+          ...formData.value.scrapeOptions,
+        }
+      }
+
+      // Only include webhookOptions if at least one field is filled
+      if (
+        formData.value.webhookOptions.url ||
+        formData.value.webhookOptions.secret ||
+        formData.value.webhookOptions.event
+      ) {
+        payload.webhookOptions = { ...formData.value.webhookOptions }
+      }
+
+      try {
+        loading.value = true
+        error.value = ''
+        result.value = null
+        // Call the crawling API (adjust method name as needed)
+        // @ts-ignore
+        const response = await api.crawling.crawlUrls(payload)
+        result.value = response.data
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          if (err.message.includes('401')) {
+            router.push({ name: 'ApiConfig' })
+            return
           }
+          error.value = err.message.includes('404')
+            ? 'Resource not found (404)'
+            : err.message.includes('Network Error')
+            ? 'Network connection failed'
+            : err.message
+        } else {
+          error.value = 'An unexpected error occurred'
         }
-      }
-      if (data.status === 'completed' && !data.next) {
-        clearInterval(pollingInterval.value!)
-        pollingInterval.value = null
-      }
-      if (data.status === 'failed' || data.status === 'cancelled') {
-        clearInterval(pollingInterval.value!)
-        pollingInterval.value = null
-      }
-      // Pagination : si next existe, on va chercher la page suivante
-      if (data.next) {
-        fetchNextPage(data.next)
-      }
-    } catch (e: any) {
-      errorMsg.value = 'Erreur lors du suivi du crawl : ' + (e?.message || e)
-      clearInterval(pollingInterval.value!)
-      pollingInterval.value = null
-    }
-  }
-  await poll()
-  pollingInterval.value = setInterval(poll, 5000) as unknown as number
-}
-
-const fetchNextPage = async (url: string) => {
-  try {
-    const res = await api.crawling.getCrawlStatus(crawlId.value!, { url })
-    const data = res.data
-    nextPageUrl.value = data.next || null
-    if (Array.isArray(data.data)) {
-      const existingUrls = new Set(allCrawledData.value.map((item: any) => item.metadata?.sourceURL))
-      for (const item of data.data) {
-        if (!existingUrls.has(item.metadata?.sourceURL)) {
-          allCrawledData.value.push(item)
-        }
+      } finally {
+        loading.value = false
       }
     }
-    if (!data.next) {
-      nextPageUrl.value = null
-    }
-  } catch (e: any) {
-    errorMsg.value = 'Erreur lors de la récupération des pages paginées : ' + (e?.message || e)
-  }
-}
 
-const cancelCrawl = async () => {
-  if (!crawlId.value) return
-  try {
-    await api.crawling.cancelCrawl(crawlId.value)
-    crawlStatus.value = 'cancelled'
-    if (pollingInterval.value) clearInterval(pollingInterval.value)
-  } catch (e: any) {
-    errorMsg.value = 'Erreur lors de l\'annulation : ' + (e?.message || e)
-  }
-}
-
-const downloadZip = async () => {
-  const zip = new JSZip()
-  // Ajout du JSON global
-  zip.file('results.json', JSON.stringify(allCrawledData.value, null, 2))
-  // Ajout des fichiers individuels
-  for (const item of allCrawledData.value) {
-    const baseName = (item.metadata?.sourceURL || 'page').replace(/https?:\/\//, '').replace(/[^\w\d\-_.]/g, '_')
-    if (item.markdown) zip.file(`${baseName}/content.md`, item.markdown)
-    if (item.html) zip.file(`${baseName}/content.html`, item.html)
-    if (item.rawHtml) zip.file(`${baseName}/raw.html`, item.rawHtml)
-    if (item.links) zip.file(`${baseName}/links.txt`, item.links.join('\n'))
-    if (item.screenshot) {
-      // Screenshot en base64, on extrait le type MIME si présent
-      const match = /^data:(image\/\w+);base64,/.exec(item.screenshot)
-      const mime = match ? match[1] : 'image/png'
-      const ext = mime.split('/')[1] || 'png'
-      const base64 = item.screenshot.replace(/^data:image\/\w+;base64,/, '')
-      zip.file(`${baseName}/screenshot.${ext}`, base64, { base64: true })
+    return {
+      formData,
+      includesInput,
+      excludesInput,
+      parseIncludes,
+      parseExcludes,
+      loading,
+      error,
+      result,
+      handleSubmit,
     }
   }
-  const blob = await zip.generateAsync({ type: 'blob' })
-  saveAs(blob, 'firecrawl_results.zip')
-}
-
-onUnmounted(() => {
-  if (pollingInterval.value) clearInterval(pollingInterval.value)
 })
 </script>
 
 <style scoped>
 .crawl-view {
-  padding: 2rem;
   max-width: 800px;
   margin: 0 auto;
+  padding: 20px;
 }
-.input-group {
-  margin-bottom: 1rem;
+.form-group {
+  margin-bottom: 20px;
 }
-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: bold;
-}
-input[type="text"], input[type="number"] {
-  width: 100%;
-  padding: 0.5rem;
+.options-fieldset {
   border: 1px solid #ccc;
+  padding: 15px;
   border-radius: 4px;
+  margin-bottom: 20px;
 }
-.formats-checkboxes {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
+.options-fieldset legend {
+  font-weight: bold;
+  padding: 0 5px;
 }
-.submit-btn, .cancel-btn, .download-btn {
-  background-color: #42b983;
-  color: white;
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1rem;
-  margin-top: 1rem;
+.grid-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
 }
-.submit-btn:hover, .cancel-btn:hover, .download-btn:hover {
-  background-color: #3aa876;
-}
-.monitoring {
-  margin-top: 2rem;
-  border-top: 1px solid #eee;
-  padding-top: 1rem;
-}
-.results {
-  margin-top: 2rem;
-  border-top: 1px solid #eee;
-  padding-top: 1rem;
-}
-.download-section {
-  margin-top: 2rem;
-}
-.error-message, .error {
-  color: #d32f2f;
-  margin-top: 1rem;
-}
-</style>
-
-<style scoped>
-.progressbar-container {
-  margin-top: 0.5rem;
+.checkbox-label {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 5px;
 }
-.progressbar-bg {
-  width: 200px;
-  height: 16px;
-  background: #eee;
-  border-radius: 8px;
-  overflow: hidden;
-  position: relative;
+.form-group small {
+  display: block;
+  font-size: 0.8em;
+  color: #666;
+  margin-top: 3px;
 }
-.progressbar-fg {
-  height: 100%;
-  background: #42b983;
-  width: 0;
-  transition: width 0.3s;
+.status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px;
+  border-radius: 4px;
+  margin: 20px 0;
 }
-.progressbar-percent {
-  min-width: 32px;
-  font-size: 0.95em;
-  color: #333;
+.loading {
+  background: #f0f7ff;
+  color: #0066cc;
+}
+.error {
+  background: #fff0f0;
+  color: #cc0000;
+}
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(0,102,204,0.3);
+  border-radius: 50%;
+  border-top-color: #0066cc;
+  animation: spin 1s ease-in-out infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.error-icon {
+  width: 20px;
+  height: 20px;
+  background: #cc0000;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-weight: bold;
 }
-.results-scrollbox {
-  max-height: 300px;
-  overflow-y: auto;
-  border: 1px solid #444857;
-  border-radius: 6px;
-  padding: 1rem;
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+.result pre {
+  white-space: pre-wrap;
   background: #23272f;
   color: #f8f8f2;
+  padding: 15px;
+  border-radius: 4px;
+  max-height: 500px;
+  overflow: auto;
   font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace;
   font-size: 1rem;
+  border: 1px solid #444857;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 </style>

@@ -10,6 +10,9 @@ import { RouterLink } from 'vue-router'
         <RouterLink to="/">Home</RouterLink>
         <RouterLink to="/scrape">Scrape</RouterLink>
         <RouterLink to="/crawl">Crawl</RouterLink>
+        <RouterLink to="/extract">Extract</RouterLink> <!-- Add link to ExtractView -->
+        <RouterLink to="/mapview">Map</RouterLink>
+        <RouterLink to="/searchview">Search</RouterLink>
         <RouterLink to="/api-config">API Config</RouterLink>
         <RouterLink to="/about">About</RouterLink>
       </nav>

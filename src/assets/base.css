@@ -48,6 +48,31 @@
     --color-heading: var(--vt-c-text-dark-1);
     --color-text: var(--vt-c-text-dark-2);
   }
+/* Styles for form elements in dark mode */
+  input,
+  textarea,
+  select {
+    background-color: var(--color-background-soft); /* Use a slightly lighter background than the main one */
+    color: var(--color-text); /* Ensure text is readable in dark mode */
+    border: 1px solid var(--color-border); /* Consistent border color */
+    padding: 8px 12px; /* Add padding for better appearance */
+    border-radius: 4px; /* Rounded corners */
+    margin-bottom: 1rem; /* Add some space below inputs */
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--vt-c-text-dark-2); /* Placeholder text color */
+    opacity: 0.7; /* Make placeholder slightly less prominent */
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none; /* Remove default outline */
+    border-color: var(--color-border-hover); /* Change border color on focus */
+    box-shadow: 0 0 0 2px hsla(160, 100%, 37%, 0.2); /* Add a subtle focus effect using Vue's green */
+  }
 }
 
 *,
