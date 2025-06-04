@@ -63,10 +63,10 @@
               >
             </div>
             <div class="form-group">
-              <label for="maxDepthDiscovery">Max Discovery Depth:</label>
+              <label for="maxDiscoveryDepth">Max Discovery Depth:</label>
               <input
-                id="maxDepthDiscovery"
-                v-model.number="formData.crawlerOptions.maxDepthDiscovery"
+                id="maxDiscoveryDepth"
+                v-model.number="formData.crawlerOptions.maxDiscoveryDepth"
                 type="number"
                 min="1"
                 placeholder="e.g. 2"
@@ -84,6 +84,17 @@
               />
               <small>Maximum number of pages to crawl (default: 10000).</small>
             </div>
+            <div class="form-group">
+              <label for="delay">Delay between pages (s):</label>
+              <input
+                id="delay"
+                v-model.number="formData.crawlerOptions.delay"
+                type="number"
+                min="0"
+                placeholder="0"
+              />
+              <small>Delay in seconds between scrapes.</small>
+            </div>
           </div>
           <div class="grid-layout">
             <label class="checkbox-label">
@@ -96,9 +107,9 @@
             <label class="checkbox-label">
               <input
                 type="checkbox"
-                v-model="formData.crawlerOptions.allowPathRevisits"
+                v-model="formData.crawlerOptions.ignoreQueryParameters"
               />
-              Allow Path Revisits
+              Ignore Query Parameters
             </label>
             <label class="checkbox-label">
               <input
@@ -110,9 +121,9 @@
             <label class="checkbox-label">
               <input
                 type="checkbox"
-                v-model="formData.crawlerOptions.navigateBacklinks"
+                v-model="formData.crawlerOptions.allowBackwardLinks"
               />
-              Navigate Backlinks
+              Allow Backward Links
             </label>
           </div>
         </div>
@@ -205,18 +216,25 @@
               />
             </div>
             <div class="form-group">
-              <label for="webhookSecret">Webhook Secret:</label>
-              <input
-                id="webhookSecret"
-                v-model="formData.webhookOptions.secret"
-                type="text"
-                placeholder="Secret for verification"
-              />
+              <label for="webhookHeaders">Webhook Headers (JSON):</label>
+              <textarea
+                id="webhookHeaders"
+                v-model="webhookHeadersJson"
+                rows="3"
+                placeholder='{ "Authorization": "token" }'
+              ></textarea>
             </div>
             <div class="form-group">
-              <label for="webhookEvent">Webhook Event:</label>
-              <select id="webhookEvent" v-model="formData.webhookOptions.event">
-                <option value="">Select event</option>
+              <label for="webhookMetadata">Webhook Metadata (JSON):</label>
+              <textarea
+                id="webhookMetadata"
+                v-model="webhookMetadataJson"
+                rows="3"
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <label for="webhookEvents">Webhook Events:</label>
+              <select id="webhookEvents" multiple v-model="webhookEvents">
                 <option value="started">Started</option>
                 <option value="page">Page</option>
                 <option value="completed">Completed</option>
@@ -324,6 +342,7 @@ import {
   onMounted,
   onUnmounted,
   computed,
+  watch,
 } from "vue";
 import { useRouter } from "vue-router";
 // Import the crawling API client (adjust import path as needed)
@@ -342,12 +361,13 @@ interface CrawlerOptions {
   includes?: string[];
   excludes?: string[];
   maxDepth?: number;
-  maxDepthDiscovery?: number;
+  maxDiscoveryDepth?: number;
   ignoreSitemap?: boolean;
-  allowPathRevisits?: boolean;
+  ignoreQueryParameters?: boolean;
+  delay?: number;
   limit?: number;
   allowExternalLinks?: boolean;
-  navigateBacklinks?: boolean;
+  allowBackwardLinks?: boolean;
 }
 
 /**
@@ -371,8 +391,9 @@ interface ScrapeOptions {
  */
 interface WebhookOptions {
   url?: string;
-  secret?: string;
-  event?: string;
+  headers?: Record<string, string>;
+  metadata?: Record<string, any>;
+  events?: string[];
 }
 
 /**
@@ -407,12 +428,13 @@ export default defineComponent({
         includes: [],
         excludes: [],
         maxDepth: undefined,
-        maxDepthDiscovery: undefined,
+        maxDiscoveryDepth: undefined,
         ignoreSitemap: false,
-        allowPathRevisits: false,
+        ignoreQueryParameters: false,
+        delay: undefined,
         limit: undefined,
         allowExternalLinks: false,
-        navigateBacklinks: false,
+        allowBackwardLinks: false,
       },
       scrapeOptions: {
         formats: ["markdown"],
@@ -427,8 +449,9 @@ export default defineComponent({
       },
       webhookOptions: {
         url: undefined,
-        secret: undefined,
-        event: undefined,
+        headers: {},
+        metadata: {},
+        events: [],
       },
     });
 
@@ -437,6 +460,15 @@ export default defineComponent({
     const excludesInput = ref("");
     const includeTagsInput = ref("");
     const excludeTagsInput = ref("");
+
+    // Webhook JSON string refs
+    const webhookHeadersJson = ref(
+      JSON.stringify(formData.value.webhookOptions.headers || {}, null, 2),
+    );
+    const webhookMetadataJson = ref(
+      JSON.stringify(formData.value.webhookOptions.metadata || {}, null, 2),
+    );
+    const webhookEvents = ref<string[]>([]);
 
     // State for collapsible sections
     const isCrawlerOptionsCollapsed = ref(true);
@@ -482,6 +514,26 @@ export default defineComponent({
         .map((s) => s.trim())
         .filter(Boolean);
     };
+
+    watch(webhookHeadersJson, (val) => {
+      try {
+        formData.value.webhookOptions.headers = val ? JSON.parse(val) : {};
+      } catch {
+        // ignore parse errors
+      }
+    });
+
+    watch(webhookMetadataJson, (val) => {
+      try {
+        formData.value.webhookOptions.metadata = val ? JSON.parse(val) : {};
+      } catch {
+        // ignore parse errors
+      }
+    });
+
+    watch(webhookEvents, (val) => {
+      formData.value.webhookOptions.events = val;
+    });
 
     const loading = ref(false);
     const crawling = ref(false);
@@ -556,6 +608,11 @@ export default defineComponent({
           excludeTagsInput.value = (crawl.scrapeOptions.excludeTags || []).join(
             ", ",
           );
+        }
+        if (crawl && crawl.webhook) {
+          webhookHeadersJson.value = JSON.stringify(crawl.webhook.headers || {}, null, 2);
+          webhookMetadataJson.value = JSON.stringify(crawl.webhook.metadata || {}, null, 2);
+          webhookEvents.value = crawl.webhook.events || [];
         }
       } catch (err: any) {
         console.error(`Error fetching crawl files for ID ${id}:`, err);
@@ -673,16 +730,18 @@ export default defineComponent({
       }
 
       // Build the request payload according to the OpenAPI CrawlRequest schema
-      // Construction du payload avec toutes les options du formulaire, y compris maxDepthDiscovery
+      // Construction du payload avec toutes les options du formulaire, y compris maxDiscoveryDepth
       const payload: any = {
         url: formData.value.url,
         excludePaths: formData.value.crawlerOptions.excludes,
         includePaths: formData.value.crawlerOptions.includes,
         maxDepth: formData.value.crawlerOptions.maxDepth,
-        maxDepthDiscovery: formData.value.crawlerOptions.maxDepthDiscovery,
+        maxDiscoveryDepth: formData.value.crawlerOptions.maxDiscoveryDepth,
         ignoreSitemap: formData.value.crawlerOptions.ignoreSitemap,
+        ignoreQueryParameters: formData.value.crawlerOptions.ignoreQueryParameters,
+        delay: formData.value.crawlerOptions.delay,
         limit: formData.value.crawlerOptions.limit,
-        allowBackwardLinks: formData.value.crawlerOptions.navigateBacklinks,
+        allowBackwardLinks: formData.value.crawlerOptions.allowBackwardLinks,
         allowExternalLinks: formData.value.crawlerOptions.allowExternalLinks,
         scrapeOptions: {
           formats: formData.value.scrapeOptions.formats,
@@ -700,14 +759,12 @@ export default defineComponent({
       // Only include webhookOptions if at least one field is filled
       // Inclure webhookOptions uniquement si au moins un champ est non vide et non une chaîne vide
       if (
-        (formData.value.webhookOptions.url &&
-          formData.value.webhookOptions.url !== "") ||
-        (formData.value.webhookOptions.secret &&
-          formData.value.webhookOptions.secret !== "") ||
-        (formData.value.webhookOptions.event &&
-          formData.value.webhookOptions.event !== "")
+        (formData.value.webhookOptions.url && formData.value.webhookOptions.url !== "") ||
+        (formData.value.webhookOptions.headers && Object.keys(formData.value.webhookOptions.headers).length > 0) ||
+        (formData.value.webhookOptions.metadata && Object.keys(formData.value.webhookOptions.metadata).length > 0) ||
+        (formData.value.webhookOptions.events && formData.value.webhookOptions.events.length > 0)
       ) {
-        payload.webhookOptions = { ...formData.value.webhookOptions };
+        payload.webhook = { ...formData.value.webhookOptions };
       }
 
       try {
@@ -732,7 +789,7 @@ export default defineComponent({
             status: "started", // Initial status
             crawlerOptions: { ...formData.value.crawlerOptions }, // Store a copy of options
             scrapeOptions: { ...formData.value.scrapeOptions },
-            webhookOptions: { ...formData.value.webhookOptions },
+            webhook: { ...formData.value.webhookOptions },
           });
           saveHistory(); // Save history after adding a new job
           fetchCrawlStatus(response.data.id);
@@ -862,6 +919,9 @@ export default defineComponent({
       selectedCrawl,
       selectCrawl,
       simulatedFiles,
+      webhookHeadersJson,
+      webhookMetadataJson,
+      webhookEvents,
       // Expose saveHistory if needed elsewhere, though not strictly necessary for this task
       // saveHistory,
     };

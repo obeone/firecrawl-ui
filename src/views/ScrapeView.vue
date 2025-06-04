@@ -105,17 +105,6 @@
             <small>Enter HTTP headers as JSON object.</small>
           </div>
           <div class="form-group">
-            <label for="action">HTTP Action:</label>
-            <select id="action" v-model="formData.pageOptions.action">
-              <option value="GET">GET</option>
-              <option value="POST">POST</option>
-              <option value="PUT">PUT</option>
-              <option value="DELETE">DELETE</option>
-              <option value="PATCH">PATCH</option>
-            </select>
-            <small>Select HTTP method for the request.</small>
-          </div>
-          <div class="form-group">
             <label for="location">Location:</label>
             <select id="location" v-model="formData.pageOptions.location">
               <option value="">Auto</option>
@@ -134,7 +123,12 @@
         <small>Enter JSON options for extraction. Must be valid JSON.</small>
         <div v-if="extractorOptionsError" class="error-message">{{ extractorOptionsError }}</div>
       </div>
-
+      <div class="form-group">
+        <label for="actions">Actions (JSON array):</label>
+        <textarea id="actions" v-model="actionsJson" rows="6" placeholder='[{"type":"wait","milliseconds":1000}]'></textarea>
+        <small>Specify advanced actions to perform before scraping.</small>
+        <div v-if="actionsError" class="error-message">{{ actionsError }}</div>
+      </div>
 
       <button type="submit">Scrape</button>
     </form>
@@ -195,8 +189,8 @@ interface FormDataPageOptions {
   removeBase64Images?: boolean;
   proxy?: string | 'basic' | 'stealth';
   headers?: Record<string, string>;
-  action?: string;
   location?: string;
+  actions?: any[];
 }
 
 interface FormDataScrapeOptions {
@@ -273,8 +267,8 @@ export default defineComponent({
         removeBase64Images: true, // Default from docs
         proxy: '', // Default to Auto/empty string
         headers: {},
-        action: 'GET',
-        location: ''
+        location: '',
+        actions: [],
       },
       scrapeOptions: {
         onlyMainContent: true, // Default from docs
@@ -328,7 +322,7 @@ export default defineComponent({
         ...(formData.value.pageOptions.removeBase64Images === false && { removeBase64Images: false }), // Default is true
         ...(formData.value.pageOptions.proxy && formData.value.pageOptions.proxy !== '' && { proxy: formData.value.pageOptions.proxy as ('basic' | 'stealth') }),
         ...(formData.value.pageOptions.headers && Object.keys(formData.value.pageOptions.headers).length > 0 && { headers: formData.value.pageOptions.headers }),
-        // Removed incorrect mapping of HTTP action to API actions
+        ...(formData.value.pageOptions.actions && formData.value.pageOptions.actions.length > 0 && { actions: formData.value.pageOptions.actions }),
         ...(formData.value.pageOptions.location && formData.value.pageOptions.location !== '' && { location: { country: formData.value.pageOptions.location } }), // Map location string to Location object with 'country' property
 
         // Include scrapeOptions properties directly
@@ -441,6 +435,20 @@ export default defineComponent({
       }
     });
 
+    // Actions JSON handling
+    const actionsJson = ref(
+      JSON.stringify(formData.value.pageOptions.actions || [], null, 2),
+    );
+    const actionsError = ref('');
+    watch(actionsJson, (val) => {
+      try {
+        formData.value.pageOptions.actions = val ? JSON.parse(val) : [];
+        actionsError.value = '';
+      } catch {
+        actionsError.value = 'Invalid JSON format';
+      }
+    });
+
     return {
       formData,
       loading,
@@ -451,6 +459,8 @@ export default defineComponent({
       downloadResult,
       extractorOptionsJson,
       extractorOptionsError,
+      actionsJson,
+      actionsError,
       ScrapeAndExtractFromUrlRequestFormatsEnum, // Expose enum for template
       isScrapeOptionsCollapsed,
       isPageOptionsCollapsed,
