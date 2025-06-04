@@ -156,23 +156,23 @@ const submitExtraction = async () => {
     }
 
     // Construct the request payload according to OpenAPI spec
-    const requestPayload: ExtractDataRequest = {
+    const requestPayload: any = {
       urls: urlList,
-      // Only include extractionOptions if prompt or schema is provided
-      ...( (extractionPrompt.value || parsedJsonSchema.value) && {
-          extractionOptions: {
-            ...(extractionPrompt.value && { prompt: extractionPrompt.value }),
-            ...(parsedJsonSchema.value && { schema: parsedJsonSchema.value }),
-            // To enable extra options, uncomment and bind to your form:
-            // enableWebSearch: options.value.enableWebSearch,
-            // showSources: options.value.showSources,
-          }
-        }
-      ),
-      // Add scanOptions or scrapeOptions if needed
-      // scanOptions: { ... },
-      // scrapeOptions: { formats: ['markdown'] } // Example
     };
+
+    // Global prompt/schema according to OpenAPI specification
+    if (extractionPrompt.value) {
+      requestPayload.extractionPrompt = extractionPrompt.value;
+    }
+
+    if (parsedJsonSchema.value) {
+      requestPayload.extractionSchema = parsedJsonSchema.value;
+      // When using a schema, ensure JSON output is requested
+      requestPayload.scrapeOptions = {
+        formats: ['json'],
+      };
+    }
+
 
   try {
     console.log("Extraction Payload:", JSON.stringify(requestPayload, null, 2));

@@ -109,10 +109,15 @@ async function onSearch() {
     searchOptions: {
       limit: options.value.maxResults,
     },
+    // Some deployments expect snake_case option names
+    search_options: {
+      limit: options.value.maxResults,
+    },
   }
 
   if (options.value.extractContent) {
     payload.scrapeOptions = { formats: ['markdown'] }
+    payload.scrape_options = { formats: ['markdown'] }
   }
 
   try {

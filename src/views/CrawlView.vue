@@ -676,14 +676,17 @@ export default defineComponent({
       // Construction du payload avec toutes les options du formulaire, y compris maxDepthDiscovery
       const payload: any = {
         url: formData.value.url,
-        excludePaths: formData.value.crawlerOptions.excludes,
-        includePaths: formData.value.crawlerOptions.includes,
-        maxDepth: formData.value.crawlerOptions.maxDepth,
-        maxDepthDiscovery: formData.value.crawlerOptions.maxDepthDiscovery,
-        ignoreSitemap: formData.value.crawlerOptions.ignoreSitemap,
-        limit: formData.value.crawlerOptions.limit,
-        allowBackwardLinks: formData.value.crawlerOptions.navigateBacklinks,
-        allowExternalLinks: formData.value.crawlerOptions.allowExternalLinks,
+        crawlerOptions: {
+          includes: formData.value.crawlerOptions.includes,
+          excludes: formData.value.crawlerOptions.excludes,
+          maxDepth: formData.value.crawlerOptions.maxDepth,
+          maxDepthDiscovery: formData.value.crawlerOptions.maxDepthDiscovery,
+          ignoreSitemap: formData.value.crawlerOptions.ignoreSitemap,
+          limit: formData.value.crawlerOptions.limit,
+          allowPathRevisits: formData.value.crawlerOptions.allowPathRevisits,
+          allowExternalLinks: formData.value.crawlerOptions.allowExternalLinks,
+          navigateBacklinks: formData.value.crawlerOptions.navigateBacklinks,
+        },
         scrapeOptions: {
           formats: formData.value.scrapeOptions.formats,
           onlyMainContent: formData.value.scrapeOptions.onlyMainContent,
@@ -778,28 +781,25 @@ export default defineComponent({
 
           // Update reactive variables with real data
           crawlStatus.value = data.status;
-          // Calculate progress based on processed vs total pages
-          if (
-            data.total !== undefined &&
-            data.total > 0 &&
-            data.processed !== undefined &&
-            data.processed >= 0
-          ) {
-            progress.value = Math.round((data.processed / data.total) * 100);
+          // Calculate progress using either 'processed' or legacy 'completed'
+          const processedCount =
+            data.processed !== undefined ? data.processed : data.completed;
+          if (data.total !== undefined && processedCount !== undefined && data.total > 0) {
+            progress.value = Math.round((processedCount / data.total) * 100);
           } else {
-            progress.value = 0; // Or handle as appropriate if total is 0 or completed is undefined/negative
+            progress.value = 0;
           }
 
           // Update matching history entry with latest status
           const historyItem = crawlHistory.value.find((c) => c.id === jobId);
           if (historyItem) {
             historyItem.status = data.status;
-            historyItem.processed = data.processed;
+            historyItem.processed = processedCount;
             historyItem.total = data.total;
           }
 
           console.log(
-            `Crawl status for ${jobId}: ${data.status}, Processed: ${data.processed}/${data.total}`,
+            `Crawl status for ${jobId}: ${data.status}, Processed: ${processedCount}/${data.total}`,
           );
 
           // Stop polling when completed or failed
