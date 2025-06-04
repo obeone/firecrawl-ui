@@ -285,8 +285,17 @@
       class="download-section"
     >
       <h2>Download Results</h2>
-      <button @click="handleDownload('Archive')">Download Archive</button>
-      <button @click="handleDownload('Full JSON')">Download Full JSON</button>
+      <div class="download-buttons">
+        <button
+          v-for="fmt in formData.scrapeOptions.formats"
+          :key="fmt"
+          @click="handleDownload(fmt)"
+        >
+          Download {{ fmt }}
+        </button>
+        <button @click="handleDownload('Archive')">Download Archive</button>
+        <button @click="handleDownload('Full JSON')">Download Full JSON</button>
+      </div>
     </div>
 
     <!-- Section for crawl history -->
@@ -344,6 +353,7 @@ import {
   computed,
   watch,
 } from "vue";
+import JSZip from "jszip";
 import { useRouter } from "vue-router";
 // Import the crawling API client (adjust import path as needed)
 import {
@@ -631,16 +641,12 @@ export default defineComponent({
      * @param type - The type of download ('Archive' or 'Full JSON').
      */
     const handleDownload = async (type: string) => {
-      // Make async to use await
       console.log(`Handling download of ${type} for the active crawl.`);
-      error.value = ""; // Clear previous errors
+      error.value = "";
 
-      // Ensure there is an active crawl job result with an ID
       if (!result.value || !result.value.id) {
         error.value = "No active crawl job found to download results.";
-        console.error(
-          "Attempted to download without an active crawl job result.",
-        );
+        console.error("Attempted to download without an active crawl job result.");
         return;
       }
 
@@ -648,48 +654,103 @@ export default defineComponent({
 
       try {
         if (type === "Archive") {
-          // Call API to download archive, expecting a Blob response
           const response = await api.crawling.downloadArchive(jobId);
-          const blob = response.data; // Assuming the API client returns the Blob directly
-
-          // Create a temporary URL for the blob and trigger download
+          const blob = response.data;
           const url = window.URL.createObjectURL(blob);
           const link = document.createElement("a");
           link.href = url;
-          link.setAttribute("download", `crawl-archive-${jobId}.zip`); // Suggest a filename
+          link.setAttribute("download", `crawl-archive-${jobId}.zip`);
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-          window.URL.revokeObjectURL(url); // Clean up the object URL
-        } else if (type === "Full JSON") {
-          // Call API to get full JSON result
-          const response = await api.crawling.getCrawlResult(jobId);
-          const jsonData = response.data; // Assuming the API client returns the JSON data
+          window.URL.revokeObjectURL(url);
+          return;
+        }
 
-          // Convert JSON data to a Blob with application/json type
-          const blob = new Blob([JSON.stringify(jsonData, null, 2)], {
+        const { data } = await api.crawling.getCrawlResult(jobId);
+
+        if (type === "Full JSON") {
+          const blob = new Blob([JSON.stringify(data, null, 2)], {
             type: "application/json",
           });
-
-          // Create a temporary URL for the blob and trigger download
           const url = window.URL.createObjectURL(blob);
           const link = document.createElement("a");
           link.href = url;
-          link.setAttribute("download", `crawl-result-${jobId}.json`); // Suggest a filename
+          link.setAttribute("download", `crawl-result-${jobId}.json`);
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-          window.URL.revokeObjectURL(url); // Clean up the object URL
+          window.URL.revokeObjectURL(url);
+          return;
+        }
+
+        const pages = data.data || [];
+        let blob: Blob | null = null;
+
+        if (type === "markdown") {
+          const content = pages
+            .map((p: any) => p.markdown)
+            .filter(Boolean)
+            .join("\n\n---\n\n");
+          blob = new Blob([content], { type: "text/markdown" });
+        } else if (type === "html") {
+          const content = pages
+            .map((p: any) => p.html)
+            .filter(Boolean)
+            .join("\n\n<!-- page -->\n\n");
+          blob = new Blob([content], { type: "text/html" });
+        } else if (type === "rawHtml") {
+          const content = pages
+            .map((p: any) => p.rawHtml)
+            .filter(Boolean)
+            .join("\n\n<!-- page -->\n\n");
+          blob = new Blob([content], { type: "text/html" });
+        } else if (type === "links") {
+          const links = pages.flatMap((p: any) => p.links || []);
+          blob = new Blob([links.join("\n")], { type: "text/plain" });
+        } else if (type.startsWith("screenshot")) {
+          const urls: string[] = pages
+            .map((p: any) => p.screenshot)
+            .filter(Boolean);
+          if (urls.length === 0) {
+            throw new Error("No screenshots available");
+          }
+          const zip = new JSZip();
+          let index = 1;
+          for (const url of urls) {
+            const resp = await fetch(url);
+            const b = await resp.blob();
+            const ext = b.type.split("/").pop() || "png";
+            zip.file(`screenshot-${index}.${ext}`, b);
+            index++;
+          }
+          blob = await zip.generateAsync({ type: "blob" });
+        } else if (type === "json" || type === "changeTracking") {
+          const stripped = pages.map((p: any) => ({
+            url: p.metadata?.sourceURL,
+            [type]: (p as any)[type],
+          }));
+          blob = new Blob([JSON.stringify(stripped, null, 2)], {
+            type: "application/json",
+          });
         } else {
-          // Log a warning for unknown download types
           console.warn(`Unknown download type: ${type}`);
+          return;
+        }
+
+        if (blob) {
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          const extension = type === "links" ? "txt" : type;
+          link.href = url;
+          link.setAttribute("download", `crawl-${jobId}-${extension}`);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
         }
       } catch (err: any) {
-        // Handle any errors during the API call or download process
-        console.error(
-          `Error during ${type} download for job ID ${jobId}:`,
-          err,
-        );
+        console.error(`Error during ${type} download for job ID ${jobId}:`, err);
         error.value = `Failed to download ${type}. ${err.message || err}`;
       }
     };
@@ -1016,6 +1077,10 @@ export default defineComponent({
 
 .download-section {
   margin-top: 20px;
+}
+
+.download-buttons button {
+  margin-right: 10px;
 }
 
 .error-icon {
