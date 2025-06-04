@@ -19,7 +19,9 @@ import type { Configuration } from './configuration';
 import type { AxiosPromise, AxiosInstance, RawAxiosRequestConfig } from 'axios';
 import globalAxios from 'axios';
 
-export const BASE_PATH = "http://docker.internal.snapp.fr:8003/v1".replace(/\/+$/, "");
+// Default to the public Firecrawl API base URL. The Configuration object
+// can override this value at runtime.
+export const BASE_PATH = "https://api.firecrawl.dev/v1".replace(/\/+$/, "");
 
 /**
  *

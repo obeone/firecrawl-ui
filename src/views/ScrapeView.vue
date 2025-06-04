@@ -1,6 +1,7 @@
 <template>
   <div class="scrape-view">
     <h1>Scrape Configuration</h1>
+    <router-link to="/scrape/history">View History</router-link>
     
     <form @submit.prevent="handleSubmit">
       <div class="form-group">
@@ -157,6 +158,7 @@
           <button @click="downloadResult('json')">Download JSON</button>
           <button @click="downloadResult('csv')">Download CSV</button>
           <button @click="downloadResult('txt')">Download Text</button>
+          <button @click="downloadResult('archive')">Download ZIP</button>
         </div>
       </div>
       <pre>{{ result }}</pre>
@@ -179,6 +181,9 @@ import {
   type ScrapeAndExtractFromUrlRequestExtract, // Correct type for extractor options
   // type ScrapeAndExtractFromUrlRequestChangeTrackingOptions // Example if it existed
 } from '../api-client/api'
+import JSZip from 'jszip'
+import { saveAs } from 'file-saver'
+import { useHistory } from '../composables/useHistory'
 
 type ScrapeResult = ScrapeResponse
 
@@ -289,6 +294,7 @@ export default defineComponent({
     const loading = ref(false)
     const error = ref('')
     const result = ref<ScrapeResult | null>(null)
+    const { add } = useHistory('scrape')
 
     const isValidUrl = (url: string) => {
       try {
@@ -351,6 +357,7 @@ export default defineComponent({
         console.log('Sending scrape request:', JSON.stringify(requestPayload, null, 2)); // Log payload for debugging
         const response = await api.scraping.scrapeAndExtractFromUrl(requestPayload)
         result.value = response.data
+        add({ id: Date.now().toString(), type: 'scrape', status: 'completed', createdAt: Date.now(), result: response.data })
       } catch (err: unknown) {
         if (err instanceof Error) {
           if (err.message.includes('401')) {
@@ -372,7 +379,7 @@ export default defineComponent({
 
     const downloadResult = (format: string) => {
       if (!result.value?.data) return
-      
+
       let dataStr, mimeType, extension
       const dataToExport = result.value.data
       
@@ -393,6 +400,21 @@ export default defineComponent({
           extension = 'txt'
           break
           
+        case 'archive':
+          const zip = new JSZip()
+          if (dataToExport.screenshot) {
+            zip.file('screenshot.png', dataToExport.screenshot, { base64: true })
+          }
+          if (dataToExport.screenshot_full_page) {
+            zip.file('screenshot_full.png', dataToExport.screenshot_full_page, { base64: true })
+          }
+          if (dataToExport.html) {
+            zip.file('page.html', dataToExport.html)
+          }
+          zip.generateAsync({ type: 'blob' }).then(blob => {
+            saveAs(blob, 'scrape-result.zip')
+          })
+          return
         default: // json
           dataStr = JSON.stringify(dataToExport, null, 2)
           mimeType = 'application/json'

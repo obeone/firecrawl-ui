@@ -1,110 +1,128 @@
 <template>
   <div class="search-view">
+    <router-link to="/search/history">View History</router-link>
     <form @submit.prevent="onSearch" class="search-form">
       <label for="query">Search Query:</label>
       <input
         id="query"
-        v-model="query"
+        v-model="form.query"
         type="text"
         placeholder="Enter search terms"
         required
       />
 
       <fieldset class="advanced-options">
-        <legend>Advanced Options</legend>
+        <legend>Options</legend>
         <label>
-          <input type="checkbox" v-model="options.includeMetadata" />
-          Include metadata in results
+          Limit:
+          <input type="number" v-model.number="form.searchOptions.limit" min="1" max="50" />
         </label>
         <label>
-          <input type="checkbox" v-model="options.extractContent" />
-          Enable content extraction
+          Language:
+          <input type="text" v-model="form.searchOptions.language" placeholder="en" />
         </label>
         <label>
-          Max results:
-          <input
-            type="number"
-            v-model.number="options.maxResults"
-            min="1"
-            max="100"
-          />
+          Country:
+          <input type="text" v-model="form.searchOptions.country" placeholder="US" />
         </label>
+      </fieldset>
+
+      <fieldset class="advanced-options">
+        <legend>Scrape Formats</legend>
+        <select v-model="form.scrapeOptions.formats" multiple>
+          <option value="markdown">Markdown</option>
+          <option value="html">HTML</option>
+          <option value="rawHtml">Raw HTML</option>
+          <option value="links">Links</option>
+          <option value="json">JSON</option>
+        </select>
       </fieldset>
 
       <button type="submit">Search</button>
     </form>
 
+    <div v-if="loading" class="status loading">
+      <div class="spinner"></div>
+      <span>Searching...</span>
+    </div>
+
+    <div v-if="error" class="status error">{{ error }}</div>
+
     <section v-if="results.length" class="results">
       <h2>Search Results</h2>
       <ul>
-        <li v-for="(result, index) in results" :key="index" class="result-item">
-          <a :href="result.link" target="_blank" rel="noopener noreferrer">{{ result.title }}</a>
-          <div v-if="options.includeMetadata" class="metadata">
-            <small>{{ result.metadata }}</small>
-          </div>
-          <button
-            v-if="options.extractContent"
-            @click="extractContent(result)"
-            class="extract-button"
-          >
-            Extract Content
-          </button>
-          <div v-if="result.extractedContent" class="extracted-content">
-            <h3>Extracted Content</h3>
-            <p>{{ result.extractedContent }}</p>
-          </div>
+        <li v-for="(r, idx) in results" :key="idx" class="result-item">
+          <a :href="r.url" target="_blank" rel="noopener noreferrer">{{ r.title }}</a>
+          <p>{{ r.description }}</p>
         </li>
       </ul>
+      <button @click="downloadJson">Download JSON</button>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import axios from 'axios'
+import apiConfig from '../config/api'
+import { useHistory } from '../composables/useHistory'
 
-interface SearchResult {
-  title: string
-  link: string
-  metadata?: string
-  extractedContent?: string
+interface SearchOptions {
+  limit?: number
+  language?: string
+  country?: string
 }
 
-const query = ref('')
-const options = ref({
-  includeMetadata: true,
-  extractContent: false,
-  maxResults: 10,
+interface SearchResult {
+  url: string
+  title: string
+  description: string
+}
+
+const { add } = useHistory('search')
+
+const form = ref({
+  query: '',
+  searchOptions: {
+    limit: 10,
+    language: '',
+    country: ''
+  } as SearchOptions,
+  scrapeOptions: { formats: [] as string[] }
 })
 
 const results = ref<SearchResult[]>([])
+const loading = ref(false)
+const error = ref('')
 
-/**
- * Simulate a search operation.
- * In a real app, this would call an API.
- */
-function onSearch() {
-  // Clear previous results
-  results.value = []
-
-  // Simulate search results
-  for (let i = 1; i <= options.value.maxResults; i++) {
-    results.value.push({
-      title: `Result for "${query.value}" #${i}`,
-      link: `https://example.com/search?q=${encodeURIComponent(query.value)}&result=${i}`,
-      metadata: options.value.includeMetadata ? `Metadata info #${i}` : undefined,
-    })
+async function onSearch() {
+  try {
+    loading.value = true
+    error.value = ''
+    results.value = []
+    const payload: any = {
+      query: form.value.query,
+      searchOptions: { ...form.value.searchOptions },
+      ...(form.value.scrapeOptions.formats.length && { scrapeOptions: { formats: form.value.scrapeOptions.formats } })
+    }
+    const { data } = await axios.post(`${apiConfig.basePath}/search`, payload, apiConfig.baseOptions)
+    results.value = data.data || []
+    add({ id: Date.now().toString(), type: 'search', status: 'completed', createdAt: Date.now(), result: data })
+  } catch (e: any) {
+    error.value = e.message || 'Error'
+  } finally {
+    loading.value = false
   }
 }
 
-/**
- * Simulate content extraction from a result.
- * @param result The search result to extract content from.
- */
-function extractContent(result: SearchResult) {
-  // Simulate extraction delay
-  setTimeout(() => {
-    result.extractedContent = `Extracted content for "${result.title}".`
-  }, 500)
+function downloadJson() {
+  const blob = new Blob([JSON.stringify(results.value, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'search-results.json'
+  a.click()
+  URL.revokeObjectURL(url)
 }
 </script>
 

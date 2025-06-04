@@ -1,6 +1,7 @@
 <template>
   <div class="extract-view">
     <h1>Extraction de Données</h1>
+    <router-link to="/extract/history">Voir l'historique</router-link>
 
     <!-- Formulaire pour les URLs et les options -->
     <form @submit.prevent="submitExtraction">
@@ -40,7 +41,9 @@
     </form>
 
     <!-- Affichage des résultats -->
-    <div v-if="loading && !results" class="loading">Extraction en cours...</div>
+    <div v-if="loading && !results" class="loading">Extraction en cours...
+      <ProgressBar :value="progress" />
+    </div>
     <div v-if="error" class="error">Erreur : {{ error }}</div>
     <div v-if="results" class="results">
       <div class="results-header">
@@ -53,8 +56,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject, watch } from 'vue';
-import type { ExtractionApi, ExtractDataRequest, ExtractResponse } from '@/api-client'; // Assurez-vous que le chemin est correct
+import { ref, computed, inject, watch } from 'vue'
+import axios from 'axios'
+import type { ExtractionApi, ExtractResponse } from '@/api-client'
+import apiConfig from '../config/api'
+import { useHistory } from '../composables/useHistory'
+import ProgressBar from '../components/ProgressBar.vue'
 
 // Injecter le client API
 const api = inject<{ extraction: ExtractionApi }>('api');
@@ -70,6 +77,8 @@ const loading = ref(false);
 const error = ref<string | null>(null);
 const results = ref<ExtractResponse['data'] | null>(null); // Store extraction results
 const schemaError = ref<string | null>(null); // Store JSON schema parsing errors
+const progress = ref(0)
+const { add, update } = useHistory('extract')
 
 // --- Computed Properties ---
 
@@ -120,6 +129,7 @@ const submitExtraction = async () => {
   }
 
   loading.value = true;
+  progress.value = 0;
   error.value = null;
   // Keep previous results visible during loading? Optional: results.value = null;
 
@@ -151,25 +161,28 @@ const submitExtraction = async () => {
   };
 
   try {
-    console.log("Payload d'extraction:", JSON.stringify(requestPayload, null, 2));
-    // Call the API using the injected client
-    const response = await api.extraction.extract(requestPayload);
-
-    if (response.success && response.data) {
-      results.value = response.data; // Store the successful results
-      error.value = null; // Clear any previous error
-    } else {
-      // Handle cases where API returns success: false or no data
-      throw new Error(response.error || "L'extraction a échoué sans message d'erreur spécifique.");
+    const { data } = await axios.post(`${apiConfig.basePath}/extract`, requestPayload, apiConfig.baseOptions)
+    const id = data.id
+    add({ id, type: 'extract', status: 'extracting', createdAt: Date.now() })
+    while (true) {
+      const res = await axios.get(`${apiConfig.basePath}/extract/${id}`, apiConfig.baseOptions)
+      const status = res.data.status
+      update(id, { status, result: res.data })
+      if (status === 'completed' || status === 'failed') {
+        results.value = res.data.data
+        break
+      }
+      if (res.data.total) {
+        progress.value = Math.round((res.data.processed / res.data.total) * 100)
+      }
+      await new Promise(r => setTimeout(r, 2000))
     }
   } catch (err: any) {
-    // Handle API call errors (network, server errors, etc.)
-    const errorMessage = err.response?.data?.error || err.message || 'Une erreur inconnue est survenue';
-    error.value = `Erreur lors de l'extraction : ${errorMessage}`;
-    results.value = null; // Clear results on error
-    console.error("Erreur d'extraction API:", err.response?.data || err);
+    const errorMessage = err.response?.data?.error || err.message || 'Une erreur inconnue est survenue'
+    error.value = `Erreur lors de l'extraction : ${errorMessage}`
+    results.value = null
   } finally {
-    loading.value = false; // Stop loading indicator
+    loading.value = false
   }
 };
 

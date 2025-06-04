@@ -1,30 +1,43 @@
 <template>
   <div class="map-view">
-    <h2>MapView Component</h2>
+    <h2>Map Website URLs</h2>
+    <router-link to="/map/history">View History</router-link>
     <form @submit.prevent="handleSubmit" class="map-form">
       <div class="form-group">
         <label for="baseUrl">Base URL:</label>
-        <input
-          id="baseUrl"
-          v-model="baseUrl"
-          type="url"
-          placeholder="Enter base URL"
-          required
-        />
+        <input id="baseUrl" v-model="form.url" type="url" required placeholder="https://example.com" />
       </div>
 
       <div class="form-group">
-        <label for="mappingOptions">Mapping Options (JSON):</label>
-        <textarea
-          id="mappingOptions"
-          v-model="mappingOptionsText"
-          placeholder='e.g. { "key": "value" }'
-          rows="5"
-        ></textarea>
+        <label for="query">Search Query (optional):</label>
+        <input id="query" v-model="form.search" type="text" placeholder="keywords" />
       </div>
 
-      <button type="submit">Find URLs</button>
+      <div class="grid-layout">
+        <label><input type="checkbox" v-model="form.ignoreSitemap" /> Ignore Sitemap</label>
+        <label><input type="checkbox" v-model="form.sitemapOnly" /> Sitemap Only</label>
+        <label><input type="checkbox" v-model="form.includeSubdomains" /> Include Subdomains</label>
+      </div>
+
+      <div class="form-group">
+        <label for="limit">Limit:</label>
+        <input id="limit" v-model.number="form.limit" type="number" min="1" />
+      </div>
+
+      <div class="form-group">
+        <label for="timeout">Timeout (ms):</label>
+        <input id="timeout" v-model.number="form.timeout" type="number" min="0" />
+      </div>
+
+      <button type="submit">Map</button>
     </form>
+
+    <div v-if="loading" class="status loading">
+      <div class="spinner"></div>
+      <span>Processing...</span>
+    </div>
+
+    <div v-if="error" class="status error">{{ error }}</div>
 
     <div v-if="urls.length" class="results">
       <h3>Found URLs</h3>
@@ -36,39 +49,55 @@
   </div>
 </template>
 
-<script setup>
-import { ref } from 'vue';
+<script setup lang="ts">
+import { ref, inject } from 'vue'
+import type { MappingApi } from '../api-client'
+import { useHistory } from '../composables/useHistory'
 
 /**
  * MapView component logic
- * - baseUrl: the base URL input by the user
- * - mappingOptionsText: JSON string for mapping options input
- * - urls: array of found URLs to display
+ * Uses MappingApi.mapUrls to retrieve URLs from a website
  */
-const baseUrl = ref('');
-const mappingOptionsText = ref('');
-const urls = ref([]);
+const api = inject('api') as { mapping: MappingApi }
+const { add } = useHistory('map')
+const form = ref({
+  url: '',
+  search: '',
+  ignoreSitemap: false,
+  sitemapOnly: false,
+  includeSubdomains: false,
+  limit: undefined as number | undefined,
+  timeout: undefined as number | undefined
+})
+const loading = ref(false)
+const error = ref('')
+const urls = ref<string[]>([])
 
 /**
- * Handle form submission
- * Parses mapping options JSON and simulates URL finding logic
+ * Handle form submission using the API
  */
-function handleSubmit() {
-  let options = {};
+async function handleSubmit() {
   try {
-    options = mappingOptionsText.value ? JSON.parse(mappingOptionsText.value) : {};
-  } catch (e) {
-    alert('Invalid JSON in mapping options');
-    return;
+    loading.value = true
+    error.value = ''
+    urls.value = []
+    const payload: any = {
+      url: form.value.url,
+      ...(form.value.search && { search: form.value.search }),
+      ...(form.value.ignoreSitemap && { ignoreSitemap: true }),
+      ...(form.value.sitemapOnly && { sitemapOnly: true }),
+      ...(form.value.includeSubdomains && { includeSubdomains: true }),
+      ...(form.value.limit && { limit: form.value.limit }),
+      ...(form.value.timeout && { pageOptions: { timeout: form.value.timeout } })
+    }
+    const response = await api.mapping.mapUrls(payload)
+    urls.value = response.data.data || []
+    add({ id: Date.now().toString(), type: 'map', status: 'completed', createdAt: Date.now(), result: response.data })
+  } catch (e: any) {
+    error.value = e.message || 'Error'
+  } finally {
+    loading.value = false
   }
-
-  // Simulate URL finding logic based on baseUrl and options
-  // For demonstration, just create some dummy URLs
-  urls.value = [
-    baseUrl.value,
-    baseUrl.value + '/page1',
-    baseUrl.value + '/page2?param=' + (options.param || 'default'),
-  ];
 }
 
 /**

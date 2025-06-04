@@ -1,6 +1,7 @@
 <template>
   <div class="crawl-view">
     <h1>Crawl Configuration</h1>
+    <router-link to="/crawl/history">View History</router-link>
     <form @submit.prevent="handleSubmit">
       <!-- URL Section -->
       <div class="form-group">
@@ -113,6 +114,7 @@
     <div v-if="loading" class="status loading">
       <div class="spinner"></div>
       <span>Processing your request...</span>
+      <ProgressBar :value="progress" />
     </div>
 
     <div v-if="error" class="status error">
@@ -138,6 +140,8 @@ import { defineComponent, ref, inject } from 'vue'
 import { useRouter } from 'vue-router'
 // Import the crawling API client (adjust import path as needed)
 import { type CrawlingApi } from '../api-client/api'
+import { useHistory } from '../composables/useHistory'
+import ProgressBar from '../components/ProgressBar.vue'
 
 /**
  * Interface for Crawler Options section of the form.
@@ -185,6 +189,7 @@ interface FormData {
 
 export default defineComponent({
   name: 'CrawlView',
+  components: { ProgressBar },
   setup() {
     const router = useRouter()
     const api = inject('api') as { crawling: CrawlingApi }
@@ -241,6 +246,8 @@ export default defineComponent({
     const loading = ref(false)
     const error = ref('')
     const result = ref<any>(null)
+    const progress = ref(0)
+    const { add, update } = useHistory('crawl')
 
     /**
      * Validate a URL string.
@@ -292,14 +299,34 @@ export default defineComponent({
         payload.webhookOptions = { ...formData.value.webhookOptions }
       }
 
+      const pollStatus = async (id: string) => {
+        try {
+          while (true) {
+            const statusRes = await api.crawling.getCrawlStatus(id)
+            const data = statusRes.data as any
+            update(id, { status: data.status, result: data })
+            if (data.total) {
+              progress.value = Math.round((data.processed / data.total) * 100)
+            }
+            if (data.status === 'completed' || data.status === 'failed') {
+              result.value = data
+              break
+            }
+            await new Promise(r => setTimeout(r, 2000))
+          }
+        } finally {
+          loading.value = false
+        }
+      }
+
       try {
         loading.value = true
         error.value = ''
         result.value = null
-        // Call the crawling API (adjust method name as needed)
-        // @ts-ignore
         const response = await api.crawling.crawlUrls(payload)
-        result.value = response.data
+        const id = response.data.id
+        add({ id, type: 'crawl', status: 'crawling', createdAt: Date.now() })
+        await pollStatus(id)
       } catch (err: unknown) {
         if (err instanceof Error) {
           if (err.message.includes('401')) {
@@ -328,6 +355,7 @@ export default defineComponent({
       loading,
       error,
       result,
+      progress,
       handleSubmit,
     }
   }
