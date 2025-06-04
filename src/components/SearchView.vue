@@ -49,7 +49,7 @@
           >
             Extract Content
           </button>
-          <div v-if="result.extractedContent" class="extracted-content">
+          <div v-if="result.showContent && result.extractedContent" class="extracted-content">
             <h3>Extracted Content</h3>
             <p>{{ result.extractedContent }}</p>
           </div>
@@ -61,12 +61,30 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import axios from 'axios'
+
+function getBaseUrl() {
+  return (
+    localStorage.getItem('firecrawl_base_url') ||
+    import.meta.env.VITE_FIRECRAWL_API_BASE_URL ||
+    'https://api.firecrawl.dev/v1'
+  )
+}
+
+function getApiKey() {
+  return (
+    localStorage.getItem('firecrawl_api_key') ||
+    import.meta.env.VITE_FIRECRAWL_API_KEY ||
+    ''
+  )
+}
 
 interface SearchResult {
   title: string
   link: string
   metadata?: string
   extractedContent?: string
+  showContent?: boolean
 }
 
 const query = ref('')
@@ -82,17 +100,41 @@ const results = ref<SearchResult[]>([])
  * Simulate a search operation.
  * In a real app, this would call an API.
  */
-function onSearch() {
+async function onSearch() {
   // Clear previous results
   results.value = []
 
-  // Simulate search results
-  for (let i = 1; i <= options.value.maxResults; i++) {
-    results.value.push({
-      title: `Result for "${query.value}" #${i}`,
-      link: `https://example.com/search?q=${encodeURIComponent(query.value)}&result=${i}`,
-      metadata: options.value.includeMetadata ? `Metadata info #${i}` : undefined,
+  const payload: any = {
+    query: query.value,
+    searchOptions: {
+      limit: options.value.maxResults,
+    },
+  }
+
+  if (options.value.extractContent) {
+    payload.scrapeOptions = { formats: ['markdown'] }
+  }
+
+  try {
+    const response = await axios.post(`${getBaseUrl()}/search`, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(getApiKey() && { Authorization: `Bearer ${getApiKey()}` }),
+      },
     })
+
+    if (response.data && response.data.success) {
+      results.value = response.data.data.map((item: any) => ({
+        title: item.title,
+        link: item.url,
+        metadata: item.description,
+        extractedContent: item.markdown,
+      }))
+    } else {
+      console.error('Search failed:', response.data)
+    }
+  } catch (e) {
+    console.error('Search API error:', e)
   }
 }
 
@@ -101,10 +143,7 @@ function onSearch() {
  * @param result The search result to extract content from.
  */
 function extractContent(result: SearchResult) {
-  // Simulate extraction delay
-  setTimeout(() => {
-    result.extractedContent = `Extracted content for "${result.title}".`
-  }, 500)
+  result.showContent = !result.showContent
 }
 </script>
 

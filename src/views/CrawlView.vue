@@ -778,20 +778,28 @@ export default defineComponent({
 
           // Update reactive variables with real data
           crawlStatus.value = data.status;
-          // Calculate progress based on completed vs total pages
+          // Calculate progress based on processed vs total pages
           if (
             data.total !== undefined &&
             data.total > 0 &&
-            data.completed !== undefined &&
-            data.completed >= 0
+            data.processed !== undefined &&
+            data.processed >= 0
           ) {
-            progress.value = Math.round((data.completed / data.total) * 100);
+            progress.value = Math.round((data.processed / data.total) * 100);
           } else {
             progress.value = 0; // Or handle as appropriate if total is 0 or completed is undefined/negative
           }
 
+          // Update matching history entry with latest status
+          const historyItem = crawlHistory.value.find((c) => c.id === jobId);
+          if (historyItem) {
+            historyItem.status = data.status;
+            historyItem.processed = data.processed;
+            historyItem.total = data.total;
+          }
+
           console.log(
-            `Crawl status for ${jobId}: ${data.status}, Completed: ${data.completed}/${data.total}`,
+            `Crawl status for ${jobId}: ${data.status}, Processed: ${data.processed}/${data.total}`,
           );
 
           // Stop polling when completed or failed

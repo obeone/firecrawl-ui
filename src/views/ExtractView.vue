@@ -177,14 +177,14 @@ const submitExtraction = async () => {
   try {
     console.log("Extraction Payload:", JSON.stringify(requestPayload, null, 2));
     // Call the API using the injected client
-    const response = await api.extraction!.extract(requestPayload);
+    const response = await api.extraction!.extractData(requestPayload);
 
-    if (response.success && response.data) {
-      results.value = response.data; // Store the successful results
+    if (response.data.success && response.data.data) {
+      results.value = response.data.data; // Store the successful results
       error.value = null; // Clear any previous error
     } else {
       // Handle cases where API returns success: false or no data
-      throw new Error(response.error || "Extraction failed without a specific error message.");
+      throw new Error(response.data.error || "Extraction failed without a specific error message.");
     }
   } catch (err: any) {
     // Handle API call errors (network, server errors, etc.)
