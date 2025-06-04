@@ -1,108 +1,228 @@
 <template>
-  <div class="crawl-view">
+  <div class="scrape-config-container">
     <h1>Crawl Configuration</h1>
-    <form @submit.prevent="handleSubmit">
+    <form class="scrape-config-form" @submit.prevent="handleSubmit">
       <!-- URL Section -->
       <div class="form-group">
         <label for="url">Base URL to Crawl:</label>
-        <input id="url" v-model="formData.url" type="text" required placeholder="https://example.com" />
+        <input
+          id="url"
+          v-model="formData.url"
+          type="text"
+          required
+          placeholder="https://example.com"
+        />
       </div>
 
       <!-- Crawler Options Section -->
       <fieldset class="form-group options-fieldset">
-        <legend>Crawler Options</legend>
-        <div class="grid-layout">
-          <div class="form-group">
-            <label for="includes">Includes (Regex Patterns):</label>
-            <input id="includes" v-model="includesInput" type="text" placeholder="/blog/.*, /products/.*" @blur="parseIncludes" />
-            <small>Comma-separated regex patterns. Only matching URLs will be included.</small>
+        <legend
+          class="collapsible-header"
+          @click="isCrawlerOptionsCollapsed = !isCrawlerOptionsCollapsed"
+        >
+          Crawler Options
+        </legend>
+        <div v-show="!isCrawlerOptionsCollapsed">
+          <div class="grid-layout">
+            <div class="form-group">
+              <label for="includes">Includes (Regex Patterns):</label>
+              <input
+                id="includes"
+                v-model="includesInput"
+                type="text"
+                placeholder="/blog/.*, /products/.*"
+                @blur="parseIncludes"
+              />
+              <small
+                >Comma-separated regex patterns. Only matching URLs will be
+                included.</small
+              >
+            </div>
+            <div class="form-group">
+              <label for="excludes">Excludes (Regex Patterns):</label>
+              <input
+                id="excludes"
+                v-model="excludesInput"
+                type="text"
+                placeholder="/login, /private/.*"
+                @blur="parseExcludes"
+              />
+              <small>Comma-separated regex patterns to exclude URLs.</small>
+            </div>
+            <div class="form-group">
+              <label for="maxDepth">Max Depth:</label>
+              <input
+                id="maxDepth"
+                v-model.number="formData.crawlerOptions.maxDepth"
+                type="number"
+                min="1"
+                placeholder="e.g. 3"
+              />
+              <small
+                >Maximum depth relative to the base URL (path segments).</small
+              >
+            </div>
+            <div class="form-group">
+              <label for="maxDepthDiscovery">Max Discovery Depth:</label>
+              <input
+                id="maxDepthDiscovery"
+                v-model.number="formData.crawlerOptions.maxDepthDiscovery"
+                type="number"
+                min="1"
+                placeholder="e.g. 2"
+              />
+              <small>Maximum depth based on discovery order.</small>
+            </div>
+            <div class="form-group">
+              <label for="limit">Page Limit:</label>
+              <input
+                id="limit"
+                v-model.number="formData.crawlerOptions.limit"
+                type="number"
+                min="1"
+                placeholder="e.g. 100"
+              />
+              <small>Maximum number of pages to crawl (default: 10000).</small>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="excludes">Excludes (Regex Patterns):</label>
-            <input id="excludes" v-model="excludesInput" type="text" placeholder="/login, /private/.*" @blur="parseExcludes" />
-            <small>Comma-separated regex patterns to exclude URLs.</small>
+          <div class="grid-layout">
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                v-model="formData.crawlerOptions.ignoreSitemap"
+              />
+              Ignore Sitemap
+            </label>
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                v-model="formData.crawlerOptions.allowPathRevisits"
+              />
+              Allow Path Revisits
+            </label>
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                v-model="formData.crawlerOptions.allowExternalLinks"
+              />
+              Allow External Links
+            </label>
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                v-model="formData.crawlerOptions.navigateBacklinks"
+              />
+              Navigate Backlinks
+            </label>
           </div>
-          <div class="form-group">
-            <label for="maxDepth">Max Depth:</label>
-            <input id="maxDepth" v-model.number="formData.crawlerOptions.maxDepth" type="number" min="1" placeholder="e.g. 3" />
-            <small>Maximum depth relative to the base URL (path segments).</small>
-          </div>
-          <div class="form-group">
-            <label for="maxDepthDiscovery">Max Discovery Depth:</label>
-            <input id="maxDepthDiscovery" v-model.number="formData.crawlerOptions.maxDepthDiscovery" type="number" min="1" placeholder="e.g. 2" />
-            <small>Maximum depth based on discovery order.</small>
-          </div>
-          <div class="form-group">
-            <label for="limit">Page Limit:</label>
-            <input id="limit" v-model.number="formData.crawlerOptions.limit" type="number" min="1" placeholder="e.g. 100" />
-            <small>Maximum number of pages to crawl (default: 10000).</small>
-          </div>
-        </div>
-        <div class="grid-layout">
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="formData.crawlerOptions.ignoreSitemap" />
-            Ignore Sitemap
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="formData.crawlerOptions.allowPathRevisits" />
-            Allow Path Revisits
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="formData.crawlerOptions.allowExternalLinks" />
-            Allow External Links
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="formData.crawlerOptions.navigateBacklinks" />
-            Navigate Backlinks
-          </label>
         </div>
       </fieldset>
 
       <!-- Scrape Options Section -->
       <fieldset class="form-group options-fieldset">
-        <legend>Scrape Options</legend>
-        <div class="form-group">
-          <label for="formats">Output Formats:</label>
-          <select id="formats" v-model="formData.scrapeOptions.formats" multiple>
-            <option value="markdown">Markdown</option>
-            <option value="html">HTML</option>
-            <option value="rawHtml">Raw HTML</option>
-            <option value="links">Links</option>
-            <option value="screenshot">Screenshot (Viewport)</option>
-            <option value="screenshot@fullPage">Screenshot (Full Page)</option>
-            <option value="json">JSON</option>
-            <option value="changeTracking">Change Tracking</option>
-          </select>
-          <small>Select one or more formats.</small>
+        <legend
+          class="collapsible-header"
+          @click="isScrapeOptionsCollapsed = !isScrapeOptionsCollapsed"
+        >
+          Scrape Options
+        </legend>
+        <div v-show="!isScrapeOptionsCollapsed">
+          <div class="form-group">
+            <label for="formats">Output Formats:</label>
+            <select
+              id="formats"
+              v-model="formData.scrapeOptions.formats"
+              multiple
+            >
+              <option value="markdown">Markdown</option>
+              <option value="html">HTML</option>
+              <option value="rawHtml">Raw HTML</option>
+              <option value="links">Links</option>
+              <option value="screenshot">Screenshot (Viewport)</option>
+              <option value="screenshot@fullPage">
+                Screenshot (Full Page)
+              </option>
+              <option value="json">JSON</option>
+              <option value="changeTracking">Change Tracking</option>
+            </select>
+            <small>Select one or more formats.</small>
+          </div>
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              v-model="formData.scrapeOptions.onlyMainContent"
+            />
+            Only Main Content (exclude headers, footers, etc.)
+          </label>
+          <div class="form-group">
+            <label for="includeTags">Include Tags (CSS Selectors):</label>
+            <input
+              id="includeTags"
+              v-model="includeTagsInput"
+              type="text"
+              placeholder="article, .main-content"
+              @blur="parseIncludeTags"
+            />
+            <small
+              >Comma-separated CSS selectors. Only content within these tags
+              will be included.</small
+            >
+          </div>
+          <div class="form-group">
+            <label for="excludeTags">Exclude Tags (CSS Selectors):</label>
+            <input
+              id="excludeTags"
+              v-model="excludeTagsInput"
+              type="text"
+              placeholder="footer, .sidebar"
+              @blur="parseExcludeTags"
+            />
+            <small
+              >Comma-separated CSS selectors to exclude content within these
+              tags.</small
+            >
+          </div>
         </div>
-        <label class="checkbox-label">
-          <input type="checkbox" v-model="formData.scrapeOptions.onlyMainContent" />
-          Only Main Content (exclude headers, footers, etc.)
-        </label>
-        <!-- TODO: Add includeTags and excludeTags if needed -->
       </fieldset>
 
       <!-- Webhook Options Section -->
       <fieldset class="form-group options-fieldset">
-        <legend>Webhook Options (Optional)</legend>
-        <div class="grid-layout">
-          <div class="form-group">
-            <label for="webhookUrl">Webhook URL:</label>
-            <input id="webhookUrl" v-model="formData.webhookOptions.url" type="text" placeholder="https://your-service.com/webhook" />
-          </div>
-          <div class="form-group">
-            <label for="webhookSecret">Webhook Secret:</label>
-            <input id="webhookSecret" v-model="formData.webhookOptions.secret" type="text" placeholder="Secret for verification" />
-          </div>
-          <div class="form-group">
-            <label for="webhookEvent">Webhook Event:</label>
-            <select id="webhookEvent" v-model="formData.webhookOptions.event">
-              <option value="">Select event</option>
-              <option value="started">Started</option>
-              <option value="page">Page</option>
-              <option value="completed">Completed</option>
-              <option value="failed">Failed</option>
-            </select>
+        <legend
+          class="collapsible-header"
+          @click="isWebhookOptionsCollapsed = !isWebhookOptionsCollapsed"
+        >
+          Webhook Options (Optional)
+        </legend>
+        <div v-show="!isWebhookOptionsCollapsed">
+          <div class="grid-layout">
+            <div class="form-group">
+              <label for="webhookUrl">Webhook URL:</label>
+              <input
+                id="webhookUrl"
+                v-model="formData.webhookOptions.url"
+                type="text"
+                placeholder="https://your-service.com/webhook"
+              />
+            </div>
+            <div class="form-group">
+              <label for="webhookSecret">Webhook Secret:</label>
+              <input
+                id="webhookSecret"
+                v-model="formData.webhookOptions.secret"
+                type="text"
+                placeholder="Secret for verification"
+              />
+            </div>
+            <div class="form-group">
+              <label for="webhookEvent">Webhook Event:</label>
+              <select id="webhookEvent" v-model="formData.webhookOptions.event">
+                <option value="">Select event</option>
+                <option value="started">Started</option>
+                <option value="page">Page</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
           </div>
         </div>
       </fieldset>
@@ -130,14 +250,90 @@
       </div>
       <pre>{{ result }}</pre>
     </div>
+
+    <!-- Section for active crawl status -->
+    <div v-if="crawling" class="crawl-status-section">
+      <h2>Crawl Status</h2>
+      <p>Status: {{ crawlStatus }}</p>
+      <div class="progress-container">
+        <div class="progress-bar" :style="{ width: progress + '%' }"></div>
+      </div>
+      <p>{{ progress }}% Completed</p>
+    </div>
+
+    <!-- Section for download options after crawl completion -->
+    <div
+      v-if="progress === 100 && crawlStatus === 'completed'"
+      class="download-section"
+    >
+      <h2>Download Results</h2>
+      <button @click="handleDownload('Archive')">Download Archive</button>
+      <button @click="handleDownload('Full JSON')">Download Full JSON</button>
+    </div>
+
+    <!-- Section for crawl history -->
+    <div class="crawl-history-section">
+      <h2>Crawl History</h2>
+      <div v-if="crawlHistory.length > 0">
+        <ul>
+          <li
+            v-for="crawl in crawlHistory"
+            :key="crawl.id"
+            @click="selectCrawl(crawl.id)"
+            :class="{ 'selected-crawl': selectedCrawlId === crawl.id }"
+          >
+            <strong>ID:</strong> {{ crawl.id }} | <strong>Date:</strong>
+            {{ new Date(crawl.createdAt).toLocaleString() }} |
+            <strong>Status:</strong> {{ crawl.status }}
+            <button @click.stop="selectCrawl(crawl.id)">
+              View Details / Access Files
+            </button>
+          </li>
+        </ul>
+      </div>
+      <div v-else>
+        <p>No crawl history available.</p>
+      </div>
+    </div>
+
+    <!-- Section for selected crawl details -->
+    <div v-if="selectedCrawl" class="selected-crawl-details-section">
+      <h2>Details for Crawl ID: {{ selectedCrawl.id }}</h2>
+      <p><strong>URL:</strong> {{ selectedCrawl.url }}</p>
+      <p>
+        <strong>Date:</strong>
+        {{ new Date(selectedCrawl.createdAt).toLocaleString() }}
+      </p>
+      <p><strong>Status:</strong> {{ selectedCrawl.status }}</p>
+
+      <h3>Files</h3>
+      <ul>
+        <li v-for="file in simulatedFiles" :key="file">{{ file }}</li>
+      </ul>
+
+      <button @click="selectedCrawlId = null">Hide Details</button>
+    </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, inject } from 'vue'
-import { useRouter } from 'vue-router'
+import {
+  defineComponent,
+  ref,
+  inject,
+  onMounted,
+  onUnmounted,
+  computed,
+} from "vue";
+import { useRouter } from "vue-router";
 // Import the crawling API client (adjust import path as needed)
-import { type CrawlingApi } from '../api-client/api'
+import {
+  type BillingApi,
+  type CrawlingApi,
+  type ExtractionApi,
+  type MappingApi,
+  type ScrapingApi,
+} from "../api-client/api";
 
 /**
  * Interface for Crawler Options section of the form.
@@ -160,8 +356,14 @@ interface CrawlerOptions {
 interface ScrapeOptions {
   formats: string[];
   onlyMainContent?: boolean;
-  // includeTags?: string[];
-  // excludeTags?: string[];
+  includeTags?: string[];
+  excludeTags?: string[];
+  // Properties from PageOptions moved here to match CrawlUrlsRequestScrapeOptions
+  headers?: object;
+  waitFor?: number;
+  mobile?: boolean;
+  removeBase64Images?: boolean;
+  actions?: any[]; // Based on OpenAPI, actions is an array of Action objects
 }
 
 /**
@@ -184,14 +386,23 @@ interface FormData {
 }
 
 export default defineComponent({
-  name: 'CrawlView',
+  name: "CrawlView",
   setup() {
-    const router = useRouter()
-    const api = inject('api') as { crawling: CrawlingApi }
+    const router = useRouter();
+    // Define the type of the injected api object based on the structure provided in src/plugins/api.ts
+    const api = inject("api") as {
+      billing: BillingApi;
+      crawling: CrawlingApi;
+      extraction: ExtractionApi;
+      mapping: MappingApi;
+      scraping: ScrapingApi;
+    };
 
     // Reactive form data with default values
+    // Initialisation du formulaire avec des valeurs par défaut explicites pour éviter les undefined
+    // Correction : utiliser undefined pour respecter les types TypeScript
     const formData = ref<FormData>({
-      url: '',
+      url: "",
       crawlerOptions: {
         includes: [],
         excludes: [],
@@ -204,43 +415,227 @@ export default defineComponent({
         navigateBacklinks: false,
       },
       scrapeOptions: {
-        formats: ['markdown'],
+        formats: ["markdown"],
         onlyMainContent: true,
+        includeTags: [],
+        excludeTags: [],
+        headers: {},
+        waitFor: undefined,
+        mobile: false,
+        removeBase64Images: false,
+        actions: [],
       },
       webhookOptions: {
-        url: '',
-        secret: '',
-        event: '',
-      }
-    })
+        url: undefined,
+        secret: undefined,
+        event: undefined,
+      },
+    });
 
     // Inputs for includes/excludes as comma-separated strings for user convenience
-    const includesInput = ref('')
-    const excludesInput = ref('')
+    const includesInput = ref("");
+    const excludesInput = ref("");
+    const includeTagsInput = ref("");
+    const excludeTagsInput = ref("");
+
+    // State for collapsible sections
+    const isCrawlerOptionsCollapsed = ref(true);
+    const isScrapeOptionsCollapsed = ref(true);
+    const isWebhookOptionsCollapsed = ref(true);
 
     /**
      * Parse the includes input string into an array for the API payload.
      */
     const parseIncludes = () => {
       formData.value.crawlerOptions.includes = includesInput.value
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean)
-    }
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    };
 
     /**
      * Parse the excludes input string into an array for the API payload.
      */
     const parseExcludes = () => {
       formData.value.crawlerOptions.excludes = excludesInput.value
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean)
-    }
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    };
 
-    const loading = ref(false)
-    const error = ref('')
-    const result = ref<any>(null)
+    /**
+     * Parse the includeTags input string into an array for the API payload.
+     */
+    const parseIncludeTags = () => {
+      formData.value.scrapeOptions.includeTags = includeTagsInput.value
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    };
+
+    /**
+     * Parse the excludeTags input string into an array for the API payload.
+     */
+    const parseExcludeTags = () => {
+      formData.value.scrapeOptions.excludeTags = excludeTagsInput.value
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    };
+
+    const loading = ref(false);
+    const crawling = ref(false);
+    const progress = ref(0);
+    const crawlStatus = ref<string | undefined>("");
+    const error = ref("");
+    const result = ref<any>(null);
+    const crawlHistory = ref<any[]>([]); // Initialize with empty array
+
+    // State for selected crawl history item
+    const selectedCrawlId = ref<string | null>(null);
+    const simulatedFiles = ref<string[]>([]);
+
+    // LocalStorage key for crawl history
+    const HISTORY_STORAGE_KEY = "crawlHistory";
+
+    // Computed property to get the selected crawl details
+    const selectedCrawl = computed(() => {
+      return crawlHistory.value.find(
+        (crawl) => crawl.id === selectedCrawlId.value,
+      );
+    });
+
+    /**
+     * Save the current crawl history to LocalStorage.
+     */
+    const saveHistory = () => {
+      localStorage.setItem(
+        HISTORY_STORAGE_KEY,
+        JSON.stringify(crawlHistory.value),
+      );
+    };
+
+    /**
+     * Select a crawl from history and fetch its files.
+     * Replaces simulated file logic with a real API call.
+     * @param id - The ID of the selected crawl.
+     */
+    /**
+     * Sélectionne un crawl dans l'historique et synchronise les champs d'entrée du formulaire.
+     * @param id - L'identifiant du crawl sélectionné.
+     */
+    const selectCrawl = async (id: string) => {
+      selectedCrawlId.value = id;
+      simulatedFiles.value = [];
+      error.value = "";
+
+      try {
+        // Récupère les fichiers pour le crawl sélectionné via l'API
+        const response = await api.crawling.getCrawlStatus(id);
+        simulatedFiles.value =
+          response.data.data
+            ?.map((file) => file.markdown)
+            .filter((content): content is string => content !== undefined) ||
+          [];
+        console.log(`Fetched files for crawl ID: ${id}`, response.data);
+
+        // Synchronise les champs d'entrée texte avec les valeurs du crawl sélectionné si disponibles
+        const crawl = crawlHistory.value.find((c) => c.id === id);
+        if (crawl && crawl.crawlerOptions) {
+          includesInput.value = (crawl.crawlerOptions.includes || []).join(
+            ", ",
+          );
+          excludesInput.value = (crawl.crawlerOptions.excludes || []).join(
+            ", ",
+          );
+        }
+        if (crawl && crawl.scrapeOptions) {
+          includeTagsInput.value = (crawl.scrapeOptions.includeTags || []).join(
+            ", ",
+          );
+          excludeTagsInput.value = (crawl.scrapeOptions.excludeTags || []).join(
+            ", ",
+          );
+        }
+      } catch (err: any) {
+        console.error(`Error fetching crawl files for ID ${id}:`, err);
+        error.value = `Failed to fetch crawl files for ID ${id}. ${err.message || err}`;
+      }
+    };
+
+    /**
+     * Handle download of crawl results.
+     * @param type - The type of download (e.g., 'Archive', 'Full JSON').
+     */
+    /**
+     * Handle download of crawl results.
+     * Calls the appropriate API endpoint based on the download type ('Archive' or 'Full JSON').
+     * Creates a Blob from the response and triggers a file download.
+     * @param type - The type of download ('Archive' or 'Full JSON').
+     */
+    const handleDownload = async (type: string) => {
+      // Make async to use await
+      console.log(`Handling download of ${type} for the active crawl.`);
+      error.value = ""; // Clear previous errors
+
+      // Ensure there is an active crawl job result with an ID
+      if (!result.value || !result.value.id) {
+        error.value = "No active crawl job found to download results.";
+        console.error(
+          "Attempted to download without an active crawl job result.",
+        );
+        return;
+      }
+
+      const jobId = result.value.id;
+
+      try {
+        if (type === "Archive") {
+          // Call API to download archive, expecting a Blob response
+          const response = await api.crawling.downloadArchive(jobId);
+          const blob = response.data; // Assuming the API client returns the Blob directly
+
+          // Create a temporary URL for the blob and trigger download
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.setAttribute("download", `crawl-archive-${jobId}.zip`); // Suggest a filename
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url); // Clean up the object URL
+        } else if (type === "Full JSON") {
+          // Call API to get full JSON result
+          const response = await api.crawling.getCrawlResult(jobId);
+          const jsonData = response.data; // Assuming the API client returns the JSON data
+
+          // Convert JSON data to a Blob with application/json type
+          const blob = new Blob([JSON.stringify(jsonData, null, 2)], {
+            type: "application/json",
+          });
+
+          // Create a temporary URL for the blob and trigger download
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.setAttribute("download", `crawl-result-${jobId}.json`); // Suggest a filename
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url); // Clean up the object URL
+        } else {
+          // Log a warning for unknown download types
+          console.warn(`Unknown download type: ${type}`);
+        }
+      } catch (err: any) {
+        // Handle any errors during the API call or download process
+        console.error(
+          `Error during ${type} download for job ID ${jobId}:`,
+          err,
+        );
+        error.value = `Failed to download ${type}. ${err.message || err}`;
+      }
+    };
 
     /**
      * Validate a URL string.
@@ -249,89 +644,229 @@ export default defineComponent({
      */
     const isValidUrl = (url: string) => {
       try {
-        new URL(url)
-        return true
+        new URL(url);
+        return true;
       } catch {
-        return false
+        return false;
       }
-    }
+    };
 
     /**
      * Handle form submission: validate, build payload, call API, handle result.
      */
     const handleSubmit = async () => {
-      parseIncludes()
-      parseExcludes()
+      parseIncludes();
+      parseExcludes();
+      parseIncludeTags();
+      parseExcludeTags();
 
       if (!isValidUrl(formData.value.url)) {
-        error.value = 'Please enter a valid URL (e.g. https://example.com)'
-        return
+        error.value = "Please enter a valid URL (e.g. https://example.com)";
+        return;
       }
-      if (!formData.value.scrapeOptions.formats || formData.value.scrapeOptions.formats.length === 0) {
-        error.value = 'Please select at least one output format'
-        return
+      if (
+        !formData.value.scrapeOptions.formats ||
+        formData.value.scrapeOptions.formats.length === 0
+      ) {
+        error.value = "Please select at least one output format";
+        return;
       }
 
       // Build the request payload according to the OpenAPI CrawlRequest schema
+      // Construction du payload avec toutes les options du formulaire, y compris maxDepthDiscovery
       const payload: any = {
         url: formData.value.url,
-        crawlerOptions: {
-          ...formData.value.crawlerOptions,
-        },
+        excludePaths: formData.value.crawlerOptions.excludes,
+        includePaths: formData.value.crawlerOptions.includes,
+        maxDepth: formData.value.crawlerOptions.maxDepth,
+        maxDepthDiscovery: formData.value.crawlerOptions.maxDepthDiscovery,
+        ignoreSitemap: formData.value.crawlerOptions.ignoreSitemap,
+        limit: formData.value.crawlerOptions.limit,
+        allowBackwardLinks: formData.value.crawlerOptions.navigateBacklinks,
+        allowExternalLinks: formData.value.crawlerOptions.allowExternalLinks,
         scrapeOptions: {
-          ...formData.value.scrapeOptions,
-        }
-      }
+          formats: formData.value.scrapeOptions.formats,
+          onlyMainContent: formData.value.scrapeOptions.onlyMainContent,
+          includeTags: formData.value.scrapeOptions.includeTags,
+          excludeTags: formData.value.scrapeOptions.excludeTags,
+          headers: formData.value.scrapeOptions.headers,
+          waitFor: formData.value.scrapeOptions.waitFor,
+          mobile: formData.value.scrapeOptions.mobile,
+          removeBase64Images: formData.value.scrapeOptions.removeBase64Images,
+          actions: formData.value.scrapeOptions.actions,
+        },
+      };
 
       // Only include webhookOptions if at least one field is filled
+      // Inclure webhookOptions uniquement si au moins un champ est non vide et non une chaîne vide
       if (
-        formData.value.webhookOptions.url ||
-        formData.value.webhookOptions.secret ||
-        formData.value.webhookOptions.event
+        (formData.value.webhookOptions.url &&
+          formData.value.webhookOptions.url !== "") ||
+        (formData.value.webhookOptions.secret &&
+          formData.value.webhookOptions.secret !== "") ||
+        (formData.value.webhookOptions.event &&
+          formData.value.webhookOptions.event !== "")
       ) {
-        payload.webhookOptions = { ...formData.value.webhookOptions }
+        payload.webhookOptions = { ...formData.value.webhookOptions };
       }
 
       try {
-        loading.value = true
-        error.value = ''
-        result.value = null
-        // Call the crawling API (adjust method name as needed)
+        loading.value = true;
+        crawling.value = true;
+        progress.value = 0;
+        error.value = "";
+        result.value = null;
+
+        // Call the crawling API to submit the crawl job
         // @ts-ignore
-        const response = await api.crawling.crawlUrls(payload)
-        result.value = response.data
+        const response = await api.crawling.crawlUrls(payload);
+        result.value = response.data;
+
+        // Add the submitted job to history
+        if (response.data && response.data.id) {
+          crawlHistory.value.unshift({
+            // Add to the beginning of the array
+            id: response.data.id,
+            url: formData.value.url,
+            createdAt: new Date().toISOString(), // Use current time for creation date
+            status: "started", // Initial status
+            crawlerOptions: { ...formData.value.crawlerOptions }, // Store a copy of options
+            scrapeOptions: { ...formData.value.scrapeOptions },
+            webhookOptions: { ...formData.value.webhookOptions },
+          });
+          saveHistory(); // Save history after adding a new job
+          fetchCrawlStatus(response.data.id);
+        }
       } catch (err: unknown) {
         if (err instanceof Error) {
-          if (err.message.includes('401')) {
-            router.push({ name: 'ApiConfig' })
-            return
+          if (err.message.includes("401")) {
+            router.push({ name: "ApiConfig" });
+            return;
           }
-          error.value = err.message.includes('404')
-            ? 'Resource not found (404)'
-            : err.message.includes('Network Error')
-            ? 'Network connection failed'
-            : err.message
+          error.value = err.message.includes("404")
+            ? "Resource not found (404)"
+            : err.message.includes("Network Error")
+              ? "Network connection failed"
+              : err.message;
         } else {
-          error.value = 'An unexpected error occurred'
+          error.value = "An unexpected error occurred";
         }
-      } finally {
-        loading.value = false
+        loading.value = false; // Stop loading on error
+        crawling.value = false; // Stop crawling animation on error
       }
-    }
+    };
+
+    // ID d'intervalle pour le polling du statut du crawl
+    let intervalId: any = null;
+
+    /**
+     * Fetch crawl status and progress periodically from the API.
+     * @param jobId - The ID of the crawl job.
+     */
+    const fetchCrawlStatus = async (jobId: string) => {
+      // Clear any existing interval before starting a new one
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+
+      intervalId = setInterval(async () => {
+        try {
+          // Call the actual API endpoint to get the crawl status
+          // @ts-ignore
+          const response = await api.crawling.getCrawlStatus(jobId);
+          const data = response.data;
+
+          // Update reactive variables with real data
+          crawlStatus.value = data.status;
+          // Calculate progress based on completed vs total pages
+          if (
+            data.total !== undefined &&
+            data.total > 0 &&
+            data.completed !== undefined &&
+            data.completed >= 0
+          ) {
+            progress.value = Math.round((data.completed / data.total) * 100);
+          } else {
+            progress.value = 0; // Or handle as appropriate if total is 0 or completed is undefined/negative
+          }
+
+          console.log(
+            `Crawl status for ${jobId}: ${data.status}, Completed: ${data.completed}/${data.total}`,
+          );
+
+          // Stop polling when completed or failed
+          if (data.status === "completed" || data.status === "failed") {
+            clearInterval(intervalId);
+            intervalId = null; // Clear intervalId after clearing interval
+            crawling.value = false; // Update crawling state
+            saveHistory(); // Save history when status changes to completed or failed
+          }
+        } catch (err: any) {
+          console.error("Failed to fetch crawl status:", err);
+          // Stop polling on error
+          clearInterval(intervalId);
+          intervalId = null;
+          crawling.value = false;
+          crawlStatus.value = "failed"; // Indicate failure in UI
+          error.value = `Failed to fetch crawl status: ${err.message || "Unknown error"}`;
+        }
+      }, 1000); // Poll every 1 second
+    };
+
+    onMounted(() => {
+      // Load history from LocalStorage on component mount
+      const savedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+      if (savedHistory) {
+        try {
+          crawlHistory.value = JSON.parse(savedHistory);
+        } catch (e) {
+          console.error("Failed to parse crawl history from LocalStorage:", e);
+          // Optionally clear invalid data
+          // localStorage.removeItem(HISTORY_STORAGE_KEY);
+        }
+      }
+    });
+
+    // Cleanup interval on component unmount
+    // Nettoyage de l'intervalle de polling lors du démontage du composant
+    onUnmounted(() => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    });
 
     return {
       formData,
       includesInput,
       excludesInput,
+      includeTagsInput,
+      excludeTagsInput,
       parseIncludes,
       parseExcludes,
+      parseIncludeTags,
+      parseExcludeTags,
       loading,
+      crawling,
+      progress,
+      crawlStatus,
       error,
       result,
       handleSubmit,
-    }
-  }
-})
+      isCrawlerOptionsCollapsed,
+      isScrapeOptionsCollapsed,
+      isWebhookOptionsCollapsed,
+      handleDownload,
+      crawlHistory,
+      selectedCrawlId,
+      selectedCrawl,
+      selectCrawl,
+      simulatedFiles,
+      // Expose saveHistory if needed elsewhere, though not strictly necessary for this task
+      // saveHistory,
+    };
+  },
+});
 </script>
 
 <style scoped>
@@ -381,6 +916,26 @@ export default defineComponent({
   background: #f0f7ff;
   color: #0066cc;
 }
+
+/* Progress bar container */
+.progress-container {
+  width: 100%;
+  background-color: #e0e0e0;
+  border-radius: 5px;
+  margin-top: 10px;
+  overflow: hidden; /* Ensure the inner bar stays within bounds */
+}
+
+/* Inner progress bar */
+.progress-bar {
+  height: 20px;
+  background-color: #4caf50; /* Green color */
+  text-align: center;
+  line-height: 20px; /* Center text vertically */
+  color: white;
+  transition: width 0.5s ease; /* Smooth transition for progress updates */
+}
+
 .error {
   background: #fff0f0;
   color: #cc0000;
@@ -388,42 +943,23 @@ export default defineComponent({
 .spinner {
   width: 20px;
   height: 20px;
-  border: 3px solid rgba(0,102,204,0.3);
+  border: 3px solid rgba(0, 102, 204, 0.3);
   border-radius: 50%;
   border-top-color: #0066cc;
   animation: spin 1s ease-in-out infinite;
 }
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
+
+.download-section {
+  margin-top: 20px;
+}
+
 .error-icon {
   width: 20px;
   height: 20px;
-  background: #cc0000;
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-}
-.result-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-.result pre {
-  white-space: pre-wrap;
-  background: #23272f;
-  color: #f8f8f2;
-  padding: 15px;
-  border-radius: 4px;
-  max-height: 500px;
-  overflow: auto;
-  font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace;
-  font-size: 1rem;
-  border: 1px solid #444857;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 </style>

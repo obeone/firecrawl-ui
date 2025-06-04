@@ -24,13 +24,13 @@ import { RouterLink } from 'vue-router'
 </template>
 
 <style>
-/* Supprime les anciens styles globaux non nécessaires */
+/* Removes old unnecessary global styles */
 #app {
-  /* Conserve les polices et l'antialiasing si nécessaire, mais la structure est gérée par app-layout */
+  /* Keeps fonts and antialiasing if necessary, but the structure is managed by app-layout */
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* text-align et margin-top sont supprimés car gérés par la nouvelle layout */
+  /* text-align and margin-top are removed because they are managed by the new layout */
   /* color est hérité ou défini dans base.css */
 }
 
@@ -88,7 +88,7 @@ main {
   background-color: var(--color-background); /* Fond principal */
 }
 
-/* Supprime les styles @media spécifiques à l'ancien header */
+/* Removes @media styles specific to the old header */
 /* @media (min-width: 1024px) { ... } */
 
 </style>

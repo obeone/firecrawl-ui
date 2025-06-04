@@ -1,7 +1,7 @@
 <template>
-  <div class="api-config-view">
-    <h1>Configuration de l'API</h1>
-    <p>Une clé API valide est requise pour utiliser Firecrawl.</p>
+  <div class="scrape-config-container">
+    <h1>API Configuration</h1>
+    <p>A valid API key is required to use Firecrawl.</p>
     <ApiKeyInput />
     <div class="actions">
       <button @click="handleContinue" class="primary">

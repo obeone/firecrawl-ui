@@ -3,16 +3,16 @@
     <h2>Configuration de l'API</h2>
     <form @submit.prevent="saveApiConfig">
       <div class="form-group">
-        <label for="apiKey">Clé API Firecrawl:</label>
+        <label for="apiKey">Firecrawl API Key:</label>
         <input
           id="apiKey"
           v-model="apiKey"
           type="password"
-          placeholder="Entrez votre clé API"
+          placeholder="Enter your API key"
           required
         >
         <small>
-          Vous pouvez obtenir votre clé API sur <a href="https://app.firecrawl.dev" target="_blank">le dashboard Firecrawl</a>
+          You can get your API key on <a href="https://app.firecrawl.dev" target="_blank">the Firecrawl dashboard</a>
         </small>
       </div>
       <div class="form-group">
@@ -24,7 +24,7 @@
           placeholder="https://api.firecrawl.dev/v1"
         >
         <small>
-          Laissez vide pour utiliser l'URL par défaut.
+          Leave blank to use the default URL.
         </small>
       </div>
       <button type="submit">Enregistrer</button>
@@ -33,7 +33,7 @@
       {{ error }}
     </div>
     <div v-if="success" class="success-message">
-      Clé API enregistrée avec succès!
+      API Key saved successfully!
     </div>
   </div>
 </template>
@@ -49,19 +49,19 @@ export default defineComponent({
     const error = ref('')
     const success = ref(false)
 
-    // Afficher automatiquement si aucune clé n'est configurée
+    // Automatically display if no key is configured
     onMounted(() => {
       if (!apiKey.value) {
-        error.value = 'Veuillez configurer votre clé API pour continuer'
+        error.value = 'Please configure your API key to continue'
       }
-      // Récupérer l'URL de base au montage
+      // Retrieve the base URL on mount
       baseUrl.value = localStorage.getItem('firecrawl_base_url') || ''
     })
 
     const saveApiConfig = () => {
       try {
         if (!apiKey.value) {
-          throw new Error('Veuillez entrer une clé API valide')
+          throw new Error('Please enter a valid API key')
         }
         // Enregistrer la clé API
         localStorage.setItem('firecrawl_api_key', apiKey.value)
@@ -72,7 +72,7 @@ export default defineComponent({
         error.value = ''
         setTimeout(() => success.value = false, 3000)
 
-        // Optionnel: Recharger la page ou reconfigurer l'instance API pour prise en compte immédiate
+        // Optional: Reload the page or reconfigure the API instance for immediate effect
         window.location.reload();
       } catch (err) {
         error.value = err instanceof Error ? err.message : 'Erreur inconnue'

@@ -1,56 +1,56 @@
 <template>
-  <div class="home">
+  <div class="scrape-config-container">
     <div class="hero">
       <img src="@/assets/logo.svg" alt="Firecrawl Logo" class="logo" />
       <h1>Firecrawl UI</h1>
       <p class="subtitle">
-        Plateforme moderne pour le crawling, le scraping et l'analyse de données web.<br>
-        Centralisez, explorez et extrayez vos données en toute simplicité.
+        Modern platform for crawling, scraping and web data analysis.<br>
+        Centralize, explore, and extract your data with ease.
       </p>
     </div>
     <div class="features">
       <div class="feature-card">
         <IconDocumentation class="icon"/>
         <h2>Scrape</h2>
-        <p>Extraire des données structurées de n'importe quelle page web.</p>
-        <router-link to="/scrape" class="feature-link">Accéder au Scraping</router-link>
+        <p>Extract structured data from any web page.</p>
+        <router-link to="/scrape" class="feature-link">Access Scraping</router-link>
       </div>
       <div class="feature-card">
         <IconEcosystem class="icon"/>
         <h2>Crawl</h2>
-        <p>Explorer des sites web en profondeur et collecter des données à grande échelle.</p>
-        <router-link to="/crawl" class="feature-link">Accéder au Crawling</router-link>
+        <p>Explore websites in depth and collect data on a large scale.</p>
+        <router-link to="/crawl" class="feature-link">Access Crawling</router-link>
       </div>
       <div class="feature-card">
         <IconTooling class="icon"/>
         <h2>Extract</h2>
-        <p>Extraire le contenu et les métadonnées d'URLs avec des options avancées.</p>
-        <router-link to="/extract" class="feature-link">Accéder à l'Extraction</router-link>
+        <p>Extract content and metadata from URLs with advanced options.</p>
+        <router-link to="/extract" class="feature-link">Access Extraction</router-link>
       </div>
       <div class="feature-card">
         <IconCommunity class="icon"/>
         <h2>Map</h2>
-        <p>Visualiser et cartographier les liens et structures d'un site web.</p>
-        <router-link to="/map" class="feature-link">Accéder à la Carte</router-link>
+        <p>Visualize and map the links and structures of a website.</p>
+        <router-link to="/map" class="feature-link">Access Map</router-link>
       </div>
       <div class="feature-card">
         <IconSupport class="icon"/>
         <h2>Search</h2>
-        <p>Rechercher et filtrer rapidement dans vos résultats de crawl et de scrape.</p>
-        <router-link to="/search" class="feature-link">Accéder à la Recherche</router-link>
+        <p>Search and filter quickly in your crawl and scrape results.</p>
+        <router-link to="/search" class="feature-link">Access Search</router-link>
       </div>
       <div class="feature-card">
         <IconSupport class="icon"/>
         <h2>API Configuration</h2>
-        <p>Configurer vos clés API et points d'accès pour des workflows personnalisés.</p>
-        <router-link to="/api-config" class="feature-link">Configurer l'API</router-link>
+        <p>Configure your API keys and access points for custom workflows.</p>
+        <router-link to="/api-config" class="feature-link">Configure API</router-link>
       </div>
     </div>
     <div class="about">
-      <h2>À propos de Firecrawl UI</h2>
+      <h2>About Firecrawl UI</h2>
       <p>
-        Firecrawl UI est une interface moderne et intuitive pour l'extraction, le crawling et l'analyse de données web.<br>
-        <strong>Fonctionnalités principales :</strong>
+        Firecrawl UI is a modern and intuitive interface for web data extraction, crawling and analysis.<br>
+        <strong>Main Features:</strong>
       </p>
       <ul>
         <li>Scraping rapide et extraction de contenu structuré.</li>

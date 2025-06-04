@@ -13,15 +13,15 @@
  */
 
 
-import type { Configuration } from './configuration';
+import type { Configuration } from './configuration.js';
 import type { AxiosPromise, AxiosInstance, RawAxiosRequestConfig } from 'axios';
 import globalAxios from 'axios';
 // Some imports not used depending on template conditions
 // @ts-ignore
-import { DUMMY_BASE_URL, assertParamExists, setApiKeyToObject, setBasicAuthToObject, setBearerAuthToObject, setOAuthToObject, setSearchParams, serializeDataIfNeeded, toPathString, createRequestFunction } from './common';
-import type { RequestArgs } from './base';
+import { DUMMY_BASE_URL, assertParamExists, setApiKeyToObject, setBasicAuthToObject, setBearerAuthToObject, setOAuthToObject, setSearchParams, serializeDataIfNeeded, toPathString, createRequestFunction } from './common.js';
+import type { RequestArgs } from './base.js';
 // @ts-ignore
-import { BASE_PATH, COLLECTION_FORMATS, BaseAPI, RequiredError, operationServerMap } from './base';
+import { BASE_PATH, COLLECTION_FORMATS, BaseAPI, RequiredError, operationServerMap } from './base.js';
 
 /**
  * 
@@ -1055,7 +1055,7 @@ export type ScrapeAndExtractFromUrlsRequestFormatsEnum = typeof ScrapeAndExtract
  * @type ScrapeAndExtractFromUrlsRequestActionsInner
  * @export
  */
-export type ScrapeAndExtractFromUrlsRequestActionsInner = Click | ExecuteJavaScript | PressAKey | Scrape | Screenshot | Scroll | Wait | WriteText1;
+export type ScrapeAndExtractFromUrlsRequestActionsInner = Click | ExecuteJavaScript | PressAKey | Scrape | Screenshot | Scroll | Wait | WriteText;
 
 /**
  * @type ScrapeAndExtractFromUrlsRequestWebhook
@@ -1353,46 +1353,13 @@ export const WriteTextTypeEnum = {
 export type WriteTextTypeEnum = typeof WriteTextTypeEnum[keyof typeof WriteTextTypeEnum];
 
 /**
- * 
- * @export
- * @interface WriteText1
- */
-export interface WriteText1 {
-    /**
-     * Write text into an input field
-     * @type {string}
-     * @memberof WriteText1
-     */
-    'type': WriteText1TypeEnum;
-    /**
-     * Text to type
-     * @type {string}
-     * @memberof WriteText1
-     */
-    'text': string;
-    /**
-     * Query selector for the input field
-     * @type {string}
-     * @memberof WriteText1
-     */
-    'selector': string;
-}
-
-export const WriteText1TypeEnum = {
-    Write: 'write'
-} as const;
-
-export type WriteText1TypeEnum = typeof WriteText1TypeEnum[keyof typeof WriteText1TypeEnum];
-
-
-/**
  * BillingApi - axios parameter creator
  * @export
  */
 export const BillingApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * 
+         *
          * @summary Get remaining credits for the authenticated team
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -1473,7 +1440,7 @@ export const BillingApiFactory = function (configuration?: Configuration, basePa
  */
 export class BillingApi extends BaseAPI {
     /**
-     * 
+     *
      * @summary Get remaining credits for the authenticated team
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -1634,6 +1601,70 @@ export const CrawlingApiAxiosParamCreator = function (configuration?: Configurat
                 options: localVarRequestOptions,
             };
         },
+        /**
+         * Download the archive of a completed crawl job.
+         * @param id The ID of the crawl job.
+         * @param options The request options.
+         */
+        downloadArchive: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('downloadArchive', 'id', id)
+            const localVarPath = `/crawl/{id}/archive`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            // Set responseType to blob for file download
+            localVarRequestOptions.responseType = 'blob';
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Get the full JSON result of a completed crawl job.
+         * @param id The ID of the crawl job.
+         * @param options The request options.
+         */
+        getCrawlResult: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('getCrawlResult', 'id', id)
+            const localVarPath = `/crawl/{id}/result`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
     }
 };
 
@@ -1645,7 +1676,7 @@ export const CrawlingApiFp = function(configuration?: Configuration) {
     const localVarAxiosParamCreator = CrawlingApiAxiosParamCreator(configuration)
     return {
         /**
-         * 
+         *
          * @summary Cancel a crawl job
          * @param {string} id The ID of the batch scrape job
          * @param {*} [options] Override http request option.
@@ -1658,7 +1689,7 @@ export const CrawlingApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * 
+         *
          * @summary Cancel a crawl job
          * @param {string} id The ID of the crawl job
          * @param {*} [options] Override http request option.
@@ -1671,9 +1702,9 @@ export const CrawlingApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * 
+         *
          * @summary Crawl multiple URLs based on options
-         * @param {CrawlUrlsRequest} crawlUrlsRequest 
+         * @param {CrawlUrlsRequest} crawlUrlsRequest
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -1684,7 +1715,7 @@ export const CrawlingApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * 
+         *
          * @summary Get the status of a crawl job
          * @param {string} id The ID of the crawl job
          * @param {*} [options] Override http request option.
@@ -1694,6 +1725,28 @@ export const CrawlingApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.getCrawlStatus(id, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['CrawlingApi.getCrawlStatus']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Download the archive of a completed crawl job.
+         * @param id The ID of the crawl job.
+         * @param options The request options.
+         */
+        async downloadArchive(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Blob>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.downloadArchive(id, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrawlingApi.downloadArchive']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Get the full JSON result of a completed crawl job.
+         * @param id The ID of the crawl job.
+         * @param options The request options.
+         */
+        async getCrawlResult(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrawlStatusResponseObj>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getCrawlResult(id, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrawlingApi.getCrawlResult']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
@@ -1755,10 +1808,75 @@ export const CrawlingApiFactory = function (configuration?: Configuration, baseP
  * @class CrawlingApi
  * @extends {BaseAPI}
  */
+/**
+ * @export
+ * @interface CrawlingApi
+ */
+export interface CrawlingApi {
+    /**
+     * Cancel a batch crawl job.
+     * @param id The ID of the batch crawl job.
+     * @param options The request options.
+     */
+    cancelBatchCrawl(id: string, options?: RawAxiosRequestConfig): AxiosPromise<CancelBatchCrawl200Response>;
+    /**
+     * Cancel a crawl job.
+     * @param id The ID of the crawl job.
+     * @param options The request options.
+     */
+    cancelCrawl(id: string, options?: RawAxiosRequestConfig): AxiosPromise<CancelBatchCrawl200Response>;
+    /**
+     * Start a new crawl job.
+     * @param crawlUrlsRequest The crawl request payload.
+     * @param options The request options.
+     */
+    crawlUrls(crawlUrlsRequest: CrawlUrlsRequest, options?: RawAxiosRequestConfig): AxiosPromise<CrawlResponse>;
+    /**
+     * Get the status of a crawl job.
+     * @param id The ID of the crawl job.
+     * @param options The request options.
+     */
+    getCrawlStatus(id: string, options?: RawAxiosRequestConfig): AxiosPromise<CrawlStatusResponseObj>;
+    /**
+     * Get the files generated by a completed crawl job.
+     * @param id The ID of the crawl job.
+     * @param options The request options.
+     */
+    getCrawlFiles(id: string, options?: RawAxiosRequestConfig): AxiosPromise<any>;
+    /**
+     * Download the archive of a completed crawl job.
+     * @param id The ID of the crawl job.
+     * @param options The request options.
+     */
+    downloadArchive(id: string, options?: RawAxiosRequestConfig): AxiosPromise<Blob>;
+    /**
+     * Get the full JSON result of a completed crawl job.
+     * @param id The ID of the crawl job.
+     * @param options The request options.
+     */
+    getCrawlResult(id: string, options?: RawAxiosRequestConfig): AxiosPromise<CrawlStatusResponseObj>;
+}
+
+/**
+ * CrawlingApi - object-oriented interface for crawl operations.
+ * Provides methods to cancel, start, and get the status of crawl jobs.
+ * @export
+ * @class CrawlingApi
+ * @extends {BaseAPI}
+ */
 export class CrawlingApi extends BaseAPI {
     /**
-     * 
-     * @summary Cancel a crawl job
+     * Creates a new instance of CrawlingApi.
+     * @param configuration Optional configuration object.
+     * @param basePath Optional base path.
+     * @param axios Optional Axios instance.
+     */
+    constructor(configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+        super(configuration, basePath, axios);
+    }
+
+    /**
+     * Cancel a batch crawl job.
      * @param {string} id The ID of the batch scrape job
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -1769,8 +1887,7 @@ export class CrawlingApi extends BaseAPI {
     }
 
     /**
-     * 
-     * @summary Cancel a crawl job
+     * Cancel a crawl job.
      * @param {string} id The ID of the crawl job
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -1781,9 +1898,8 @@ export class CrawlingApi extends BaseAPI {
     }
 
     /**
-     * 
-     * @summary Crawl multiple URLs based on options
-     * @param {CrawlUrlsRequest} crawlUrlsRequest 
+     * Start a new crawl job.
+     * @param {CrawlUrlsRequest} crawlUrlsRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof CrawlingApi
@@ -1793,8 +1909,7 @@ export class CrawlingApi extends BaseAPI {
     }
 
     /**
-     * 
-     * @summary Get the status of a crawl job
+     * Get the status of a crawl job.
      * @param {string} id The ID of the crawl job
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -1902,11 +2017,27 @@ export const ExtractionApiFactory = function (configuration?: Configuration, bas
  * @class ExtractionApi
  * @extends {BaseAPI}
  */
+/**
+ * ExtractionApi - object-oriented interface for extraction operations.
+ * Provides methods to extract structured data from pages using LLMs.
+ * @export
+ * @class ExtractionApi
+ * @extends {BaseAPI}
+ */
 export class ExtractionApi extends BaseAPI {
     /**
-     * 
-     * @summary Extract structured data from pages using LLMs
-     * @param {ExtractDataRequest} extractDataRequest 
+     * Creates a new instance of ExtractionApi.
+     * @param configuration Optional configuration object.
+     * @param basePath Optional base path.
+     * @param axios Optional Axios instance.
+     */
+    constructor(configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+        super(configuration, basePath, axios);
+    }
+
+    /**
+     * Extract structured data from pages using LLMs.
+     * @param {ExtractDataRequest} extractDataRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof ExtractionApi
@@ -2013,11 +2144,27 @@ export const MappingApiFactory = function (configuration?: Configuration, basePa
  * @class MappingApi
  * @extends {BaseAPI}
  */
+/**
+ * MappingApi - object-oriented interface for mapping operations.
+ * Provides methods to map multiple URLs based on options.
+ * @export
+ * @class MappingApi
+ * @extends {BaseAPI}
+ */
 export class MappingApi extends BaseAPI {
     /**
-     * 
-     * @summary Map multiple URLs based on options
-     * @param {MapUrlsRequest} mapUrlsRequest 
+     * Creates a new instance of MappingApi.
+     * @param configuration Optional configuration object.
+     * @param basePath Optional base path.
+     * @param axios Optional Axios instance.
+     */
+    constructor(configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+        super(configuration, basePath, axios);
+    }
+
+    /**
+     * Map multiple URLs based on options.
+     * @param {MapUrlsRequest} mapUrlsRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof MappingApi
@@ -2242,10 +2389,26 @@ export const ScrapingApiFactory = function (configuration?: Configuration, baseP
  * @class ScrapingApi
  * @extends {BaseAPI}
  */
+/**
+ * ScrapingApi - object-oriented interface for scraping operations.
+ * Provides methods to scrape single or multiple URLs and extract information.
+ * @export
+ * @class ScrapingApi
+ * @extends {BaseAPI}
+ */
 export class ScrapingApi extends BaseAPI {
     /**
-     * 
-     * @summary Get the status of a batch scrape job
+     * Creates a new instance of ScrapingApi.
+     * @param configuration Optional configuration object.
+     * @param basePath Optional base path.
+     * @param axios Optional Axios instance.
+     */
+    constructor(configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+        super(configuration, basePath, axios);
+    }
+
+    /**
+     * Get the status of a batch scrape job.
      * @param {string} id The ID of the batch scrape job
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -2256,9 +2419,8 @@ export class ScrapingApi extends BaseAPI {
     }
 
     /**
-     * 
-     * @summary Scrape a single URL and optionally extract information using an LLM
-     * @param {ScrapeAndExtractFromUrlRequest} scrapeAndExtractFromUrlRequest 
+     * Scrape a single URL and optionally extract information using an LLM.
+     * @param {ScrapeAndExtractFromUrlRequest} scrapeAndExtractFromUrlRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof ScrapingApi
@@ -2268,9 +2430,8 @@ export class ScrapingApi extends BaseAPI {
     }
 
     /**
-     * 
-     * @summary Scrape multiple URLs and optionally extract information using an LLM
-     * @param {ScrapeAndExtractFromUrlsRequest} scrapeAndExtractFromUrlsRequest 
+     * Scrape multiple URLs and optionally extract information using an LLM.
+     * @param {ScrapeAndExtractFromUrlsRequest} scrapeAndExtractFromUrlsRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof ScrapingApi

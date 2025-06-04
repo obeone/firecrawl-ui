@@ -5,7 +5,7 @@ const getBaseUrl = () => {
 }
 
 const getApiKey = () => {
-  // Récupère la clé API depuis le stockage local ou les variables d'environnement
+  // Retrieves the API key from local storage or environment variables
   return localStorage.getItem('firecrawl_api_key') || import.meta.env.VITE_FIRECRAWL_API_KEY || ''
 }
 

@@ -13,7 +13,7 @@ const api = {
   scraping: new ScrapingApi(apiConfig)
 }
 
-// Fournir l'API à toute l'application
+// Provide the API to the entire application
 app.provide('api', api)
 
 app

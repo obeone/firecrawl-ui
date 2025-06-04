@@ -1,8 +1,8 @@
 <template>
-  <div class="scrape-view">
+  <div class="scrape-config-container">
     <h1>Scrape Configuration</h1>
     
-    <form @submit.prevent="handleSubmit">
+    <form class="scrape-config-form" @submit.prevent="handleSubmit">
       <div class="form-group">
         <label for="url">URL:</label>
         <input id="url" v-model="formData.url" type="text" required>
@@ -42,85 +42,89 @@
       </div>
 
       <fieldset class="form-group options-fieldset">
-        <legend>Scrape Options</legend>
-        <label>
-          <input type="checkbox" v-model="formData.scrapeOptions.onlyMainContent">
-          Only Main Content (exclude headers, footers, etc.)
-        </label>
-        <div class="form-group">
-          <label for="includeTags">Include Tags (comma separated):</label>
-          <input id="includeTags" type="text" v-model="formData.scrapeOptions.includeTags" placeholder="e.g. p, div, span">
-        </div>
-        <div class="form-group">
-          <label for="excludeTags">Exclude Tags (comma separated):</label>
-          <input id="excludeTags" type="text" v-model="formData.scrapeOptions.excludeTags" placeholder="e.g. script, style">
+        <legend class="collapsible-header" @click="isScrapeOptionsCollapsed = !isScrapeOptionsCollapsed">Scrape Options</legend>
+        <div v-show="!isScrapeOptionsCollapsed">
+          <label>
+            <input type="checkbox" v-model="formData.scrapeOptions.onlyMainContent">
+            Only Main Content (exclude headers, footers, etc.)
+          </label>
+          <div class="form-group">
+            <label for="includeTags">Include Tags (comma separated):</label>
+            <input id="includeTags" type="text" v-model="formData.scrapeOptions.includeTags" placeholder="e.g. p, div, span">
+          </div>
+          <div class="form-group">
+            <label for="excludeTags">Exclude Tags (comma separated):</label>
+            <input id="excludeTags" type="text" v-model="formData.scrapeOptions.excludeTags" placeholder="e.g. script, style">
+          </div>
         </div>
       </fieldset>
 
       <fieldset class="form-group options-fieldset">
-        <legend>Page Options</legend>
-        <div class="grid-layout">
-          <div class="form-group">
-            <label for="waitFor">Wait For (ms):</label>
-            <input id="waitFor" v-model.number="formData.pageOptions.waitFor" type="number" min="0">
-            <small>Delay before fetching content.</small>
+        <legend class="collapsible-header" @click="isPageOptionsCollapsed = !isPageOptionsCollapsed">Page Options</legend>
+        <div v-show="!isPageOptionsCollapsed">
+          <div class="grid-layout">
+            <div class="form-group">
+              <label for="waitFor">Wait For (ms):</label>
+              <input id="waitFor" v-model.number="formData.pageOptions.waitFor" type="number" min="0">
+              <small>Delay before fetching content.</small>
+            </div>
+            <div class="form-group">
+              <label for="timeout">Timeout (ms):</label>
+              <input id="timeout" v-model.number="formData.pageOptions.timeout" type="number" min="0">
+              <small>Page request timeout (default: 30000).</small>
+            </div>
+            <div class="form-group">
+              <label for="proxy">Proxy:</label>
+              <select id="proxy" v-model="formData.pageOptions.proxy">
+                <option value="">Auto</option>
+                <option value="basic">Basic</option>
+                <option value="stealth">Stealth</option>
+              </select>
+              <small>Proxy type for request.</small>
+            </div>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="formData.pageOptions.mobile">
+              Emulate Mobile Device
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="formData.pageOptions.skipTlsVerification">
+              Skip TLS Verification
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="formData.pageOptions.blockAds">
+              Block Ads & Popups
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="formData.pageOptions.removeBase64Images">
+              Remove Base64 Images
+            </label>
           </div>
           <div class="form-group">
-            <label for="timeout">Timeout (ms):</label>
-            <input id="timeout" v-model.number="formData.pageOptions.timeout" type="number" min="0">
-            <small>Page request timeout (default: 30000).</small>
+            <label for="headers">HTTP Headers (JSON format):</label>
+            <textarea id="headers" v-model="headersJson" rows="4" placeholder='{"Authorization": "Bearer token", "Accept": "application/json"}'></textarea>
+            <small>Enter HTTP headers as JSON object.</small>
           </div>
           <div class="form-group">
-            <label for="proxy">Proxy:</label>
-            <select id="proxy" v-model="formData.pageOptions.proxy">
-              <option value="">Auto</option>
-              <option value="basic">Basic</option>
-              <option value="stealth">Stealth</option>
+            <label for="action">HTTP Action:</label>
+            <select id="action" v-model="formData.pageOptions.action">
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+              <option value="PUT">PUT</option>
+              <option value="DELETE">DELETE</option>
+              <option value="PATCH">PATCH</option>
             </select>
-            <small>Proxy type for request.</small>
+            <small>Select HTTP method for the request.</small>
           </div>
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="formData.pageOptions.mobile">
-            Emulate Mobile Device
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="formData.pageOptions.skipTlsVerification">
-            Skip TLS Verification
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="formData.pageOptions.blockAds">
-            Block Ads & Popups
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="formData.pageOptions.removeBase64Images">
-            Remove Base64 Images
-          </label>
-        </div>
-        <div class="form-group">
-          <label for="headers">HTTP Headers (JSON format):</label>
-          <textarea id="headers" v-model="headersJson" rows="4" placeholder='{"Authorization": "Bearer token", "Accept": "application/json"}'></textarea>
-          <small>Enter HTTP headers as JSON object.</small>
-        </div>
-        <div class="form-group">
-          <label for="action">HTTP Action:</label>
-          <select id="action" v-model="formData.pageOptions.action">
-            <option value="GET">GET</option>
-            <option value="POST">POST</option>
-            <option value="PUT">PUT</option>
-            <option value="DELETE">DELETE</option>
-            <option value="PATCH">PATCH</option>
-          </select>
-          <small>Select HTTP method for the request.</small>
-        </div>
-        <div class="form-group">
-          <label for="location">Location:</label>
-          <select id="location" v-model="formData.pageOptions.location">
-            <option value="">Auto</option>
-            <option value="US">US</option>
-            <option value="EU">EU</option>
-            <option value="ASIA">ASIA</option>
-          </select>
-          <small>Select request location.</small>
+          <div class="form-group">
+            <label for="location">Location:</label>
+            <select id="location" v-model="formData.pageOptions.location">
+              <option value="">Auto</option>
+              <option value="US">US</option>
+              <option value="EU">EU</option>
+              <option value="ASIA">ASIA</option>
+            </select>
+            <small>Select request location.</small>
+          </div>
         </div>
       </fieldset>
 
@@ -130,7 +134,6 @@
         <small>Enter JSON options for extraction. Must be valid JSON.</small>
         <div v-if="extractorOptionsError" class="error-message">{{ extractorOptionsError }}</div>
       </div>
-      <!-- TODO: Add Change Tracking Options (conditional on 'changeTracking' format) -->
 
 
       <button type="submit">Scrape</button>
@@ -285,7 +288,11 @@ export default defineComponent({
         frequency: 60  // default frequency in minutes
       }
     })
-    
+
+    // State for collapsible sections
+    const isScrapeOptionsCollapsed = ref(true);
+    const isPageOptionsCollapsed = ref(true);
+
     const loading = ref(false)
     const error = ref('')
     const result = ref<ScrapeResult | null>(null)
@@ -313,23 +320,24 @@ export default defineComponent({
       // Construct the request payload matching the ScrapeAndExtractFromUrlRequest interface
       const requestPayload: ScrapeAndExtractFromUrlRequest = {
         url: formData.value.url,
-        // Directly include options if they have non-default/non-empty values
-        ...(formData.value.pageOptions.waitFor !== undefined && formData.value.pageOptions.waitFor > 0 && { pageOptions_waitFor: formData.value.pageOptions.waitFor }),
-        ...(formData.value.pageOptions.mobile === true && { pageOptions_mobile: true }), // Default is false
-        ...(formData.value.pageOptions.skipTlsVerification === true && { pageOptions_skipTlsVerification: true }), // Default is false
-        ...(formData.value.pageOptions.timeout !== undefined && formData.value.pageOptions.timeout > 0 && formData.value.pageOptions.timeout !== 30000 && { pageOptions_timeout: formData.value.pageOptions.timeout }), // Default is 30000
-        ...(formData.value.pageOptions.blockAds === false && { pageOptions_blockAds: false }), // Default is true
-        ...(formData.value.pageOptions.removeBase64Images === false && { pageOptions_removeBase64Images: false }), // Default is true
-        ...(formData.value.pageOptions.proxy && formData.value.pageOptions.proxy !== '' && { pageOptions_proxy: formData.value.pageOptions.proxy as ('basic' | 'stealth') }),
-        ...(formData.value.pageOptions.headers && Object.keys(formData.value.pageOptions.headers).length > 0 && { pageOptions_headers: formData.value.pageOptions.headers }),
-        ...(formData.value.pageOptions.action && formData.value.pageOptions.action !== '' && { pageOptions_action: formData.value.pageOptions.action }),
-        ...(formData.value.pageOptions.location && formData.value.pageOptions.location !== '' && { pageOptions_location: formData.value.pageOptions.location }),
+        ...(formData.value.pageOptions.waitFor !== undefined && formData.value.pageOptions.waitFor > 0 && { waitFor: formData.value.pageOptions.waitFor }),
+        ...(formData.value.pageOptions.mobile === true && { mobile: true }), // Default is false
+        ...(formData.value.pageOptions.skipTlsVerification === true && { skipTlsVerification: true }), // Default is false
+        ...(formData.value.pageOptions.timeout !== undefined && formData.value.pageOptions.timeout > 0 && formData.value.pageOptions.timeout !== 30000 && { timeout: formData.value.pageOptions.timeout }), // Default is 30000
+        ...(formData.value.pageOptions.blockAds === false && { blockAds: false }), // Default is true
+        ...(formData.value.pageOptions.removeBase64Images === false && { removeBase64Images: false }), // Default is true
+        ...(formData.value.pageOptions.proxy && formData.value.pageOptions.proxy !== '' && { proxy: formData.value.pageOptions.proxy as ('basic' | 'stealth') }),
+        ...(formData.value.pageOptions.headers && Object.keys(formData.value.pageOptions.headers).length > 0 && { headers: formData.value.pageOptions.headers }),
+        // Removed incorrect mapping of HTTP action to API actions
+        ...(formData.value.pageOptions.location && formData.value.pageOptions.location !== '' && { location: { country: formData.value.pageOptions.location } }), // Map location string to Location object with 'country' property
 
+        // Include scrapeOptions properties directly
         formats: formData.value.scrapeOptions.formats as unknown as ScrapeAndExtractFromUrlRequestFormatsEnum[],
         ...(formData.value.scrapeOptions.onlyMainContent === false && { onlyMainContent: false }), // Default is true
         ...(formData.value.scrapeOptions.includeTags && formData.value.scrapeOptions.includeTags.trim() !== '' && { includeTags: formData.value.scrapeOptions.includeTags.split(',').map(tag => tag.trim()).filter(tag => tag !== '') }),
         ...(formData.value.scrapeOptions.excludeTags && formData.value.scrapeOptions.excludeTags.trim() !== '' && { excludeTags: formData.value.scrapeOptions.excludeTags.split(',').map(tag => tag.trim()).filter(tag => tag !== '') }),
 
+        // Include extractorOptions and changeTrackingOptions directly if they exist
         ...(formData.value.scrapeOptions.formats.includes(ScrapeAndExtractFromUrlRequestFormatsEnum.Extract) && formData.value.extractorOptions && Object.keys(formData.value.extractorOptions).length > 0 && { extract: formData.value.extractorOptions as ScrapeAndExtractFromUrlRequestExtract }),
         ...(formData.value.scrapeOptions.formats.includes('changeTracking') && {
           changeTrackingOptions: {
@@ -443,7 +451,9 @@ export default defineComponent({
       downloadResult,
       extractorOptionsJson,
       extractorOptionsError,
-      ScrapeAndExtractFromUrlRequestFormatsEnum // Expose enum for template
+      ScrapeAndExtractFromUrlRequestFormatsEnum, // Expose enum for template
+      isScrapeOptionsCollapsed,
+      isPageOptionsCollapsed,
     }
   }
 })
@@ -501,35 +511,10 @@ export default defineComponent({
 .error {
   background: #fff0f0;
   color: #cc0000;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 15px;
-  border-radius: 4px;
-  margin: 20px 0;
 }
 
-.error-icon {
-  font-size: 1.5em;
-  font-weight: bold;
-}
-
-.error h3 {
-  margin: 0 0 5px 0;
-}
-
-.error p {
-  margin: 0;
-}
-
-.error button {
-  background: none;
-  border: none;
-  color: #0066cc;
-  text-decoration: underline;
+.collapsible-header {
   cursor: pointer;
-  padding: 0;
-  font-size: 0.9em;
 }
 
 .result {
@@ -569,10 +554,17 @@ export default defineComponent({
   white-space: pre-wrap;
   word-wrap: break-word;
   background: #eee;
+  color: #333;
   padding: 10px;
   border-radius: 4px;
   max-height: 400px;
   overflow-y: auto;
+}
+
+.error-message {
+  color: red;
+  font-size: 0.9em;
+  margin-top: 5px;
 }
 
 .spinner {

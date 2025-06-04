@@ -1,8 +1,8 @@
 @import './base.css';
 
-/* Styles pour #app (lignes 3-8) supprimés car gérés par .app-layout dans App.vue */
+/* Styles for #app (lines 3-8) removed as they are managed by .app-layout in App.vue */
 
-/* Styles généraux pour les liens commentés pour éviter les conflits avec la sidebar. */
+/* General styles for commented-out links to avoid conflicts with the sidebar. */
 /* Si un style de lien global est nécessaire pour le contenu principal, il faudra le redéfinir ici de manière moins spécifique. */
 /*
 a,
@@ -20,4 +20,103 @@ a,
 }
 */
 
-/* Styles @media (min-width: 1024px) (lignes 24-35) supprimés car obsolètes avec la nouvelle structure */
+/* @media (min-width: 1024px) styles (lines 24-35) removed as they are obsolete with the new structure */
+
+/* --- Scrape Configuration Modern UI --- */
+.scrape-config-container {
+  background: #232323;
+  border-radius: 18px;
+  box-shadow: 0 4px 32px 0 rgba(0,0,0,0.25);
+  padding: 2.5rem 3rem;
+  max-width: 600px;
+  margin: 2.5rem auto;
+  color: #f3f3f3;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.scrape-config-container h1,
+.scrape-config-container h2 {
+  color: #e0e0e0;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  letter-spacing: 0.5px;
+}
+
+.scrape-config-form label {
+  font-size: 1.1rem;
+  color: #b0b0b0;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.scrape-config-form input[type="text"],
+.scrape-config-form select,
+.scrape-config-form textarea {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #444;
+  background: #181818;
+  color: #f3f3f3;
+  margin-bottom: 1.2rem;
+  font-size: 1rem;
+  transition: border 0.2s;
+}
+
+.scrape-config-form input[type="text"]:focus,
+.scrape-config-form select:focus,
+.scrape-config-form textarea:focus {
+  border: 1.5px solid #4fc08d;
+  outline: none;
+}
+
+.scrape-config-form input[type="checkbox"] {
+  accent-color: #4fc08d;
+  width: 1.1em;
+  height: 1.1em;
+  margin-right: 0.5em;
+}
+
+.scrape-config-form .section-title {
+  font-size: 1.15rem;
+  color: #4fc08d;
+  margin: 1.5rem 0 0.7rem 0;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+.scrape-config-form .helper-text {
+  color: #888;
+  font-size: 0.95rem;
+  margin-bottom: 1.2rem;
+}
+
+.scrape-config-form button,
+.scrape-config-form input[type="submit"] {
+  background: linear-gradient(90deg, #4fc08d 60%, #2c7a7b 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.8rem 2.2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px 0 rgba(79,192,141,0.10);
+  transition: background 0.2s, transform 0.1s;
+  margin-top: 1.5rem;
+}
+
+.scrape-config-form button:hover,
+.scrape-config-form input[type="submit"]:hover {
+  background: linear-gradient(90deg, #2c7a7b 60%, #4fc08d 100%);
+  transform: translateY(-2px) scale(1.03);
+}
+
+@media (max-width: 700px) {
+  .scrape-config-container {
+    padding: 1.2rem 0.5rem;
+    max-width: 98vw;
+  }
+}

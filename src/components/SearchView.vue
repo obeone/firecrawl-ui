@@ -1,6 +1,6 @@
 <template>
-  <div class="search-view">
-    <form @submit.prevent="onSearch" class="search-form">
+  <div class="scrape-config-container">
+    <form @submit.prevent="onSearch" class="scrape-config-form">
       <label for="query">Search Query:</label>
       <input
         id="query"

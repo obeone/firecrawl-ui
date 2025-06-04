@@ -1,3 +1,4 @@
+ import './assets/main.css' // Import global CSS
 import { createApp } from 'vue'
 import App from './App.vue'
 import apiPlugin from './plugins/api'
