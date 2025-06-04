@@ -1,6 +1,6 @@
 import type { App } from 'vue'
-import { BillingApi, CrawlingApi, ExtractionApi, MappingApi, ScrapingApi } from '../api-client'
-import apiConfig from '../config/api'
+import { BillingApi, CrawlingApi, ExtractionApi, MappingApi, ScrapingApi } from '../api-client/index.js'
+import apiConfig from '../config/api.js'
 
 const apiPlugin = {
   install(app: App) {
