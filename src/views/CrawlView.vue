@@ -198,8 +198,22 @@ async function downloadFormat(fmt: string) {
   status.value.data.forEach((page, idx) => {
     const data: any = (page as any)[key]
     if (!data) return
+    const meta: any = (page as any).metadata || {}
+    let fileName = `page_${idx + 1}`
+    if (meta.sourceURL) {
+      try {
+        const urlObj = new URL(meta.sourceURL)
+        fileName = `${urlObj.hostname}${urlObj.pathname}`
+      } catch {
+        // ignore malformed URLs
+      }
+    }
+    fileName = fileName
+      .replace(/^\/+/, '')
+      .replace(/\/$/, '')
+      .replace(/[\\/?%*:|"<>]/g, '_') || `page_${idx + 1}`
     const content = typeof data === 'object' ? JSON.stringify(data, null, 2) : String(data)
-    zip.file(`page_${idx + 1}${ext}`, content)
+    zip.file(`${fileName}${ext}`, content)
   })
   const blob = await zip.generateAsync({ type: 'blob' })
   saveAs(blob, `${key}_files_${currentId.value}.zip`)
