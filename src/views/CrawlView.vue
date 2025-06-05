@@ -55,10 +55,22 @@
       </div>
       <p>{{ status?.completed || 0 }} / {{ status?.total || 0 }} pages</p>
       <pre v-if="preview">{{ preview }}</pre>
-      <div v-if="status?.status === 'completed'" class="downloads">
-        <button @click="downloadJson">Télécharger JSON</button>
-        <button v-for="fmt in form.scrapeOptions.formats" :key="fmt" @click="downloadFormat(fmt)">
+      <div class="downloads">
+        <button @click="downloadJson" :disabled="!status?.data">Télécharger JSON</button>
+        <button
+          v-for="fmt in form.scrapeOptions.formats"
+          :key="fmt"
+          @click="downloadFormat(fmt)"
+          :disabled="!status?.data"
+        >
           {{ fmt }}
+        </button>
+        <button
+          v-if="status?.status === 'scraping'"
+          @click="cancelCurrent"
+          class="cancel"
+        >
+          Arrêter
         </button>
       </div>
     </div>
@@ -192,6 +204,19 @@ async function downloadFormat(fmt: string) {
   const blob = await zip.generateAsync({ type: 'blob' })
   saveAs(blob, `${key}_files_${currentId.value}.zip`)
 }
+
+async function cancelCurrent() {
+  if (!currentId.value) return
+  try {
+    await api.crawling.cancelCrawl(currentId.value)
+    if (status.value) status.value.status = 'cancelled'
+    const h = history.value.find(j => j.id === currentId.value)
+    if (h) { h.status = 'cancelled'; saveHistory() }
+    clearInterval(timer)
+  } catch (e) {
+    console.error(e)
+  }
+}
 </script>
 
 <style scoped>
@@ -233,6 +258,11 @@ async function downloadFormat(fmt: string) {
 }
 .downloads button {
   margin-right: 0.5rem;
+}
+.cancel {
+  background-color: #e53935;
+  color: #fff;
+  margin-left: 0.5rem;
 }
 .history {
   margin-top: 2rem;
