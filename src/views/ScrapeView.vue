@@ -3,65 +3,97 @@
     <h1>Scrape a URL</h1>
     <form @submit.prevent="submit">
       <div class="form-group">
-        <label for="url">URL</label>
-        <input id="url" v-model="form.url" required placeholder="https://example.com" />
+        <label for="url">URL:</label>
+        <input id="url" v-model="form.url" type="text" required placeholder="https://example.com" />
       </div>
-      <div class="form-group">
-        <label for="formats">Formats</label>
-        <select id="formats" v-model="form.formats" multiple>
-          <option value="markdown">Markdown</option>
-          <option value="html">HTML</option>
-          <option value="rawHtml">Raw HTML</option>
-          <option value="links">Links</option>
-          <option value="screenshot">Screenshot</option>
-          <option value="screenshot@fullPage">Screenshot Full Page</option>
-          <option value="json">JSON</option>
-          <option value="changeTracking">Change Tracking</option>
-        </select>
-      </div>
-      <label>
-        <input type="checkbox" v-model="form.onlyMainContent" /> Only Main Content
-      </label>
-      <div class="form-group">
-        <label>Include Tags</label>
-        <input v-model="includeTags" placeholder="p,div" />
-      </div>
-      <div class="form-group">
-        <label>Exclude Tags</label>
-        <input v-model="excludeTags" placeholder="script,style" />
-      </div>
-      <div class="form-group">
-        <label>Wait For (ms)</label>
-        <input type="number" v-model.number="form.waitFor" min="0" />
-      </div>
-      <div class="form-group">
-        <label>Timeout (ms)</label>
-        <input type="number" v-model.number="form.timeout" min="0" />
-      </div>
-      <label><input type="checkbox" v-model="form.mobile" /> Mobile</label>
-      <label><input type="checkbox" v-model="form.skipTlsVerification" /> Skip TLS Verification</label>
-      <div class="form-group">
-        <label>Proxy</label>
-        <select v-model="form.proxy">
-          <option value="">Default</option>
-          <option value="basic">Basic</option>
-          <option value="stealth">Stealth</option>
-        </select>
-      </div>
-      <label><input type="checkbox" v-model="form.blockAds" /> Block Ads</label>
-      <label><input type="checkbox" v-model="form.removeBase64Images" /> Remove Base64 Images</label>
-      <div class="form-group">
-        <label>Headers (JSON)</label>
-        <textarea v-model="headersJson" rows="4" placeholder='{"User-Agent":"MyBot"}'></textarea>
-      </div>
-      <div class="form-group">
-        <label>JSON Options</label>
-        <textarea v-model="jsonOptionsJson" rows="4" placeholder='{"schema":{}}'></textarea>
-      </div>
-      <div class="form-group">
-        <label>Change Tracking Options</label>
-        <textarea v-model="changeTrackingJson" rows="4" placeholder='{"modes":["git-diff"]}'></textarea>
-      </div>
+
+      <fieldset class="form-group options-fieldset">
+        <legend>Scrape Options</legend>
+        <div class="form-group">
+          <label for="formats">Output Formats:</label>
+          <select id="formats" v-model="form.formats" multiple>
+            <option value="markdown">Markdown</option>
+            <option value="html">HTML</option>
+            <option value="rawHtml">Raw HTML</option>
+            <option value="links">Links</option>
+            <option value="screenshot">Screenshot</option>
+            <option value="screenshot@fullPage">Screenshot Full Page</option>
+            <option value="json">JSON</option>
+            <option value="changeTracking">Change Tracking</option>
+          </select>
+        </div>
+        <label class="checkbox-label">
+          <input type="checkbox" v-model="form.onlyMainContent" />
+          Only Main Content
+        </label>
+        <div class="grid-layout">
+          <div class="form-group">
+            <label for="includeTags">Include Tags:</label>
+            <input id="includeTags" v-model="includeTags" placeholder="p,div" />
+          </div>
+          <div class="form-group">
+            <label for="excludeTags">Exclude Tags:</label>
+            <input id="excludeTags" v-model="excludeTags" placeholder="script,style" />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="form-group options-fieldset">
+        <legend>Page Options</legend>
+        <div class="grid-layout">
+          <div class="form-group">
+            <label for="waitFor">Wait For (ms):</label>
+            <input id="waitFor" type="number" v-model.number="form.waitFor" min="0" />
+          </div>
+          <div class="form-group">
+            <label for="timeout">Timeout (ms):</label>
+            <input id="timeout" type="number" v-model.number="form.timeout" min="0" />
+          </div>
+          <div class="form-group">
+            <label for="proxy">Proxy:</label>
+            <select id="proxy" v-model="form.proxy">
+              <option value="">Default</option>
+              <option value="basic">Basic</option>
+              <option value="stealth">Stealth</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid-layout">
+          <label class="checkbox-label">
+            <input type="checkbox" v-model="form.mobile" />
+            Mobile
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" v-model="form.skipTlsVerification" />
+            Skip TLS Verification
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" v-model="form.blockAds" />
+            Block Ads
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" v-model="form.removeBase64Images" />
+            Remove Base64 Images
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="form-group options-fieldset">
+        <legend>Advanced</legend>
+        <div class="form-group">
+          <label for="headers">Headers (JSON):</label>
+          <textarea id="headers" v-model="headersJson" rows="4" placeholder='{"User-Agent":"MyBot"}'></textarea>
+        </div>
+        <div class="form-group">
+          <label for="jsonOptions">JSON Options:</label>
+          <textarea id="jsonOptions" v-model="jsonOptionsJson" rows="4" placeholder='{"schema":{}}'></textarea>
+        </div>
+        <div class="form-group">
+          <label for="changeTracking">Change Tracking Options:</label>
+          <textarea id="changeTracking" v-model="changeTrackingJson" rows="4" placeholder='{"modes":["git-diff"]}'></textarea>
+        </div>
+      </fieldset>
+
       <button type="submit" :disabled="loading">{{ loading ? 'Processing...' : 'Scrape' }}</button>
     </form>
 
@@ -288,6 +320,27 @@ button[type="submit"]:hover:not(:disabled) {
 
 .download-options button:hover {
   background-color: #286090;
+}
+
+.options-fieldset {
+  border: 1px solid #ccc;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+.options-fieldset legend {
+  font-weight: bold;
+  padding: 0 5px;
+}
+.grid-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 pre {
