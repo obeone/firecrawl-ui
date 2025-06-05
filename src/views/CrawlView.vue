@@ -129,10 +129,10 @@ async function startCrawl() {
   excludeInput.value && (form.excludePaths = excludeInput.value.split(',').map(s => s.trim()).filter(Boolean))
   loading.value = true
   try {
-    const res = await api.crawling.crawlUrls(form)
-    if (res.id) {
-      currentId.value = res.id
-      history.value.unshift({ id: res.id, url: form.url, status: 'scraping' })
+    const { data } = await api.crawling.crawlUrls(form)
+    if (data.id) {
+      currentId.value = data.id
+      history.value.unshift({ id: data.id, url: form.url, status: 'scraping' })
       saveHistory()
       pollStatus()
     }
@@ -154,11 +154,11 @@ function pollStatus() {
   const fetchStatus = async () => {
     if (!currentId.value) return
     try {
-      const res = await api.crawling.getCrawlStatus(currentId.value)
-      status.value = res
+      const { data } = await api.crawling.getCrawlStatus(currentId.value)
+      status.value = data
       const h = history.value.find(j => j.id === currentId.value)
-      if (h && res.status) { h.status = res.status; saveHistory() }
-      if (res.status === 'completed' || res.status === 'failed') {
+      if (h && data.status) { h.status = data.status; saveHistory() }
+      if (data.status === 'completed' || data.status === 'failed') {
         clearInterval(timer)
       }
     } catch (e) {
