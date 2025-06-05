@@ -193,6 +193,63 @@
               tags.</small
             >
           </div>
+          <div class="grid-layout">
+            <div class="form-group">
+              <label for="waitFor">Wait For (ms):</label>
+              <input id="waitFor" v-model.number="formData.scrapeOptions.waitFor" type="number" min="0" />
+            </div>
+            <div class="form-group">
+              <label for="timeout">Timeout (ms):</label>
+              <input id="timeout" v-model.number="formData.scrapeOptions.timeout" type="number" min="0" />
+            </div>
+            <div class="form-group">
+              <label for="proxy">Proxy:</label>
+              <select id="proxy" v-model="formData.scrapeOptions.proxy">
+                <option value="">Auto</option>
+                <option value="basic">Basic</option>
+                <option value="stealth">Stealth</option>
+              </select>
+            </div>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="formData.scrapeOptions.mobile" />
+              Emulate Mobile Device
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="formData.scrapeOptions.skipTlsVerification" />
+              Skip TLS Verification
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="formData.scrapeOptions.blockAds" />
+              Block Ads & Popups
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="formData.scrapeOptions.removeBase64Images" />
+              Remove Base64 Images
+            </label>
+          </div>
+          <div class="form-group">
+            <label for="headers">HTTP Headers (JSON):</label>
+            <textarea id="headers" v-model="headersJson" rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="location">Location (country code):</label>
+            <input id="location" v-model="formData.scrapeOptions.location" placeholder="US" />
+          </div>
+          <div v-if="formData.scrapeOptions.formats.includes('json')" class="form-group">
+            <label for="jsonOptionsCrawl">JSON Options:</label>
+            <textarea id="jsonOptionsCrawl" v-model="jsonOptionsJson" rows="4"></textarea>
+          </div>
+          <div v-if="formData.scrapeOptions.formats.includes('changeTracking')" class="form-group">
+            <label for="changeModesCrawl">Change Tracking Modes:</label>
+            <select id="changeModesCrawl" v-model="changeTrackingModes" multiple>
+              <option value="git-diff">git-diff</option>
+              <option value="json">json</option>
+            </select>
+            <label for="changeSchemaCrawl">Change Tracking Schema (JSON):</label>
+            <textarea id="changeSchemaCrawl" v-model="changeTrackingSchemaJson" rows="4"></textarea>
+            <label for="changePromptCrawl">Change Tracking Prompt:</label>
+            <textarea id="changePromptCrawl" v-model="formData.scrapeOptions.changeTrackingOptions.prompt" rows="2"></textarea>
+          </div>
         </div>
       </fieldset>
 
@@ -393,7 +450,18 @@ interface ScrapeOptions {
   waitFor?: number;
   mobile?: boolean;
   removeBase64Images?: boolean;
+  skipTlsVerification?: boolean;
+  timeout?: number;
+  blockAds?: boolean;
+  proxy?: string | 'basic' | 'stealth';
+  location?: string;
+  jsonOptions?: any;
   actions?: any[]; // Based on OpenAPI, actions is an array of Action objects
+  changeTrackingOptions?: {
+    modes?: string[];
+    schema?: object;
+    prompt?: string;
+  };
 }
 
 /**
@@ -454,8 +522,15 @@ export default defineComponent({
         headers: {},
         waitFor: undefined,
         mobile: false,
+        skipTlsVerification: false,
+        timeout: undefined,
+        blockAds: true,
         removeBase64Images: false,
+        proxy: '',
+        location: '',
+        jsonOptions: {},
         actions: [],
+        changeTrackingOptions: { modes: [], schema: undefined, prompt: '' },
       },
       webhookOptions: {
         url: undefined,
@@ -524,6 +599,54 @@ export default defineComponent({
         .map((s) => s.trim())
         .filter(Boolean);
     };
+
+    const headersJson = ref(JSON.stringify(formData.value.scrapeOptions.headers || {}, null, 2));
+    const actionsJson = ref(JSON.stringify(formData.value.scrapeOptions.actions || [], null, 2));
+    const jsonOptionsJson = ref(JSON.stringify(formData.value.scrapeOptions.jsonOptions || {}, null, 2));
+    const changeTrackingSchemaJson = ref(JSON.stringify(formData.value.scrapeOptions.changeTrackingOptions?.schema || {}, null, 2));
+    const changeTrackingModes = ref<string[]>([]);
+
+    watch(headersJson, (val) => {
+      try {
+        formData.value.scrapeOptions.headers = val ? JSON.parse(val) : {};
+      } catch {
+        // ignore
+      }
+    });
+
+    watch(actionsJson, (val) => {
+      try {
+        formData.value.scrapeOptions.actions = val ? JSON.parse(val) : [];
+      } catch {
+        // ignore
+      }
+    });
+
+    watch(jsonOptionsJson, (val) => {
+      try {
+        formData.value.scrapeOptions.jsonOptions = val ? JSON.parse(val) : {};
+      } catch {
+        // ignore
+      }
+    });
+
+    watch(changeTrackingSchemaJson, (val) => {
+      try {
+        if (!formData.value.scrapeOptions.changeTrackingOptions) {
+          formData.value.scrapeOptions.changeTrackingOptions = { modes: [], schema: {}, prompt: '' };
+        }
+        formData.value.scrapeOptions.changeTrackingOptions.schema = val ? JSON.parse(val) : undefined;
+      } catch {
+        /* ignore */
+      }
+    });
+
+    watch(changeTrackingModes, (val) => {
+      if (!formData.value.scrapeOptions.changeTrackingOptions) {
+        formData.value.scrapeOptions.changeTrackingOptions = { modes: [], schema: {}, prompt: '' };
+      }
+      formData.value.scrapeOptions.changeTrackingOptions.modes = val;
+    });
 
     watch(webhookHeadersJson, (val) => {
       try {
@@ -812,8 +935,19 @@ export default defineComponent({
           headers: formData.value.scrapeOptions.headers,
           waitFor: formData.value.scrapeOptions.waitFor,
           mobile: formData.value.scrapeOptions.mobile,
+          skipTlsVerification: formData.value.scrapeOptions.skipTlsVerification,
+          timeout: formData.value.scrapeOptions.timeout,
+          blockAds: formData.value.scrapeOptions.blockAds,
           removeBase64Images: formData.value.scrapeOptions.removeBase64Images,
+          proxy: formData.value.scrapeOptions.proxy,
+          location:
+            formData.value.scrapeOptions.location &&
+            formData.value.scrapeOptions.location !== ''
+              ? { country: formData.value.scrapeOptions.location }
+              : undefined,
+          jsonOptions: formData.value.scrapeOptions.jsonOptions,
           actions: formData.value.scrapeOptions.actions,
+          changeTrackingOptions: formData.value.scrapeOptions.changeTrackingOptions,
         },
       };
 
@@ -983,6 +1117,11 @@ export default defineComponent({
       webhookHeadersJson,
       webhookMetadataJson,
       webhookEvents,
+      headersJson,
+      actionsJson,
+      jsonOptionsJson,
+      changeTrackingSchemaJson,
+      changeTrackingModes,
       // Expose saveHistory if needed elsewhere, though not strictly necessary for this task
       // saveHistory,
     };

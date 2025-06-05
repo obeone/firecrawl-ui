@@ -32,13 +32,19 @@
 
       <!-- Change Tracking Options (conditional) -->
       <div v-if="formData.scrapeOptions.formats.includes('changeTracking')" class="form-group">
-        <label for="changeTrackingThreshold">Change Threshold (%):</label>
-        <input id="changeTrackingThreshold" type="number" min="0" max="100" v-model.number="formData.changeTrackingOptions.threshold" />
-        <small>Minimum percentage change to trigger tracking.</small>
+        <label for="changeModes">Change Tracking Modes:</label>
+        <select id="changeModes" v-model="changeTrackingModes" multiple>
+          <option value="git-diff">git-diff</option>
+          <option value="json">json</option>
+        </select>
+        <small>Select modes for change tracking.</small>
 
-        <label for="changeTrackingFrequency">Check Frequency (minutes):</label>
-        <input id="changeTrackingFrequency" type="number" min="1" v-model.number="formData.changeTrackingOptions.frequency" />
-        <small>Frequency to check for changes.</small>
+        <label for="changeSchema">Change Tracking Schema (JSON):</label>
+        <textarea id="changeSchema" v-model="changeTrackingSchemaJson" rows="4"></textarea>
+        <small>Define JSON schema when using json mode.</small>
+
+        <label for="changePrompt">Change Tracking Prompt:</label>
+        <textarea id="changePrompt" v-model="formData.changeTrackingOptions.prompt" rows="2"></textarea>
       </div>
 
       <fieldset class="form-group options-fieldset">
@@ -117,11 +123,11 @@
         </div>
       </fieldset>
 
-      <div v-if="formData.scrapeOptions.formats.includes(ScrapeAndExtractFromUrlRequestFormatsEnum.Extract)" class="form-group">
-        <label for="extractorOptions">Extractor Options (JSON format):</label>
-        <textarea id="extractorOptions" v-model="extractorOptionsJson" rows="8" placeholder='e.g. {"key": "value"}'></textarea>
-        <small>Enter JSON options for extraction. Must be valid JSON.</small>
-        <div v-if="extractorOptionsError" class="error-message">{{ extractorOptionsError }}</div>
+      <div v-if="formData.scrapeOptions.formats.includes('json')" class="form-group">
+        <label for="jsonOptions">JSON Options:</label>
+        <textarea id="jsonOptions" v-model="jsonOptionsJson" rows="8" placeholder='{"schema": {}}'></textarea>
+        <small>Enter JSON extraction options.</small>
+        <div v-if="jsonOptionsError" class="error-message">{{ jsonOptionsError }}</div>
       </div>
       <div class="form-group">
         <label for="actions">Actions (JSON array):</label>
@@ -179,73 +185,41 @@ import {
 
 type ScrapeResult = ScrapeResponse
 
-// Define interfaces for the reactive formData structure (can differ from API request structure for UI organization)
+// ----- Type Definitions -----
 interface FormDataPageOptions {
-  waitFor?: number;
-  mobile?: boolean;
-  skipTlsVerification?: boolean;
-  timeout?: number;
-  blockAds?: boolean;
-  removeBase64Images?: boolean;
-  proxy?: string | 'basic' | 'stealth';
-  headers?: Record<string, string>;
-  location?: string;
-  actions?: any[];
+  waitFor?: number
+  mobile?: boolean
+  skipTlsVerification?: boolean
+  timeout?: number
+  blockAds?: boolean
+  removeBase64Images?: boolean
+  proxy?: string | 'basic' | 'stealth'
+  headers?: Record<string, string>
+  location?: string
+  actions?: any[]
 }
 
 interface FormDataScrapeOptions {
-  formats: string[]; // Accept string values like "json", "markdown", etc.
-  onlyMainContent?: boolean;
-  includeTags?: string;
-  excludeTags?: string;
+  formats: string[]
+  onlyMainContent?: boolean
+  includeTags?: string
+  excludeTags?: string
 }
 
-interface FormDataExtractorOptions extends Partial<ScrapeAndExtractFromUrlRequestExtract> {
-  // Add specific fields if needed for UI binding, otherwise Partial is fine
-}
+interface JsonOptions extends Partial<ScrapeAndExtractFromUrlRequestExtract> {}
 
-interface FormData {
-  url: string;
-  pageOptions: FormDataPageOptions;
-  scrapeOptions: FormDataScrapeOptions;
-  extractorOptions?: FormDataExtractorOptions; // Added extractorOptions for JSON format
-  changeTrackingOptions: FormDataChangeTrackingOptions;
-}
-
-interface FormDataChangeTrackingOptions {
-  threshold: number; // percentage threshold for change detection
-  frequency: number; // frequency in minutes to check for changes
+interface ChangeTrackingOptions {
+  modes: string[]
+  schema?: object
+  prompt?: string
 }
 
 interface FormData {
-  url: string;
-  pageOptions: FormDataPageOptions;
-  scrapeOptions: FormDataScrapeOptions;
-  extractorOptions?: FormDataExtractorOptions; // Added extractorOptions for JSON format
-  changeTrackingOptions: FormDataChangeTrackingOptions; // Added changeTrackingOptions
-}
-
-interface FormDataChangeTrackingOptions {
-  threshold: number; // percentage threshold for change detection
-  frequency: number; // frequency in minutes to check for changes
-}
-
-interface FormDataExtractorOptions extends Partial<ScrapeAndExtractFromUrlRequestExtract> {
-  // Add specific fields if needed for UI binding, otherwise Partial is fine
-}
-
-// interface FormDataChangeTrackingOptions { // Add later if needed
-//   mode?: string;
-//   schema?: object;
-//   prompt?: string;
-// }
-
-interface FormData {
-  url: string;
-  pageOptions: FormDataPageOptions;
-  scrapeOptions: FormDataScrapeOptions;
-  // extractorOptions?: FormDataExtractorOptions; // Add later
-  changeTrackingOptions: FormDataChangeTrackingOptions; // Add later
+  url: string
+  pageOptions: FormDataPageOptions
+  scrapeOptions: FormDataScrapeOptions
+  jsonOptions?: JsonOptions
+  changeTrackingOptions: ChangeTrackingOptions
 }
 
 
@@ -259,27 +233,28 @@ export default defineComponent({
     const formData = ref<FormData>({
       url: '',
       pageOptions: {
-        waitFor: undefined, // Use undefined for optional numbers initially
+        waitFor: undefined,
         mobile: false,
         skipTlsVerification: false,
-        timeout: undefined, // Default is 30000ms in API, let API handle default if undefined
-        blockAds: true, // Default from docs
-        removeBase64Images: true, // Default from docs
-        proxy: '', // Default to Auto/empty string
+        timeout: undefined,
+        blockAds: true,
+        removeBase64Images: true,
+        proxy: '',
         headers: {},
         location: '',
         actions: [],
       },
       scrapeOptions: {
-        onlyMainContent: true, // Default from docs
-        formats: [ScrapeAndExtractFromUrlRequestFormatsEnum.Markdown], // Default format
+        onlyMainContent: true,
+        formats: [ScrapeAndExtractFromUrlRequestFormatsEnum.Markdown],
         includeTags: '',
         excludeTags: ''
       },
-      extractorOptions: {}, // Added extractorOptions initial empty object
+      jsonOptions: {},
       changeTrackingOptions: {
-        threshold: 10, // default threshold percentage
-        frequency: 60  // default frequency in minutes
+        modes: [],
+        schema: undefined,
+        prompt: ''
       }
     })
 
@@ -331,13 +306,23 @@ export default defineComponent({
         ...(formData.value.scrapeOptions.includeTags && formData.value.scrapeOptions.includeTags.trim() !== '' && { includeTags: formData.value.scrapeOptions.includeTags.split(',').map(tag => tag.trim()).filter(tag => tag !== '') }),
         ...(formData.value.scrapeOptions.excludeTags && formData.value.scrapeOptions.excludeTags.trim() !== '' && { excludeTags: formData.value.scrapeOptions.excludeTags.split(',').map(tag => tag.trim()).filter(tag => tag !== '') }),
 
-        // Include extractorOptions and changeTrackingOptions directly if they exist
-        ...(formData.value.scrapeOptions.formats.includes(ScrapeAndExtractFromUrlRequestFormatsEnum.Extract) && formData.value.extractorOptions && Object.keys(formData.value.extractorOptions).length > 0 && { extract: formData.value.extractorOptions as ScrapeAndExtractFromUrlRequestExtract }),
+        // Include jsonOptions and changeTrackingOptions when provided
+        ...(formData.value.scrapeOptions.formats.includes('json') &&
+          formData.value.jsonOptions && Object.keys(formData.value.jsonOptions).length > 0 && {
+            jsonOptions: formData.value.jsonOptions as ScrapeAndExtractFromUrlRequestExtract,
+          }),
         ...(formData.value.scrapeOptions.formats.includes('changeTracking') && {
           changeTrackingOptions: {
-            threshold: formData.value.changeTrackingOptions?.threshold ?? 10,
-            frequency: formData.value.changeTrackingOptions?.frequency ?? 60
-          }
+            ...(formData.value.changeTrackingOptions.modes.length > 0 && {
+              modes: formData.value.changeTrackingOptions.modes,
+            }),
+            ...(formData.value.changeTrackingOptions.schema && {
+              schema: formData.value.changeTrackingOptions.schema,
+            }),
+            ...(formData.value.changeTrackingOptions.prompt && {
+              prompt: formData.value.changeTrackingOptions.prompt,
+            }),
+          },
         })
       };
 
@@ -410,16 +395,16 @@ export default defineComponent({
       document.body.removeChild(link)
     }
 
-    // JSON validation for extractorOptions textarea
-    const extractorOptionsJson = ref(JSON.stringify(formData.value.extractorOptions || {}, null, 2))
-    const extractorOptionsError = ref('')
+    // JSON validation for jsonOptions textarea
+    const jsonOptionsJson = ref(JSON.stringify(formData.value.jsonOptions || {}, null, 2))
+    const jsonOptionsError = ref('')
 
-    watch(extractorOptionsJson, (newVal) => {
+    watch(jsonOptionsJson, (newVal) => {
       try {
-        formData.value.extractorOptions = newVal ? JSON.parse(newVal) : {}
-        extractorOptionsError.value = ''
+        formData.value.jsonOptions = newVal ? JSON.parse(newVal) : {}
+        jsonOptionsError.value = ''
       } catch (e) {
-        extractorOptionsError.value = 'Invalid JSON format'
+        jsonOptionsError.value = 'Invalid JSON format'
       }
     })
 
@@ -449,6 +434,21 @@ export default defineComponent({
       }
     });
 
+    const changeTrackingSchemaJson = ref(
+      JSON.stringify(formData.value.changeTrackingOptions.schema || {}, null, 2),
+    );
+    const changeTrackingModes = ref<string[]>([]);
+    watch(changeTrackingSchemaJson, (val) => {
+      try {
+        formData.value.changeTrackingOptions.schema = val ? JSON.parse(val) : undefined;
+      } catch {
+        /* ignore JSON errors */
+      }
+    });
+    watch(changeTrackingModes, (val) => {
+      formData.value.changeTrackingOptions.modes = val;
+    });
+
     return {
       formData,
       loading,
@@ -457,10 +457,12 @@ export default defineComponent({
       result,
       handleSubmit,
       downloadResult,
-      extractorOptionsJson,
-      extractorOptionsError,
+      jsonOptionsJson,
+      jsonOptionsError,
       actionsJson,
       actionsError,
+      changeTrackingSchemaJson,
+      changeTrackingModes,
       ScrapeAndExtractFromUrlRequestFormatsEnum, // Expose enum for template
       isScrapeOptionsCollapsed,
       isPageOptionsCollapsed,
