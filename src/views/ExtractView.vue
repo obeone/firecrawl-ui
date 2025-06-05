@@ -109,9 +109,10 @@ async function startExtract() {
       payload,
       { headers: api.extraction.configuration.baseOptions?.headers }
     )
-    if (data.id) {
-      currentId.value = data.id
-      history.value.unshift({ id: data.id, label: urls[0], status: 'processing' })
+    const jobId = data.id || data.extractId
+    if (jobId) {
+      currentId.value = jobId
+      history.value.unshift({ id: jobId, label: urls[0], status: 'processing' })
       saveHistory()
       pollStatus()
     }
