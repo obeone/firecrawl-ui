@@ -310,6 +310,18 @@ export interface CrawlUrlsRequest {
      */
     'maxDepth'?: number;
     /**
+     * Maximum depth to crawl based on discovery order.
+     * @type {number}
+     * @memberof CrawlUrlsRequest
+     */
+    'maxDiscoveryDepth'?: number;
+    /**
+     * Do not re-scrape the same path with different (or none) query parameters
+     * @type {boolean}
+     * @memberof CrawlUrlsRequest
+     */
+    'ignoreQueryParameters'?: boolean;
+    /**
      * Ignore the website sitemap when crawling
      * @type {boolean}
      * @memberof CrawlUrlsRequest
@@ -333,6 +345,12 @@ export interface CrawlUrlsRequest {
      * @memberof CrawlUrlsRequest
      */
     'allowExternalLinks'?: boolean;
+    /**
+     * Delay in seconds between scrapes. This helps respect website rate limits.
+     * @type {number}
+     * @memberof CrawlUrlsRequest
+     */
+    'delay'?: number;
     /**
      * 
      * @type {CrawlUrlsRequestWebhook}
@@ -442,7 +460,22 @@ export interface CrawlUrlsRequestWebhookOneOf {
      * @memberof CrawlUrlsRequestWebhookOneOf
      */
     'metadata'?: { [key: string]: any; };
+    /**
+     * Type of events that should be sent to the webhook URL. (default: all)
+     * @type {Array<CrawlUrlsRequestWebhookOneOfEventsEnum>}
+     * @memberof CrawlUrlsRequestWebhookOneOf
+     */
+    'events'?: Array<CrawlUrlsRequestWebhookOneOfEventsEnum>;
 }
+
+export const CrawlUrlsRequestWebhookOneOfEventsEnum = {
+    Completed: 'completed',
+    Page: 'page',
+    Failed: 'failed',
+    Started: 'started'
+} as const;
+
+export type CrawlUrlsRequestWebhookOneOfEventsEnum = typeof CrawlUrlsRequestWebhookOneOfEventsEnum[keyof typeof CrawlUrlsRequestWebhookOneOfEventsEnum];
 /**
  * 
  * @export

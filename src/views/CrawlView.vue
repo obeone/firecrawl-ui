@@ -63,10 +63,10 @@
               >
             </div>
             <div class="form-group">
-              <label for="maxDepthDiscovery">Max Discovery Depth:</label>
+              <label for="maxDiscoveryDepth">Max Discovery Depth:</label>
               <input
-                id="maxDepthDiscovery"
-                v-model.number="formData.crawlerOptions.maxDepthDiscovery"
+                id="maxDiscoveryDepth"
+                v-model.number="formData.crawlerOptions.maxDiscoveryDepth"
                 type="number"
                 min="1"
                 placeholder="e.g. 2"
@@ -84,6 +84,18 @@
               />
               <small>Maximum number of pages to crawl (default: 10000).</small>
             </div>
+            <div class="form-group">
+              <label for="delay">Delay (seconds):</label>
+              <input
+                id="delay"
+                v-model.number="formData.crawlerOptions.delay"
+                type="number"
+                min="0"
+                step="0.1"
+                placeholder="e.g. 1.5"
+              />
+              <small>Delay between pages to respect rate limits.</small>
+            </div>
           </div>
           <div class="grid-layout">
             <label class="checkbox-label">
@@ -96,9 +108,9 @@
             <label class="checkbox-label">
               <input
                 type="checkbox"
-                v-model="formData.crawlerOptions.allowPathRevisits"
+                v-model="formData.crawlerOptions.ignoreQueryParameters"
               />
-              Allow Path Revisits
+              Ignore Query Parameters
             </label>
             <label class="checkbox-label">
               <input
@@ -205,22 +217,30 @@
               />
             </div>
             <div class="form-group">
-              <label for="webhookSecret">Webhook Secret:</label>
-              <input
-                id="webhookSecret"
-                v-model="formData.webhookOptions.secret"
-                type="text"
-                placeholder="Secret for verification"
-              />
+              <label for="webhookHeaders">Webhook Headers (JSON):</label>
+              <textarea
+                id="webhookHeaders"
+                v-model="webhookHeadersInput"
+                placeholder='{"Authorization": "token"}'
+                @blur="parseWebhookHeaders"
+              ></textarea>
             </div>
             <div class="form-group">
-              <label for="webhookEvent">Webhook Event:</label>
-              <select id="webhookEvent" v-model="formData.webhookOptions.event">
-                <option value="">Select event</option>
-                <option value="started">Started</option>
-                <option value="page">Page</option>
+              <label for="webhookMetadata">Webhook Metadata (JSON):</label>
+              <textarea
+                id="webhookMetadata"
+                v-model="webhookMetadataInput"
+                placeholder='{"source": "ui"}'
+                @blur="parseWebhookMetadata"
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <label for="webhookEvents">Webhook Events:</label>
+              <select id="webhookEvents" v-model="formData.webhookOptions.events" multiple>
                 <option value="completed">Completed</option>
+                <option value="page">Page</option>
                 <option value="failed">Failed</option>
+                <option value="started">Started</option>
               </select>
             </div>
           </div>
@@ -342,10 +362,11 @@ interface CrawlerOptions {
   includes?: string[];
   excludes?: string[];
   maxDepth?: number;
-  maxDepthDiscovery?: number;
+  maxDiscoveryDepth?: number;
   ignoreSitemap?: boolean;
-  allowPathRevisits?: boolean;
+  ignoreQueryParameters?: boolean;
   limit?: number;
+  delay?: number;
   allowExternalLinks?: boolean;
   navigateBacklinks?: boolean;
 }
@@ -371,8 +392,9 @@ interface ScrapeOptions {
  */
 interface WebhookOptions {
   url?: string;
-  secret?: string;
-  event?: string;
+  headers?: Record<string, string>;
+  metadata?: Record<string, any>;
+  events?: string[];
 }
 
 /**
@@ -407,10 +429,11 @@ export default defineComponent({
         includes: [],
         excludes: [],
         maxDepth: undefined,
-        maxDepthDiscovery: undefined,
+        maxDiscoveryDepth: undefined,
         ignoreSitemap: false,
-        allowPathRevisits: false,
+        ignoreQueryParameters: false,
         limit: undefined,
+        delay: undefined,
         allowExternalLinks: false,
         navigateBacklinks: false,
       },
@@ -427,8 +450,9 @@ export default defineComponent({
       },
       webhookOptions: {
         url: undefined,
-        secret: undefined,
-        event: undefined,
+        headers: {},
+        metadata: {},
+        events: [],
       },
     });
 
@@ -437,6 +461,8 @@ export default defineComponent({
     const excludesInput = ref("");
     const includeTagsInput = ref("");
     const excludeTagsInput = ref("");
+    const webhookHeadersInput = ref("");
+    const webhookMetadataInput = ref("");
 
     // State for collapsible sections
     const isCrawlerOptionsCollapsed = ref(true);
@@ -481,6 +507,26 @@ export default defineComponent({
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
+    };
+
+    const parseWebhookHeaders = () => {
+      try {
+        formData.value.webhookOptions.headers = webhookHeadersInput.value
+          ? JSON.parse(webhookHeadersInput.value)
+          : {};
+      } catch {
+        error.value = "Invalid JSON for webhook headers";
+      }
+    };
+
+    const parseWebhookMetadata = () => {
+      try {
+        formData.value.webhookOptions.metadata = webhookMetadataInput.value
+          ? JSON.parse(webhookMetadataInput.value)
+          : {};
+      } catch {
+        error.value = "Invalid JSON for webhook metadata";
+      }
     };
 
     const loading = ref(false);
@@ -659,6 +705,8 @@ export default defineComponent({
       parseExcludes();
       parseIncludeTags();
       parseExcludeTags();
+      parseWebhookHeaders();
+      parseWebhookMetadata();
 
       if (!isValidUrl(formData.value.url)) {
         error.value = "Please enter a valid URL (e.g. https://example.com)";
@@ -673,15 +721,17 @@ export default defineComponent({
       }
 
       // Build the request payload according to the OpenAPI CrawlRequest schema
-      // Construction du payload avec toutes les options du formulaire, y compris maxDepthDiscovery
+      // Construction du payload avec toutes les options du formulaire, y compris maxDiscoveryDepth
       const payload: any = {
         url: formData.value.url,
         excludePaths: formData.value.crawlerOptions.excludes,
         includePaths: formData.value.crawlerOptions.includes,
         maxDepth: formData.value.crawlerOptions.maxDepth,
-        maxDepthDiscovery: formData.value.crawlerOptions.maxDepthDiscovery,
+        maxDiscoveryDepth: formData.value.crawlerOptions.maxDiscoveryDepth,
         ignoreSitemap: formData.value.crawlerOptions.ignoreSitemap,
+        ignoreQueryParameters: formData.value.crawlerOptions.ignoreQueryParameters,
         limit: formData.value.crawlerOptions.limit,
+        delay: formData.value.crawlerOptions.delay,
         allowBackwardLinks: formData.value.crawlerOptions.navigateBacklinks,
         allowExternalLinks: formData.value.crawlerOptions.allowExternalLinks,
         scrapeOptions: {
@@ -697,17 +747,33 @@ export default defineComponent({
         },
       };
 
-      // Only include webhookOptions if at least one field is filled
-      // Inclure webhookOptions uniquement si au moins un champ est non vide et non une chaîne vide
+      // Include webhook options only when a URL is provided
       if (
-        (formData.value.webhookOptions.url &&
-          formData.value.webhookOptions.url !== "") ||
-        (formData.value.webhookOptions.secret &&
-          formData.value.webhookOptions.secret !== "") ||
-        (formData.value.webhookOptions.event &&
-          formData.value.webhookOptions.event !== "")
+        formData.value.webhookOptions.url &&
+        formData.value.webhookOptions.url !== ""
       ) {
-        payload.webhookOptions = { ...formData.value.webhookOptions };
+        payload.webhook = {
+          url: formData.value.webhookOptions.url,
+        } as any;
+
+        if (
+          formData.value.webhookOptions.headers &&
+          Object.keys(formData.value.webhookOptions.headers).length > 0
+        ) {
+          payload.webhook.headers = formData.value.webhookOptions.headers;
+        }
+        if (
+          formData.value.webhookOptions.metadata &&
+          Object.keys(formData.value.webhookOptions.metadata).length > 0
+        ) {
+          payload.webhook.metadata = formData.value.webhookOptions.metadata;
+        }
+        if (
+          formData.value.webhookOptions.events &&
+          formData.value.webhookOptions.events.length > 0
+        ) {
+          payload.webhook.events = formData.value.webhookOptions.events;
+        }
       }
 
       try {
@@ -842,10 +908,14 @@ export default defineComponent({
       excludesInput,
       includeTagsInput,
       excludeTagsInput,
+      webhookHeadersInput,
+      webhookMetadataInput,
       parseIncludes,
       parseExcludes,
       parseIncludeTags,
       parseExcludeTags,
+      parseWebhookHeaders,
+      parseWebhookMetadata,
       loading,
       crawling,
       progress,
