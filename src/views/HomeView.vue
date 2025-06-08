@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <div class="hero">
-      <img src="@/assets/logo.png" alt="Firecrawl Logo" class="logo" />
+      <img src="@/assets/logo.png" alt="Firecrawl UI Logo" class="logo" />
       <h1>Firecrawl UI</h1>
       <p class="subtitle">
         Modern platform for crawling, scraping and web data analysis.<br />
@@ -62,7 +62,7 @@
       </ul>
       <p class="local-note">All features run locally; your data never leaves your machine.</p>
       <p>
-        <a href="https://github.com/firecrawl/firecrawl-ui" target="_blank" class="about-link"
+        <a href="https://github.com/obeone/firecrawl-ui" target="_blank" class="about-link"
           >Documentation & Support</a
         >
       </p>
