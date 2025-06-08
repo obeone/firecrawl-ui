@@ -1,4 +1,4 @@
-@import './base.css';
+@import "./base.css";
 
 /* Styles for #app (lines 3-8) removed as they are managed by .app-layout in App.vue */
 
@@ -22,11 +22,13 @@ a,
 
 /* @media (min-width: 1024px) styles (lines 24-35) removed as they are obsolete with the new structure */
 
-/* --- Scrape Configuration Modern UI --- */
-.scrape-config-container {
+/* --- General Page Container Style --- */
+/* Used across views for consistent layout */
+.scrape-config-container,
+.page-container {
   background: #232323;
   border-radius: 18px;
-  box-shadow: 0 4px 32px 0 rgba(0,0,0,0.25);
+  box-shadow: 0 4px 32px 0 rgba(0, 0, 0, 0.25);
   padding: 2.5rem 3rem;
   max-width: 600px;
   margin: 2.5rem auto;
@@ -37,7 +39,9 @@ a,
 }
 
 .scrape-config-container h1,
-.scrape-config-container h2 {
+.scrape-config-container h2,
+.page-container h1,
+.page-container h2 {
   color: #e0e0e0;
   font-weight: 600;
   margin-bottom: 1rem;
@@ -103,8 +107,10 @@ a,
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 2px 8px 0 rgba(79,192,141,0.10);
-  transition: background 0.2s, transform 0.1s;
+  box-shadow: 0 2px 8px 0 rgba(79, 192, 141, 0.1);
+  transition:
+    background 0.2s,
+    transform 0.1s;
   margin-top: 1.5rem;
 }
 
@@ -117,8 +123,10 @@ a,
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 2px 8px 0 rgba(79,192,141,0.10);
-  transition: background 0.2s, transform 0.1s;
+  box-shadow: 0 2px 8px 0 rgba(79, 192, 141, 0.1);
+  transition:
+    background 0.2s,
+    transform 0.1s;
   margin-top: 1.5rem;
 }
 
@@ -134,7 +142,8 @@ a,
 }
 
 @media (max-width: 700px) {
-  .scrape-config-container {
+  .scrape-config-container,
+  .page-container {
     padding: 1.2rem 0.5rem;
     max-width: 98vw;
   }

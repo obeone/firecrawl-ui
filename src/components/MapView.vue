@@ -1,5 +1,5 @@
 <template>
-  <div class="map-view">
+  <div class="page-container map-view">
     <h2>MapView Component</h2>
     <form @submit.prevent="handleSubmit" class="map-form">
       <div class="form-group">
@@ -37,7 +37,8 @@
 
       <div class="form-group checkbox">
         <label>
-          <input type="checkbox" v-model="includeSubdomains" /> Include Subdomains
+          <input type="checkbox" v-model="includeSubdomains" /> Include
+          Subdomains
         </label>
       </div>
 
@@ -57,7 +58,7 @@
         <input id="timeout" v-model.number="timeout" type="number" min="0" />
       </div>
 
-      <button type="submit">Find URLs</button>
+      <button type="submit" class="primary-button">Find URLs</button>
     </form>
 
     <div v-if="error" class="error">{{ error }}</div>
@@ -68,14 +69,16 @@
       <ul>
         <li v-for="(url, index) in urls" :key="index">{{ url }}</li>
       </ul>
-      <button @click="downloadJson">Download JSON</button>
+      <button class="primary-button" @click="downloadJson">
+        Download JSON
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, inject } from 'vue'
-import type { MappingApi, MapUrlsRequest } from '@/api-client'
+import { ref, inject } from "vue";
+import type { MappingApi, MapUrlsRequest } from "@/api-client";
 
 /**
  * MapView lets users map URLs starting from a base URL.
@@ -86,31 +89,31 @@ import type { MappingApi, MapUrlsRequest } from '@/api-client'
 /**
  * Access the Mapping API instance provided by the api plugin.
  */
-const api = inject('api') as { mapping?: MappingApi } | undefined
+const api = inject("api") as { mapping?: MappingApi } | undefined;
 if (!api?.mapping) {
-  throw new Error('Mapping API is not available')
+  throw new Error("Mapping API is not available");
 }
 
 /** Base URL entered by the user. */
-const baseUrl = ref('')
+const baseUrl = ref("");
 /** Search query used when mapping URLs. */
-const search = ref('')
+const search = ref("");
 /** Ignore the website sitemap when crawling. */
-const ignoreSitemap = ref(true)
+const ignoreSitemap = ref(true);
 /** Only return links found in the website sitemap. */
-const sitemapOnly = ref(false)
+const sitemapOnly = ref(false);
 /** Include subdomains of the website. */
-const includeSubdomains = ref(false)
+const includeSubdomains = ref(false);
 /** Maximum number of links to return. */
-const limit = ref(5000)
+const limit = ref(5000);
 /** Request timeout in milliseconds. */
-const timeout = ref<number | null>(null)
+const timeout = ref<number | null>(null);
 /** List of URLs returned by the API. */
-const urls = ref<string[]>([])
+const urls = ref<string[]>([]);
 /** Indicates whether the API request is in progress. */
-const loading = ref(false)
+const loading = ref(false);
 /** Holds any error message from the API call. */
-const error = ref('')
+const error = ref("");
 
 /**
  * Handle form submission and fetch mapped URLs from the API.
@@ -123,19 +126,19 @@ async function handleSubmit(): Promise<void> {
     sitemapOnly: sitemapOnly.value,
     includeSubdomains: includeSubdomains.value,
     limit: limit.value || undefined,
-    timeout: timeout.value ?? undefined
-  }
+    timeout: timeout.value ?? undefined,
+  };
 
-  loading.value = true
-  error.value = ''
+  loading.value = true;
+  error.value = "";
   try {
-    const response = await api.mapping.mapUrls(payload)
-    urls.value = response.data.links ?? []
+    const response = await api.mapping.mapUrls(payload);
+    urls.value = response.data.links ?? [];
   } catch (err: any) {
-    error.value = err?.message || 'Failed to map URLs'
-    urls.value = []
+    error.value = err?.message || "Failed to map URLs";
+    urls.value = [];
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
@@ -144,13 +147,13 @@ async function handleSubmit(): Promise<void> {
  */
 function downloadJson(): void {
   const blob = new Blob([JSON.stringify(urls.value, null, 2)], {
-    type: 'application/json'
-  })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = 'urls.json'
-  link.click()
-  URL.revokeObjectURL(link.href)
+    type: "application/json",
+  });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "urls.json";
+  link.click();
+  URL.revokeObjectURL(link.href);
 }
 </script>
 
@@ -180,7 +183,7 @@ label {
   margin-bottom: 0.25rem;
 }
 
-input[type='url'],
+input[type="url"],
 textarea {
   padding: 0.5rem;
   font-size: 1rem;
