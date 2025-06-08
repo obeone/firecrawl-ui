@@ -133,10 +133,11 @@ const runExtraction = async (): Promise<void> => {
     loading.value = true;
     error.value = '';
     const response = await api.extraction.extractData(payload);
-    if (response.success && response.data) {
-      result.value = response.data;
+    const respData = response.data;
+    if (respData.success && (respData as any).data) {
+      result.value = (respData as any).data;
     } else {
-      throw new Error(response.error || 'Extraction failed');
+      throw new Error((respData as any).error || 'Extraction failed');
     }
   } catch (err: any) {
     error.value = err?.message || 'Request failed';
