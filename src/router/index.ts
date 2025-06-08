@@ -6,6 +6,7 @@ import ApiConfigView from '../views/ApiConfigView.vue';
 import ExtractView from '../views/ExtractView.vue'; // Import the new view
 import MapView from '../components/MapView.vue';
 import SearchView from '../components/SearchView.vue';
+import AboutView from '../views/AboutView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -45,6 +46,11 @@ const router = createRouter({
       path: '/search',
       name: 'search',
       component: SearchView,
+    },
+    {
+      path: '/about',
+      name: 'about',
+      component: AboutView,
     },
   ],
 });
