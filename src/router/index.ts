@@ -5,7 +5,7 @@ import CrawlView from '../views/CrawlView.vue'
 import ApiConfigView from '../views/ApiConfigView.vue'
 import ExtractView from '../views/ExtractView.vue' // Import the new view
 import MapView from '../components/MapView.vue'
-import SearchView from '../components/SearchView.vue' // Import SearchView component
+import SearchView from '../components/SearchView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -40,9 +40,9 @@ const router = createRouter({
       name: 'map',
       component: MapView
     },
-    { // Add the route for SearchView
-      path: '/searchview',
-      name: 'searchview',
+    {
+      path: '/search',
+      name: 'search',
       component: SearchView
     }
   ]

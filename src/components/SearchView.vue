@@ -38,20 +38,13 @@
       <h2>Search Results</h2>
       <ul>
         <li v-for="(result, index) in results" :key="index" class="result-item">
-          <a :href="result.link" target="_blank" rel="noopener noreferrer">{{ result.title }}</a>
-          <div v-if="options.includeMetadata" class="metadata">
-            <small>{{ result.metadata }}</small>
+          <a :href="result.url" target="_blank" rel="noopener noreferrer">{{ result.title }}</a>
+          <div v-if="options.includeMetadata && result.metadata" class="metadata">
+            <small>{{ result.metadata.title }}</small>
           </div>
-          <button
-            v-if="options.extractContent"
-            @click="extractContent(result)"
-            class="extract-button"
-          >
-            Extract Content
-          </button>
-          <div v-if="result.extractedContent" class="extracted-content">
+          <div v-if="result.markdown" class="extracted-content">
             <h3>Extracted Content</h3>
-            <p>{{ result.extractedContent }}</p>
+            <p>{{ result.markdown }}</p>
           </div>
         </li>
       </ul>
@@ -60,52 +53,67 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, inject } from 'vue'
+import type { SearchApi, SearchRequest } from '@/api-client/search.js'
 
 interface SearchResult {
   title: string
-  link: string
-  metadata?: string
-  extractedContent?: string
+  url: string
+  description?: string
+  markdown?: string | null
+  html?: string | null
+  rawHtml?: string | null
+  links?: string[]
+  screenshot?: string | null
+  metadata?: {
+    title?: string
+    description?: string
+    sourceURL?: string
+    statusCode?: number
+    error?: string | null
+  }
+}
+
+const api = inject('api') as { search?: SearchApi } | undefined
+if (!api?.search) {
+  throw new Error('Search API is not available')
 }
 
 const query = ref('')
 const options = ref({
   includeMetadata: true,
   extractContent: false,
-  maxResults: 10,
+  maxResults: 5,
 })
 
+const loading = ref(false)
+const error = ref('')
 const results = ref<SearchResult[]>([])
 
 /**
- * Simulate a search operation.
- * In a real app, this would call an API.
+ * Send the search request to the API and populate results.
  */
-function onSearch() {
-  // Clear previous results
+async function onSearch() {
   results.value = []
+  error.value = ''
+  loading.value = true
 
-  // Simulate search results
-  for (let i = 1; i <= options.value.maxResults; i++) {
-    results.value.push({
-      title: `Result for "${query.value}" #${i}`,
-      link: `https://example.com/search?q=${encodeURIComponent(query.value)}&result=${i}`,
-      metadata: options.value.includeMetadata ? `Metadata info #${i}` : undefined,
-    })
+  const payload: SearchRequest = {
+    query: query.value,
+    limit: options.value.maxResults,
+    scrapeOptions: options.value.extractContent ? { formats: ['extract'] } : undefined
+  }
+
+  try {
+    const response = await api.search.search(payload)
+    results.value = (response.data.data || []) as unknown as SearchResult[]
+  } catch (err: any) {
+    error.value = err?.message || 'Search request failed'
+  } finally {
+    loading.value = false
   }
 }
 
-/**
- * Simulate content extraction from a result.
- * @param result The search result to extract content from.
- */
-function extractContent(result: SearchResult) {
-  // Simulate extraction delay
-  setTimeout(() => {
-    result.extractedContent = `Extracted content for "${result.title}".`
-  }, 500)
-}
 </script>
 
 <style scoped>
