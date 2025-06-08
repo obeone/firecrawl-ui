@@ -7,9 +7,9 @@ import { RouterLink } from "vue-router";
   <div class="app-layout">
     <aside class="sidebar">
       <img
-        alt="Vue logo"
+        alt="Firecrawl UI logo"
         class="logo"
-        src="@/assets/logo.svg"
+        src="@/assets/logo.png"
         width="80"
         height="80"
       />

@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <div class="hero">
-      <img src="@/assets/logo.svg" alt="Firecrawl Logo" class="logo" />
+      <img src="@/assets/logo.png" alt="Firecrawl Logo" class="logo" />
       <h1>Firecrawl UI</h1>
       <p class="subtitle">
         Modern platform for crawling, scraping and web data analysis.<br />
