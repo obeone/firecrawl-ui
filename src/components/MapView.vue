@@ -4,53 +4,29 @@
     <form @submit.prevent="handleSubmit" class="map-form">
       <div class="form-group">
         <label for="baseUrl">Base URL:</label>
-        <input
-          id="baseUrl"
-          v-model="baseUrl"
-          type="url"
-          placeholder="Enter base URL"
-          required
-        />
+        <input id="baseUrl" v-model="baseUrl" type="url" placeholder="Enter base URL" required />
       </div>
 
       <div class="form-group">
         <label for="search">Search Query:</label>
-        <input
-          id="search"
-          v-model="search"
-          type="text"
-          placeholder="Optional search terms"
-        />
+        <input id="search" v-model="search" type="text" placeholder="Optional search terms" />
       </div>
 
       <div class="form-group checkbox">
-        <label>
-          <input type="checkbox" v-model="ignoreSitemap" /> Ignore Sitemap
-        </label>
+        <label> <input type="checkbox" v-model="ignoreSitemap" /> Ignore Sitemap </label>
       </div>
 
       <div class="form-group checkbox">
-        <label>
-          <input type="checkbox" v-model="sitemapOnly" /> Sitemap Only
-        </label>
+        <label> <input type="checkbox" v-model="sitemapOnly" /> Sitemap Only </label>
       </div>
 
       <div class="form-group checkbox">
-        <label>
-          <input type="checkbox" v-model="includeSubdomains" /> Include
-          Subdomains
-        </label>
+        <label> <input type="checkbox" v-model="includeSubdomains" /> Include Subdomains </label>
       </div>
 
       <div class="form-group">
         <label for="limit">Limit:</label>
-        <input
-          id="limit"
-          v-model.number="limit"
-          type="number"
-          min="1"
-          max="30000"
-        />
+        <input id="limit" v-model.number="limit" type="number" min="1" max="30000" />
       </div>
 
       <div class="form-group">
@@ -69,16 +45,14 @@
       <ul>
         <li v-for="(url, index) in urls" :key="index">{{ url }}</li>
       </ul>
-      <button class="primary-button" @click="downloadJson">
-        Download JSON
-      </button>
+      <button class="primary-button" @click="downloadJson">Download JSON</button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, inject } from "vue";
-import type { MappingApi, MapUrlsRequest } from "@/api-client";
+import { ref, inject } from 'vue';
+import type { MappingApi, MapUrlsRequest } from '@/api-client';
 
 /**
  * MapView lets users map URLs starting from a base URL.
@@ -89,15 +63,15 @@ import type { MappingApi, MapUrlsRequest } from "@/api-client";
 /**
  * Access the Mapping API instance provided by the api plugin.
  */
-const api = inject("api") as { mapping?: MappingApi } | undefined;
+const api = inject('api') as { mapping?: MappingApi } | undefined;
 if (!api?.mapping) {
-  throw new Error("Mapping API is not available");
+  throw new Error('Mapping API is not available');
 }
 
 /** Base URL entered by the user. */
-const baseUrl = ref("");
+const baseUrl = ref('');
 /** Search query used when mapping URLs. */
-const search = ref("");
+const search = ref('');
 /** Ignore the website sitemap when crawling. */
 const ignoreSitemap = ref(true);
 /** Only return links found in the website sitemap. */
@@ -113,7 +87,7 @@ const urls = ref<string[]>([]);
 /** Indicates whether the API request is in progress. */
 const loading = ref(false);
 /** Holds any error message from the API call. */
-const error = ref("");
+const error = ref('');
 
 /**
  * Handle form submission and fetch mapped URLs from the API.
@@ -130,12 +104,12 @@ async function handleSubmit(): Promise<void> {
   };
 
   loading.value = true;
-  error.value = "";
+  error.value = '';
   try {
     const response = await api.mapping.mapUrls(payload);
     urls.value = response.data.links ?? [];
   } catch (err: any) {
-    error.value = err?.message || "Failed to map URLs";
+    error.value = err?.message || 'Failed to map URLs';
     urls.value = [];
   } finally {
     loading.value = false;
@@ -147,11 +121,11 @@ async function handleSubmit(): Promise<void> {
  */
 function downloadJson(): void {
   const blob = new Blob([JSON.stringify(urls.value, null, 2)], {
-    type: "application/json",
+    type: 'application/json',
   });
-  const link = document.createElement("a");
+  const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = "urls.json";
+  link.download = 'urls.json';
   link.click();
   URL.revokeObjectURL(link.href);
 }
@@ -183,7 +157,7 @@ label {
   margin-bottom: 0.25rem;
 }
 
-input[type="url"],
+input[type='url'],
 textarea {
   padding: 0.5rem;
   font-size: 1rem;

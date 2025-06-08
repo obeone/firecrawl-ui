@@ -2,13 +2,7 @@
   <div class="page-container">
     <form @submit.prevent="onSearch" class="scrape-config-form">
       <label for="query">Search Query:</label>
-      <input
-        id="query"
-        v-model="query"
-        type="text"
-        placeholder="Enter search terms"
-        required
-      />
+      <input id="query" v-model="query" type="text" placeholder="Enter search terms" required />
 
       <fieldset class="advanced-options">
         <legend>Advanced Options</legend>
@@ -22,12 +16,7 @@
         </label>
         <label>
           Max results:
-          <input
-            type="number"
-            v-model.number="options.maxResults"
-            min="1"
-            max="100"
-          />
+          <input type="number" v-model.number="options.maxResults" min="1" max="100" />
         </label>
         <label>
           Language:
@@ -60,13 +49,8 @@
       <h2>Search Results</h2>
       <ul>
         <li v-for="(result, index) in results" :key="index" class="result-item">
-          <a :href="result.url" target="_blank" rel="noopener noreferrer">{{
-            result.title
-          }}</a>
-          <div
-            v-if="options.includeMetadata && result.metadata"
-            class="metadata"
-          >
+          <a :href="result.url" target="_blank" rel="noopener noreferrer">{{ result.title }}</a>
+          <div v-if="options.includeMetadata && result.metadata" class="metadata">
             <small>{{ result.metadata.title }}</small>
           </div>
           <!-- Content extraction is available for download but not shown inline -->
@@ -88,11 +72,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, inject, computed } from "vue";
-import type { SearchApi, SearchRequest } from "@/api-client/search.js";
-import JSZip from "jszip";
-import { saveAs } from "file-saver";
-import axios from "axios";
+import { ref, inject, computed } from 'vue';
+import type { SearchApi, SearchRequest } from '@/api-client/search.js';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
+import axios from 'axios';
 
 interface SearchResult {
   title: string;
@@ -112,12 +96,12 @@ interface SearchResult {
   };
 }
 
-const api = inject("api") as { search?: SearchApi } | undefined;
+const api = inject('api') as { search?: SearchApi } | undefined;
 if (!api?.search) {
-  throw new Error("Search API is not available");
+  throw new Error('Search API is not available');
 }
 
-const query = ref("");
+const query = ref('');
 interface SearchOptions {
   includeMetadata: boolean;
   extractContent: boolean;
@@ -133,15 +117,15 @@ const options = ref<SearchOptions>({
   includeMetadata: true,
   extractContent: false,
   maxResults: 5,
-  lang: "en",
-  country: "us",
-  location: "",
-  tbs: "",
+  lang: 'en',
+  country: 'us',
+  location: '',
+  tbs: '',
   timeout: undefined,
 });
 
 const loading = ref(false);
-const error = ref("");
+const error = ref('');
 const results = ref<SearchResult[]>([]);
 const requestedFormats = ref<string[]>([]);
 
@@ -154,7 +138,7 @@ const activeFormats = computed(() => requestedFormats.value);
  */
 async function onSearch(): Promise<void> {
   results.value = [];
-  error.value = "";
+  error.value = '';
   loading.value = true;
 
   const payload: SearchRequest = {
@@ -166,7 +150,7 @@ async function onSearch(): Promise<void> {
     ...(options.value.location && { location: options.value.location }),
     ...(options.value.timeout && { timeout: options.value.timeout }),
     ...(options.value.extractContent && {
-      scrapeOptions: { formats: ["markdown"] },
+      scrapeOptions: { formats: ['markdown'] },
     }),
   };
 
@@ -175,7 +159,7 @@ async function onSearch(): Promise<void> {
     requestedFormats.value = payload.scrapeOptions?.formats ?? [];
     results.value = (response.data.data || []).map(normalizeResult);
   } catch (err: any) {
-    error.value = err?.message || "Search request failed";
+    error.value = err?.message || 'Search request failed';
   } finally {
     loading.value = false;
   }
@@ -217,7 +201,7 @@ function fixEncoding(value?: string | null): string | undefined {
   }
   try {
     const decoded = decodeURIComponent(escape(value));
-    if (!decoded.includes("\ufffd")) {
+    if (!decoded.includes('\ufffd')) {
       return decoded;
     }
   } catch {
@@ -225,8 +209,8 @@ function fixEncoding(value?: string | null): string | undefined {
   }
   try {
     const bytes = Uint8Array.from([...value].map((c) => c.charCodeAt(0)));
-    const decoded = new TextDecoder("utf-8").decode(bytes);
-    if (!decoded.includes("\ufffd")) {
+    const decoded = new TextDecoder('utf-8').decode(bytes);
+    if (!decoded.includes('\ufffd')) {
       return decoded;
     }
   } catch {
@@ -242,10 +226,10 @@ function fixEncoding(value?: string | null): string | undefined {
  * @returns Sanitized filename string
  */
 function sanitizeFilename(url: string): string {
-  let name = url.replace(/^https?:\/\//, "");
-  name = name.replace(/[?#].*$/, "");
-  name = name.replace(/[^a-zA-Z0-9]+/g, "_");
-  return name || "result";
+  let name = url.replace(/^https?:\/\//, '');
+  name = name.replace(/[?#].*$/, '');
+  name = name.replace(/[^a-zA-Z0-9]+/g, '_');
+  return name || 'result';
 }
 
 /**
@@ -258,11 +242,11 @@ async function handleDownload(type: string): Promise<void> {
     return;
   }
 
-  if (type === "Full JSON") {
+  if (type === 'Full JSON') {
     const blob = new Blob([JSON.stringify(results.value, null, 2)], {
-      type: "application/json",
+      type: 'application/json',
     });
-    saveAs(blob, "search-results.json");
+    saveAs(blob, 'search-results.json');
     return;
   }
 
@@ -271,36 +255,34 @@ async function handleDownload(type: string): Promise<void> {
 
   results.value.forEach((page, index) => {
     const base = sanitizeFilename(page.url || index.toString());
-    const prefix = (index + 1).toString().padStart(3, "0");
+    const prefix = (index + 1).toString().padStart(3, '0');
     switch (type) {
-      case "markdown":
+      case 'markdown':
         if (page.markdown) {
           zip.file(`${prefix}-${base}.md`, page.markdown);
         }
         break;
-      case "html":
+      case 'html':
         if (page.html) {
           zip.file(`${prefix}-${base}.html`, page.html);
         }
         break;
-      case "rawHtml":
+      case 'rawHtml':
         if (page.rawHtml) {
           zip.file(`${prefix}-${base}.raw.html`, page.rawHtml);
         }
         break;
-      case "links":
+      case 'links':
         if (page.links && page.links.length) {
-          zip.file(`${prefix}-${base}.txt`, page.links.join("\n"));
+          zip.file(`${prefix}-${base}.txt`, page.links.join('\n'));
         }
         break;
-      case "screenshot":
-      case "screenshot@fullPage":
+      case 'screenshot':
+      case 'screenshot@fullPage':
         if (page.screenshot) {
-          const p = axios
-            .get(page.screenshot, { responseType: "blob" })
-            .then((res) => {
-              zip.file(`${prefix}-${base}.png`, res.data);
-            });
+          const p = axios.get(page.screenshot, { responseType: 'blob' }).then((res) => {
+            zip.file(`${prefix}-${base}.png`, res.data);
+          });
           fetches.push(p);
         }
         break;
@@ -310,7 +292,7 @@ async function handleDownload(type: string): Promise<void> {
   });
 
   await Promise.all(fetches);
-  const blob = await zip.generateAsync({ type: "blob" });
+  const blob = await zip.generateAsync({ type: 'blob' });
   saveAs(blob, `search-${type}-archive.zip`);
 }
 </script>

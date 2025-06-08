@@ -1,10 +1,6 @@
-import type {
-  AxiosInstance,
-  AxiosResponse,
-  RawAxiosRequestConfig,
-} from "axios";
-import type { Configuration } from "./configuration.js";
-import { BaseAPI } from "./base.js";
+import type { AxiosInstance, AxiosResponse, RawAxiosRequestConfig } from 'axios';
+import type { Configuration } from './configuration.js';
+import { BaseAPI } from './base.js';
 
 export interface SearchRequest {
   query: string;
@@ -47,11 +43,7 @@ export interface SearchResponse {
  * Minimal API client for the /search endpoint.
  */
 export class SearchApi extends BaseAPI {
-  constructor(
-    configuration?: Configuration,
-    basePath?: string,
-    axios?: AxiosInstance,
-  ) {
+  constructor(configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
     super(configuration, basePath, axios);
   }
 

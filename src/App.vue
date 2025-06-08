@@ -1,17 +1,11 @@
 <script setup lang="ts">
-import { RouterLink } from "vue-router";
+import { RouterLink } from 'vue-router';
 </script>
 
 <template>
   <div class="app-layout">
     <aside class="sidebar">
-      <img
-        alt="Firecrawl UI logo"
-        class="logo"
-        src="@/assets/logo.png"
-        width="80"
-        height="80"
-      />
+      <img alt="Firecrawl UI logo" class="logo" src="@/assets/logo.png" width="80" height="80" />
       <nav>
         <RouterLink to="/">Home</RouterLink>
         <RouterLink to="/scrape">Scrape</RouterLink>
@@ -47,9 +41,7 @@ import { RouterLink } from "vue-router";
 
 .sidebar {
   width: 220px; /* Fixed width for the sidebar */
-  background-color: var(
-    --color-background-soft
-  ); /* Slightly different background color */
+  background-color: var(--color-background-soft); /* Slightly different background color */
   padding: 1.5rem 1rem;
   display: flex;
   flex-direction: column;
@@ -73,36 +65,20 @@ import { RouterLink } from "vue-router";
   display: block; /* Ensures padding and background are applied correctly */
   padding: 0.6rem 1rem;
   border-radius: 6px; /* Rounded corners */
-  color: var(
-    --color-text
-  ); /* Use the CSS variable for text color */
+  color: var(--color-text); /* Use the CSS variable for text color */
   text-decoration: none;
   font-weight: 500; /* Slightly less bold than 'bold' */
   transition:
-   
     background-color 0.2s ease-in-out,
-   
     color 0.2s ease-in-out;
 }
 
 .sidebar nav a:hover {
-  background-color: var(
-    --color-background-mute
-  ); /* Light background on hover */
+  background-color: var(--color-background-mute); /* Light background on hover */
 }
 
 .sidebar nav a.router-link-exact-active {
-  background-color: hsla(
-    
-    160,
-   
-    100%,
-   
-    37%,
-   
-    0.2
-  
-  ); /* Uses the existing accent color as background */
+  background-color: hsla(160, 100%, 37%, 0.2); /* Uses the existing accent color as background */
   color: hsla(160, 100%, 37%, 1); /* Accent color for the text */
   font-weight: 600; /* Slightly more pronounced for the active link */
 }

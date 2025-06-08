@@ -4,17 +4,15 @@
     <p>A valid API key is required to use Firecrawl.</p>
     <ApiKeyInput />
     <div class="actions">
-      <button @click="handleContinue" class="primary">
-        Continuer vers l'application
-      </button>
+      <button @click="handleContinue" class="primary">Continuer vers l'application</button>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
-import { useRouter } from "vue-router";
-import ApiKeyInput from "@/components/ApiKeyInput.vue";
+import { defineComponent } from 'vue';
+import { useRouter } from 'vue-router';
+import ApiKeyInput from '@/components/ApiKeyInput.vue';
 
 /**
  * Component for configuring the API key before using the application.
@@ -22,7 +20,7 @@ import ApiKeyInput from "@/components/ApiKeyInput.vue";
  * @returns Component options for the API configuration view.
  */
 export default defineComponent({
-  name: "ApiConfigView",
+  name: 'ApiConfigView',
   components: {
     ApiKeyInput,
   },
@@ -30,7 +28,7 @@ export default defineComponent({
     const router = useRouter();
 
     const handleContinue = () => {
-      router.push({ name: "home" });
+      router.push({ name: 'home' });
     };
 
     return {

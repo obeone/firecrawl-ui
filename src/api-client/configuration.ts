@@ -36,7 +36,7 @@ export class Configuration {
    * @param url url of the server
    * @memberof Configuration
    */
-  baseUrl?: string = "https://api.firecrawl.dev/v1";
+  baseUrl?: string = 'https://api.firecrawl.dev/v1';
   /**
    * parameter for apiKey security
    * @param name security name
@@ -130,13 +130,11 @@ export class Configuration {
    */
   public isJsonMime(mime: string): boolean {
     const jsonMime: RegExp = new RegExp(
-      "^(application\/json|[^;/ \t]+\/[^;/ \t]+[+]json)[ \t]*(;.*)?$",
-      "i",
+      '^(application/json|[^;/ \t]+/[^;/ \t]+[+]json)[ \t]*(;.*)?$',
+      'i',
     );
     return (
-      mime !== null &&
-      (jsonMime.test(mime) ||
-        mime.toLowerCase() === "application/json-patch+json")
+      mime !== null && (jsonMime.test(mime) || mime.toLowerCase() === 'application/json-patch+json')
     );
   }
 }
