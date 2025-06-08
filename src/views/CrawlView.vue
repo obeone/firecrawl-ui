@@ -384,9 +384,28 @@
       <button @click="handleDownload('Full JSON')">Download Full JSON</button>
     </div>
 
+    <!-- Section for selected crawl details -->
+    <div v-if="selectedCrawl" class="selected-crawl-details-section">
+      <h2>Details for Crawl ID: {{ selectedCrawl.id }}</h2>
+      <p><strong>URL:</strong> {{ selectedCrawl.url }}</p>
+      <p>
+        <strong>Date:</strong>
+        {{ new Date(selectedCrawl.createdAt).toLocaleString() }}
+      </p>
+      <p><strong>Status:</strong> {{ selectedCrawl.status }}</p>
+
+      <h3>Files</h3>
+      <ul>
+        <li v-for="file in simulatedFiles" :key="file">{{ file }}</li>
+      </ul>
+
+      <button @click="selectedCrawlId = null">Hide Details</button>
+    </div>
+
     <!-- Section for crawl history -->
     <div class="crawl-history-section">
       <h2>Crawl History</h2>
+      <button type="button" @click="clearHistory">Clear History</button>
       <div v-if="crawlHistory.length > 0">
         <ul>
           <li
@@ -406,24 +425,6 @@
       <div v-else>
         <p>No crawl history available.</p>
       </div>
-    </div>
-
-    <!-- Section for selected crawl details -->
-    <div v-if="selectedCrawl" class="selected-crawl-details-section">
-      <h2>Details for Crawl ID: {{ selectedCrawl.id }}</h2>
-      <p><strong>URL:</strong> {{ selectedCrawl.url }}</p>
-      <p>
-        <strong>Date:</strong>
-        {{ new Date(selectedCrawl.createdAt).toLocaleString() }}
-      </p>
-      <p><strong>Status:</strong> {{ selectedCrawl.status }}</p>
-
-      <h3>Files</h3>
-      <ul>
-        <li v-for="file in simulatedFiles" :key="file">{{ file }}</li>
-      </ul>
-
-      <button @click="selectedCrawlId = null">Hide Details</button>
     </div>
   </div>
 </template>
@@ -753,6 +754,15 @@ export default defineComponent({
         HISTORY_STORAGE_KEY,
         JSON.stringify(crawlHistory.value),
       );
+    };
+
+    /**
+     * Clear the crawl history and remove the stored data.
+     */
+    const clearHistory = () => {
+      crawlHistory.value = [];
+      selectedCrawlId.value = null;
+      localStorage.removeItem(HISTORY_STORAGE_KEY);
     };
 
     /**
@@ -1251,6 +1261,7 @@ export default defineComponent({
       crawlerOptionsArrow,
       scrapeOptionsArrow,
       webhookOptionsArrow,
+      clearHistory,
       // Expose saveHistory if needed elsewhere, though not strictly necessary for this task
       // saveHistory,
     };
