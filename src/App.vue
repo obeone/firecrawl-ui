@@ -1,12 +1,23 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { RouterLink } from 'vue-router';
+
+const isMenuOpen = ref(false);
+
+/**
+ * Toggle the sidebar visibility on small screens.
+ */
+function toggleMenu(): void {
+  isMenuOpen.value = !isMenuOpen.value;
+}
 </script>
 
 <template>
-  <div class="app-layout">
-    <aside class="sidebar">
+  <div class="app-layout" :class="{ 'menu-open': isMenuOpen }">
+    <button class="menu-button" @click="toggleMenu" aria-label="Toggle navigation">☰</button>
+    <aside class="sidebar" :class="{ open: isMenuOpen }">
       <img alt="Firecrawl UI logo" class="logo" src="@/assets/logo.png" width="80" height="80" />
-      <nav>
+      <nav @click="isMenuOpen = false">
         <RouterLink to="/">Home</RouterLink>
         <RouterLink to="/scrape">Scrape</RouterLink>
         <RouterLink to="/crawl">Crawl</RouterLink>
@@ -17,7 +28,7 @@ import { RouterLink } from 'vue-router';
         <RouterLink to="/about">About</RouterLink>
       </nav>
     </aside>
-    <main>
+    <main @click="isMenuOpen = false">
       <router-view />
     </main>
   </div>
@@ -83,6 +94,15 @@ import { RouterLink } from 'vue-router';
   font-weight: 600; /* Slightly more pronounced for the active link */
 }
 
+.menu-button {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  padding: 0.5rem;
+  cursor: pointer;
+}
+
 main {
   flex-grow: 1; /* Takes up all remaining space */
   padding: 2rem; /* Inner margin for content */
@@ -92,4 +112,33 @@ main {
 
 /* Removes @media styles specific to the old header */
 /* @media (min-width: 1024px) { ... } */
+
+@media (max-width: 768px) {
+  .app-layout {
+    flex-direction: column;
+  }
+
+  .menu-button {
+    display: block;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 200px;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  main {
+    padding: 1rem;
+  }
+}
 </style>
