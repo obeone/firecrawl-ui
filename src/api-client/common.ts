@@ -182,7 +182,7 @@ export const createRequestFunction = function (
   ) => {
     const axiosRequestArgs = {
       ...axiosArgs.options,
-      url: (axios.defaults.baseURL ? '' : configuration?.basePath ?? basePath) + axiosArgs.url,
+      url: (axios.defaults.baseURL ? '' : (configuration?.basePath ?? basePath)) + axiosArgs.url,
     };
     return axios.request<T, R>(axiosRequestArgs);
   };
