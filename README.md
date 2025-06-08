@@ -36,6 +36,25 @@ Preview the built app locally:
 npm run preview
 ```
 
+## Docker
+
+Build the Docker image:
+
+```sh
+docker build -t firecrawl-ui .
+```
+
+Run the container and expose the Nginx server:
+
+```sh
+docker run -p 8080:8080 firecrawl-ui
+```
+
+A prebuilt image is also published and can be pulled from:
+
+- `ghcr.io/obeone/firecrawl-ui`
+- `docker.io/obeoneorg/firecrawl-ui`
+
 ## API Specification
 The OpenAPI document describing all endpoints is available in `openapi.yaml`.
 
