@@ -358,12 +358,6 @@
       </div>
     </div>
 
-    <div v-if="result" class="result">
-      <div class="result-header">
-        <h2>Crawl Job Submitted</h2>
-      </div>
-      <pre>{{ result }}</pre>
-    </div>
 
     <!-- Section for active crawl status -->
     <div v-if="crawling" class="crawl-status-section">
