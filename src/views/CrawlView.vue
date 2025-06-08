@@ -720,32 +720,38 @@ export default defineComponent({
         return;
       }
 
-      // Build the request payload according to the OpenAPI CrawlRequest schema
-      // Construction du payload avec toutes les options du formulaire, y compris maxDiscoveryDepth
-      const payload: any = {
-        url: formData.value.url,
-        excludePaths: formData.value.crawlerOptions.excludes,
-        includePaths: formData.value.crawlerOptions.includes,
-        maxDepth: formData.value.crawlerOptions.maxDepth,
-        maxDiscoveryDepth: formData.value.crawlerOptions.maxDiscoveryDepth,
-        ignoreSitemap: formData.value.crawlerOptions.ignoreSitemap,
-        ignoreQueryParameters: formData.value.crawlerOptions.ignoreQueryParameters,
-        limit: formData.value.crawlerOptions.limit,
-        delay: formData.value.crawlerOptions.delay,
-        allowBackwardLinks: formData.value.crawlerOptions.navigateBacklinks,
-        allowExternalLinks: formData.value.crawlerOptions.allowExternalLinks,
-        scrapeOptions: {
-          formats: formData.value.scrapeOptions.formats,
-          onlyMainContent: formData.value.scrapeOptions.onlyMainContent,
-          includeTags: formData.value.scrapeOptions.includeTags,
-          excludeTags: formData.value.scrapeOptions.excludeTags,
-          headers: formData.value.scrapeOptions.headers,
-          waitFor: formData.value.scrapeOptions.waitFor,
-          mobile: formData.value.scrapeOptions.mobile,
-          removeBase64Images: formData.value.scrapeOptions.removeBase64Images,
-          actions: formData.value.scrapeOptions.actions,
-        },
-      };
+      // Build the request payload and only include defined options
+      const payload: any = { url: formData.value.url };
+
+      const crawler = formData.value.crawlerOptions;
+      if (crawler.excludes.length > 0) payload.excludePaths = crawler.excludes;
+      if (crawler.includes.length > 0) payload.includePaths = crawler.includes;
+      if (crawler.maxDepth !== undefined) payload.maxDepth = crawler.maxDepth;
+      if (crawler.maxDiscoveryDepth !== undefined)
+        payload.maxDiscoveryDepth = crawler.maxDiscoveryDepth;
+      if (crawler.ignoreSitemap) payload.ignoreSitemap = true;
+      if (crawler.ignoreQueryParameters) payload.ignoreQueryParameters = true;
+      if (crawler.limit !== undefined) payload.limit = crawler.limit;
+      if (crawler.delay !== undefined) payload.delay = crawler.delay;
+      if (crawler.navigateBacklinks) payload.allowBackwardLinks = true;
+      if (crawler.allowExternalLinks) payload.allowExternalLinks = true;
+
+      const scrape = formData.value.scrapeOptions;
+      const scrapePayload: any = { formats: scrape.formats };
+      if (scrape.onlyMainContent) scrapePayload.onlyMainContent = true;
+      if (scrape.includeTags.length > 0)
+        scrapePayload.includeTags = scrape.includeTags;
+      if (scrape.excludeTags.length > 0)
+        scrapePayload.excludeTags = scrape.excludeTags;
+      if (scrape.headers && Object.keys(scrape.headers).length > 0)
+        scrapePayload.headers = scrape.headers;
+      if (scrape.waitFor !== undefined) scrapePayload.waitFor = scrape.waitFor;
+      if (scrape.mobile) scrapePayload.mobile = true;
+      if (scrape.removeBase64Images) scrapePayload.removeBase64Images = true;
+      if (scrape.actions && scrape.actions.length > 0)
+        scrapePayload.actions = scrape.actions;
+
+      payload.scrapeOptions = scrapePayload;
 
       // Include webhook options only when a URL is provided
       if (
