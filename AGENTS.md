@@ -4,15 +4,16 @@
 
 ### General Principles
 
-* **Language:**
+- **Language:**
   All code, comments, docstrings, variable and function names must be in English.
-* **Documentation:**
+- **Documentation:**
   Every class, function/method, and file should be fully documented (docstrings/JSDoc), including:
 
-  * Arguments (type + description)
-  * Return values
-  * Exceptions (if any)
-* **Comments:**
+  - Arguments (type + description)
+  - Return values
+  - Exceptions (if any)
+
+- **Comments:**
   Use inline comments for non-obvious logic only.
   All comments must be clear, concise, and in English.
 
@@ -45,26 +46,26 @@
 
 ### Python-specific
 
-* Use [type hints](https://docs.python.org/3/library/typing.html) for all function arguments and return values.
-* Use docstrings (`"""Summary..."""`) for all modules, classes, and functions.
-* Prefer list/dict comprehensions over loops for simple cases.
-* Avoid global variables.
-* Use virtual environments.
-* Format with [`black`](https://black.readthedocs.io/) and check with [`ruff`](https://docs.astral.sh/ruff/).
-* Always run static type checks (e.g., with `mypy`).
+- Use [type hints](https://docs.python.org/3/library/typing.html) for all function arguments and return values.
+- Use docstrings (`"""Summary..."""`) for all modules, classes, and functions.
+- Prefer list/dict comprehensions over loops for simple cases.
+- Avoid global variables.
+- Use virtual environments.
+- Format with [`black`](https://black.readthedocs.io/) and check with [`ruff`](https://docs.astral.sh/ruff/).
+- Always run static type checks (e.g., with `mypy`).
 
 ---
 
 ### JavaScript/TypeScript-specific
 
-* Use [JSDoc](https://jsdoc.app/) or [TSDoc](https://tsdoc.org/) for documentation.
-* Always use semicolons (`;`).
-* Prefer `const` and `let` over `var`.
-* Use `===`/`!==` for comparison.
-* For TypeScript, type everything explicitly.
-* Prefer arrow functions except for class methods.
-* Use ES modules (`import`/`export`) by default.
-* Format with [Prettier](https://prettier.io/) and lint with [ESLint](https://eslint.org/).
+- Use [JSDoc](https://jsdoc.app/) or [TSDoc](https://tsdoc.org/) for documentation.
+- Always use semicolons (`;`).
+- Prefer `const` and `let` over `var`.
+- Use `===`/`!==` for comparison.
+- For TypeScript, type everything explicitly.
+- Prefer arrow functions except for class methods.
+- Use ES modules (`import`/`export`) by default.
+- Format with [Prettier](https://prettier.io/) and lint with [ESLint](https://eslint.org/).
 
 ---
 
@@ -107,4 +108,5 @@ function addNumbers(a: number, b: number): number {
 Title in English
 
 ## PR instructions
+
 Title format: [<project_name>] <Title>
