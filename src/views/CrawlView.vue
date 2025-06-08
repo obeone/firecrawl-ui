@@ -812,7 +812,7 @@ export default defineComponent({
      */
     const fetchAllCrawlData = async (jobId: string) => {
       const pages: any[] = [];
-      let response = await api.crawling.getCrawlResult(jobId);
+      let response = await api.crawling.getCrawlStatus(jobId);
       pages.push(...(response.data.data || []));
       let next = response.data.next;
       while (next) {

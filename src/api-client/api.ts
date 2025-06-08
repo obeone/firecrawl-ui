@@ -1634,70 +1634,6 @@ export const CrawlingApiAxiosParamCreator = function (configuration?: Configurat
                 options: localVarRequestOptions,
             };
         },
-        /**
-         * Download the archive of a completed crawl job.
-         * @param id The ID of the crawl job.
-         * @param options The request options.
-         */
-        downloadArchive: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'id' is not null or undefined
-            assertParamExists('downloadArchive', 'id', id)
-            const localVarPath = `/crawl/{id}/archive`
-                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            // Set responseType to blob for file download
-            localVarRequestOptions.responseType = 'blob';
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * Get the full JSON result of a completed crawl job.
-         * @param id The ID of the crawl job.
-         * @param options The request options.
-         */
-        getCrawlResult: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'id' is not null or undefined
-            assertParamExists('getCrawlResult', 'id', id)
-            const localVarPath = `/crawl/{id}/result`
-                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
     }
 };
 
@@ -1758,28 +1694,6 @@ export const CrawlingApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.getCrawlStatus(id, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['CrawlingApi.getCrawlStatus']?.[localVarOperationServerIndex]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
-        },
-        /**
-         * Download the archive of a completed crawl job.
-         * @param id The ID of the crawl job.
-         * @param options The request options.
-         */
-        async downloadArchive(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Blob>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.downloadArchive(id, options);
-            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['CrawlingApi.downloadArchive']?.[localVarOperationServerIndex]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
-        },
-        /**
-         * Get the full JSON result of a completed crawl job.
-         * @param id The ID of the crawl job.
-         * @param options The request options.
-         */
-        async getCrawlResult(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrawlStatusResponseObj>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getCrawlResult(id, options);
-            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['CrawlingApi.getCrawlResult']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
@@ -1876,18 +1790,6 @@ export interface CrawlingApi {
      * @param options The request options.
      */
     getCrawlFiles(id: string, options?: RawAxiosRequestConfig): AxiosPromise<any>;
-    /**
-     * Download the archive of a completed crawl job.
-     * @param id The ID of the crawl job.
-     * @param options The request options.
-     */
-    downloadArchive(id: string, options?: RawAxiosRequestConfig): AxiosPromise<Blob>;
-    /**
-     * Get the full JSON result of a completed crawl job.
-     * @param id The ID of the crawl job.
-     * @param options The request options.
-     */
-    getCrawlResult(id: string, options?: RawAxiosRequestConfig): AxiosPromise<CrawlStatusResponseObj>;
 }
 
 /**
@@ -1952,27 +1854,6 @@ export class CrawlingApi extends BaseAPI {
         return CrawlingApiFp(this.configuration).getCrawlStatus(id, options).then((request) => request(this.axios, this.basePath));
     }
 
-    /**
-     * Download the archive of a completed crawl job.
-     * @param {string} id The ID of the crawl job
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof CrawlingApi
-     */
-    public downloadArchive(id: string, options?: RawAxiosRequestConfig) {
-        return CrawlingApiFp(this.configuration).downloadArchive(id, options).then((request) => request(this.axios, this.basePath));
-    }
-
-    /**
-     * Get the full JSON result of a completed crawl job.
-     * @param {string} id The ID of the crawl job
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof CrawlingApi
-     */
-    public getCrawlResult(id: string, options?: RawAxiosRequestConfig) {
-        return CrawlingApiFp(this.configuration).getCrawlResult(id, options).then((request) => request(this.axios, this.basePath));
-    }
 }
 
 
