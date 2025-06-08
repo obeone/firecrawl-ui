@@ -161,20 +161,20 @@ const startExtraction = async () => {
     if (parsedSchema.value && parsedSchema.value !== undefined) {
       payload.schema = parsedSchema.value;
     }
-    const response = await api.extraction!.extractData(payload);
-    if (response.success && response.id) {
-      currentJobId.value = response.id;
+    const { data } = await api.extraction!.extractData(payload);
+    if (data.success && data.id) {
+      currentJobId.value = data.id;
       currentStatus.value = 'processing';
       currentData.value = null;
       const job: ExtractJob = {
-        id: response.id,
+        id: data.id,
         createdAt: Date.now(),
         status: 'processing',
         urls,
       };
       history.value.unshift(job);
       saveHistory();
-      pollStatus(response.id);
+      pollStatus(data.id);
     } else {
       throw new Error('Extraction failed');
     }
