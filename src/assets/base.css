@@ -18,7 +18,12 @@
   --vt-c-text-light-1: var(--vt-c-indigo);
   --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
   --vt-c-text-dark-1: var(--vt-c-white);
-  --vt-c-text-dark-2: rgba(235, 235, 235, 0.80); /* Increased opacity for better contrast */
+  --vt-c-text-dark-2: rgba(
+    235,
+    235,
+    235,
+    0.8
+  ); /* Increased opacity for better contrast */
 }
 
 /* semantic color variables for this project */
@@ -48,11 +53,13 @@
     --color-heading: var(--vt-c-text-dark-1);
     --color-text: var(--vt-c-text-dark-2);
   }
-/* Styles for form elements in dark mode */
+  /* Styles for form elements in dark mode */
   input,
   textarea,
   select {
-    background-color: var(--color-background-soft); /* Use a slightly lighter background than the main one */
+    background-color: var(
+      --color-background-soft
+    ); /* Use a slightly lighter background than the main one */
     color: var(--color-text); /* Ensure text is readable in dark mode */
     border: 1px solid var(--color-border); /* Consistent border color */
     padding: 8px 12px; /* Add padding for better appearance */
@@ -95,14 +102,14 @@ body {
     Inter,
     -apple-system,
     BlinkMacSystemFont,
-    'Segoe UI',
+    "Segoe UI",
     Roboto,
     Oxygen,
     Ubuntu,
     Cantarell,
-    'Fira Sans',
-    'Droid Sans',
-    'Helvetica Neue',
+    "Fira Sans",
+    "Droid Sans",
+    "Helvetica Neue",
     sans-serif;
   font-size: 15px;
   text-rendering: optimizeLegibility;

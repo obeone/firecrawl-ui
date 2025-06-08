@@ -32,14 +32,14 @@ paths:
                       description: The URL to scrape
                   required:
                     - url
-                - $ref: '#/components/schemas/ScrapeOptions'
+                - $ref: "#/components/schemas/ScrapeOptions"
       responses:
         "200":
           description: Successful response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ScrapeResponse'
+                $ref: "#/components/schemas/ScrapeResponse"
         "402":
           description: Payment required
           content:
@@ -110,7 +110,7 @@ paths:
                           additionalProperties: true
                         events:
                           type: array
-                          description: 'Type of events that should be sent to the webhook URL. (default: all)'
+                          description: "Type of events that should be sent to the webhook URL. (default: all)"
                           items:
                             type: string
                             enum:
@@ -126,14 +126,14 @@ paths:
                       description: If invalid URLs are specified in the urls array, they will be ignored. Instead of them failing the entire request, a batch scrape using the remaining valid URLs will be created, and the invalid URLs will be returned in the invalidURLs field of the response.
                   required:
                     - urls
-                - $ref: '#/components/schemas/ScrapeOptions'
+                - $ref: "#/components/schemas/ScrapeOptions"
       responses:
         "200":
           description: Successful response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BatchScrapeResponseObj'
+                $ref: "#/components/schemas/BatchScrapeResponseObj"
         "402":
           description: Payment required
           content:
@@ -186,7 +186,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BatchScrapeStatusResponseObj'
+                $ref: "#/components/schemas/BatchScrapeStatusResponseObj"
         "402":
           description: Payment required
           content:
@@ -280,7 +280,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CrawlErrorsResponseObj'
+                $ref: "#/components/schemas/CrawlErrorsResponseObj"
         "402":
           description: Payment required
           content:
@@ -333,7 +333,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CrawlStatusResponseObj'
+                $ref: "#/components/schemas/CrawlStatusResponseObj"
         "402":
           description: Payment required
           content:
@@ -426,7 +426,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CrawlErrorsResponseObj'
+                $ref: "#/components/schemas/CrawlErrorsResponseObj"
         "402":
           description: Payment required
           content:
@@ -534,7 +534,7 @@ paths:
                       additionalProperties: true
                     events:
                       type: array
-                      description: 'Type of events that should be sent to the webhook URL. (default: all)'
+                      description: "Type of events that should be sent to the webhook URL. (default: all)"
                       items:
                         type: string
                         enum:
@@ -545,7 +545,7 @@ paths:
                   required:
                     - url
                 scrapeOptions:
-                  $ref: '#/components/schemas/ScrapeOptions'
+                  $ref: "#/components/schemas/ScrapeOptions"
               required:
                 - url
       responses:
@@ -554,7 +554,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CrawlResponse'
+                $ref: "#/components/schemas/CrawlResponse"
         "402":
           description: Payment required
           content:
@@ -635,7 +635,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MapResponse'
+                $ref: "#/components/schemas/MapResponse"
         "402":
           description: Payment required
           content:
@@ -720,7 +720,7 @@ paths:
                   description: When true, the sources used to extract the data will be included in the response as `sources` key
                   default: false
                 scrapeOptions:
-                  $ref: '#/components/schemas/ScrapeOptions'
+                  $ref: "#/components/schemas/ScrapeOptions"
               required:
                 - urls
       responses:
@@ -729,7 +729,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ExtractResponse'
+                $ref: "#/components/schemas/ExtractResponse"
         "400":
           description: Invalid request
           content:
@@ -772,7 +772,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ExtractStatusResponse'
+                $ref: "#/components/schemas/ExtractStatusResponse"
   /deep-research:
     post:
       summary: Start a deep research operation on a query
@@ -1423,7 +1423,7 @@ components:
                   selector:
                     type: string
                     description: Query selector to find the element by
-                    example: '#my-element'
+                    example: "#my-element"
                 required:
                   - type
               - type: object
@@ -1451,7 +1451,7 @@ components:
                   selector:
                     type: string
                     description: Query selector to find the element by
-                    example: '#load-more-button'
+                    example: "#load-more-button"
                   all:
                     type: boolean
                     description: Clicks all elements matched by the selector, not just the first one. Does not throw an error if no elements match the selector.
@@ -1466,7 +1466,7 @@ components:
                     type: string
                     enum:
                       - write
-                    description: 'Write text into an input field, text area, or contenteditable element. Note: You must first focus the element using a ''click'' action before writing. The text will be typed character by character to simulate keyboard input.'
+                    description: "Write text into an input field, text area, or contenteditable element. Note: You must first focus the element using a 'click' action before writing. The text will be typed character by character to simulate keyboard input."
                   text:
                     type: string
                     description: Text to type
@@ -1508,7 +1508,7 @@ components:
                   selector:
                     type: string
                     description: Query selector for the element to scroll
-                    example: '#my-element'
+                    example: "#my-element"
                 required:
                   - type
               - type: object
@@ -1658,7 +1658,7 @@ components:
                 sourceURL:
                   type: string
                   format: uri
-                '<any other metadata> ':
+                "<any other metadata> ":
                   type: string
                 statusCode:
                   type: integer
@@ -1768,7 +1768,7 @@ components:
                   sourceURL:
                     type: string
                     format: uri
-                  '<any other metadata> ':
+                  "<any other metadata> ":
                     type: string
                   statusCode:
                     type: integer
@@ -1864,7 +1864,7 @@ components:
                   sourceURL:
                     type: string
                     format: uri
-                  '<any other metadata> ':
+                  "<any other metadata> ":
                     type: string
                   statusCode:
                     type: integer

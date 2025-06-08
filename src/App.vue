@@ -1,16 +1,23 @@
 <script setup lang="ts">
-import { RouterLink } from 'vue-router'
+import { RouterLink } from "vue-router";
 </script>
 
 <template>
   <div class="app-layout">
     <aside class="sidebar">
-      <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="80" height="80" />
+      <img
+        alt="Vue logo"
+        class="logo"
+        src="@/assets/logo.svg"
+        width="80"
+        height="80"
+      />
       <nav>
         <RouterLink to="/">Home</RouterLink>
         <RouterLink to="/scrape">Scrape</RouterLink>
         <RouterLink to="/crawl">Crawl</RouterLink>
-        <RouterLink to="/extract">Extract</RouterLink> <!-- Add link to ExtractView -->
+        <RouterLink to="/extract">Extract</RouterLink>
+        <!-- Add link to ExtractView -->
         <RouterLink to="/map">Map</RouterLink>
         <RouterLink to="/search">Search</RouterLink>
         <RouterLink to="/api-config">API Config</RouterLink>
@@ -41,7 +48,9 @@ import { RouterLink } from 'vue-router'
 
 .sidebar {
   width: 220px; /* Largeur fixe pour la sidebar */
-  background-color: var(--color-background-soft); /* Couleur de fond légèrement différente */
+  background-color: var(
+    --color-background-soft
+  ); /* Couleur de fond légèrement différente */
   padding: 1.5rem 1rem;
   display: flex;
   flex-direction: column;
@@ -65,10 +74,14 @@ import { RouterLink } from 'vue-router'
   display: block; /* Pour que le padding et le background s'appliquent correctement */
   padding: 0.6rem 1rem;
   border-radius: 6px; /* Coins arrondis */
-  color: var(--color-text); /* Utilise la variable CSS pour la couleur du texte */
+  color: var(
+    --color-text
+  ); /* Utilise la variable CSS pour la couleur du texte */
   text-decoration: none;
   font-weight: 500; /* Un peu moins gras que 'bold' */
-  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+  transition:
+    background-color 0.2s ease-in-out,
+    color 0.2s ease-in-out;
 }
 
 .sidebar nav a:hover {
@@ -76,7 +89,12 @@ import { RouterLink } from 'vue-router'
 }
 
 .sidebar nav a.router-link-exact-active {
-  background-color: hsla(160, 100%, 37%, 0.2); /* Utilise la couleur d'accentuation existante mais en fond */
+  background-color: hsla(
+    160,
+    100%,
+    37%,
+    0.2
+  ); /* Utilise la couleur d'accentuation existante mais en fond */
   color: hsla(160, 100%, 37%, 1); /* Couleur d'accentuation pour le texte */
   font-weight: 600; /* Un peu plus prononcé pour l'actif */
 }
@@ -90,5 +108,4 @@ main {
 
 /* Removes @media styles specific to the old header */
 /* @media (min-width: 1024px) { ... } */
-
 </style>
