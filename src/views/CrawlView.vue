@@ -330,7 +330,11 @@
             </div>
             <div class="form-group">
               <label for="webhookEvents">Webhook Events:</label>
-              <select id="webhookEvents" v-model="formData.webhookOptions.events" multiple>
+              <select
+                id="webhookEvents"
+                v-model="formData.webhookOptions.events"
+                multiple
+              >
                 <option value="completed">Completed</option>
                 <option value="page">Page</option>
                 <option value="failed">Failed</option>
@@ -358,7 +362,6 @@
       </div>
     </div>
 
-
     <!-- Section for active crawl status -->
     <div v-if="crawling" class="crawl-status-section">
       <h2>Crawl Status</h2>
@@ -376,9 +379,7 @@
     >
       <h2>Download Results</h2>
       <div v-for="fmt in activeFormats" :key="fmt" class="download-btn">
-        <button @click="handleDownload(fmt)">
-          Download {{ fmt }} Archive
-        </button>
+        <button @click="handleDownload(fmt)">Download {{ fmt }} Archive</button>
       </div>
       <button @click="handleDownload('Full JSON')">Download Full JSON</button>
     </div>
@@ -391,14 +392,13 @@
           <li
             v-for="crawl in crawlHistory"
             :key="crawl.id"
-            @click="selectCrawl(crawl.id)"
             :class="{ 'selected-crawl': selectedCrawlId === crawl.id }"
           >
-            <strong>ID:</strong> {{ crawl.id }} | <strong>Date:</strong>
-            {{ new Date(crawl.createdAt).toLocaleString() }} |
-            <strong>Status:</strong> {{ crawl.status }}
-            <button @click.stop="selectCrawl(crawl.id)">
-              View Details / Access Files
+            <strong>{{ crawl.url }}</strong>
+            – {{ new Date(crawl.createdAt).toLocaleString() }} – Status:
+            {{ crawl.status }}
+            <button type="button" @click.prevent="selectCrawl(crawl.id)">
+              View Details
             </button>
           </li>
         </ul>
@@ -656,19 +656,21 @@ export default defineComponent({
     const parseLocationLanguages = () => {
       formData.value.scrapeOptions.location =
         formData.value.scrapeOptions.location || {};
-      formData.value.scrapeOptions.location.languages = locationLanguagesInput.value
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
+      formData.value.scrapeOptions.location.languages =
+        locationLanguagesInput.value
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
     };
 
     const parseJsonOptionsSchema = () => {
       try {
         formData.value.scrapeOptions.jsonOptions =
           formData.value.scrapeOptions.jsonOptions || {};
-        formData.value.scrapeOptions.jsonOptions.schema = jsonOptionsSchemaInput.value
-          ? JSON.parse(jsonOptionsSchemaInput.value)
-          : undefined;
+        formData.value.scrapeOptions.jsonOptions.schema =
+          jsonOptionsSchemaInput.value
+            ? JSON.parse(jsonOptionsSchemaInput.value)
+            : undefined;
       } catch {
         error.value = "Invalid JSON for JSON schema";
       }
@@ -784,17 +786,16 @@ export default defineComponent({
           excludeTagsInput.value = (crawl.scrapeOptions.excludeTags || []).join(
             ", ",
           );
-          locationLanguagesInput.value =
-            (crawl.scrapeOptions.location?.languages || []).join(", ");
+          locationLanguagesInput.value = (
+            crawl.scrapeOptions.location?.languages || []
+          ).join(", ");
           jsonOptionsSchemaInput.value = crawl.scrapeOptions.jsonOptions?.schema
             ? JSON.stringify(crawl.scrapeOptions.jsonOptions.schema)
             : "";
-          changeTrackingSchemaInput.value =
-            crawl.scrapeOptions.changeTrackingOptions?.schema
-              ? JSON.stringify(
-                  crawl.scrapeOptions.changeTrackingOptions.schema,
-                )
-              : "";
+          changeTrackingSchemaInput.value = crawl.scrapeOptions
+            .changeTrackingOptions?.schema
+            ? JSON.stringify(crawl.scrapeOptions.changeTrackingOptions.schema)
+            : "";
           changeTrackingModesInput.value = (
             crawl.scrapeOptions.changeTrackingOptions?.modes || []
           ).join(", ");
@@ -1002,8 +1003,7 @@ export default defineComponent({
       if (scrape.removeBase64Images) scrapePayload.removeBase64Images = true;
       if (scrape.actions && scrape.actions.length > 0)
         scrapePayload.actions = scrape.actions;
-      if (scrape.skipTlsVerification)
-        scrapePayload.skipTlsVerification = true;
+      if (scrape.skipTlsVerification) scrapePayload.skipTlsVerification = true;
       if (scrape.timeout !== undefined) scrapePayload.timeout = scrape.timeout;
       if (scrape.jsonOptions) {
         const jsonOpts: any = {};
@@ -1011,16 +1011,15 @@ export default defineComponent({
           jsonOpts.schema = scrape.jsonOptions.schema;
         if (scrape.jsonOptions.systemPrompt)
           jsonOpts.systemPrompt = scrape.jsonOptions.systemPrompt;
-        if (scrape.jsonOptions.prompt) jsonOpts.prompt = scrape.jsonOptions.prompt;
-        if (Object.keys(jsonOpts).length > 0) scrapePayload.jsonOptions = jsonOpts;
+        if (scrape.jsonOptions.prompt)
+          jsonOpts.prompt = scrape.jsonOptions.prompt;
+        if (Object.keys(jsonOpts).length > 0)
+          scrapePayload.jsonOptions = jsonOpts;
       }
       if (scrape.location) {
         const loc: any = {};
         if (scrape.location.country) loc.country = scrape.location.country;
-        if (
-          scrape.location.languages &&
-          scrape.location.languages.length > 0
-        )
+        if (scrape.location.languages && scrape.location.languages.length > 0)
           loc.languages = scrape.location.languages;
         if (Object.keys(loc).length > 0) scrapePayload.location = loc;
       }
@@ -1099,6 +1098,7 @@ export default defineComponent({
           });
           saveHistory(); // Save history after adding a new job
           fetchCrawlStatus(response.data.id);
+          loading.value = false; // hide loading spinner once polling starts
         }
       } catch (err: unknown) {
         if (err instanceof Error) {
@@ -1332,6 +1332,15 @@ export default defineComponent({
 
 .download-section {
   margin-top: 20px;
+}
+
+.crawl-history-section li {
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.selected-crawl {
+  background-color: #eef6ff;
 }
 
 .error-icon {
