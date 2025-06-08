@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { RouterLink } from "vue-router";
-import { RouterLink } from "vue-router";
 </script>
 
 <template>
@@ -13,21 +12,11 @@ import { RouterLink } from "vue-router";
         width="80"
         height="80"
       />
-      <img
-        alt="Vue logo"
-        class="logo"
-        src="@/assets/logo.svg"
-        width="80"
-        height="80"
-      />
       <nav>
         <RouterLink to="/">Home</RouterLink>
         <RouterLink to="/scrape">Scrape</RouterLink>
         <RouterLink to="/crawl">Crawl</RouterLink>
         <RouterLink to="/extract">Extract</RouterLink>
-        <!-- Add link to ExtractView -->
-        <RouterLink to="/extract">Extract</RouterLink>
-        <!-- Add link to ExtractView -->
         <RouterLink to="/map">Map</RouterLink>
         <RouterLink to="/search">Search</RouterLink>
         <RouterLink to="/api-config">API Config</RouterLink>
