@@ -42,6 +42,12 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted } from "vue";
 
+/**
+ * Component allowing users to configure and store the Firecrawl API key.
+ *
+ * @returns Component options for the API key input view.
+ */
+
 export default defineComponent({
   name: "ApiKeyInput",
   setup() {
@@ -64,9 +70,9 @@ export default defineComponent({
         if (!apiKey.value) {
           throw new Error("Please enter a valid API key");
         }
-        // Enregistrer la clé API
+        // Save the API key
         localStorage.setItem("firecrawl_api_key", apiKey.value);
-        // Enregistrer l'URL de base (même si vide, pour écraser une ancienne valeur si nécessaire)
+        // Save the base URL (even if empty to override any previous value if needed)
         localStorage.setItem("firecrawl_base_url", baseUrl.value);
 
         success.value = true;

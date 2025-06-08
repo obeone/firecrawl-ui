@@ -16,6 +16,11 @@ import { defineComponent } from "vue";
 import { useRouter } from "vue-router";
 import ApiKeyInput from "@/components/ApiKeyInput.vue";
 
+/**
+ * Component for configuring the API key before using the application.
+ *
+ * @returns Component options for the API configuration view.
+ */
 export default defineComponent({
   name: "ApiConfigView",
   components: {

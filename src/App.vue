@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from "vue-router";
+import { RouterLink } from "vue-router";
 </script>
 
 <template>
@@ -12,10 +13,19 @@ import { RouterLink } from "vue-router";
         width="80"
         height="80"
       />
+      <img
+        alt="Vue logo"
+        class="logo"
+        src="@/assets/logo.svg"
+        width="80"
+        height="80"
+      />
       <nav>
         <RouterLink to="/">Home</RouterLink>
         <RouterLink to="/scrape">Scrape</RouterLink>
         <RouterLink to="/crawl">Crawl</RouterLink>
+        <RouterLink to="/extract">Extract</RouterLink>
+        <!-- Add link to ExtractView -->
         <RouterLink to="/extract">Extract</RouterLink>
         <!-- Add link to ExtractView -->
         <RouterLink to="/map">Map</RouterLink>
@@ -38,7 +48,7 @@ import { RouterLink } from "vue-router";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   /* text-align and margin-top are removed because they are managed by the new layout */
-  /* color est hérité ou défini dans base.css */
+  /* color is inherited or set in base.css */
 }
 
 .app-layout {
@@ -47,63 +57,72 @@ import { RouterLink } from "vue-router";
 }
 
 .sidebar {
-  width: 220px; /* Largeur fixe pour la sidebar */
+  width: 220px; /* Fixed width for the sidebar */
   background-color: var(
     --color-background-soft
-  ); /* Couleur de fond légèrement différente */
+  ); /* Slightly different background color */
   padding: 1.5rem 1rem;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--color-border); /* Ajoute une bordure fine */
+  border-right: 1px solid var(--color-border); /* Adds a thin border */
 }
 
 .sidebar .logo {
   display: block;
-  margin: 0 auto 2rem; /* Centre le logo et ajoute de l'espace en dessous */
-  width: 80px; /* Taille ajustée */
+  margin: 0 auto 2rem; /* Centers the logo and adds spacing below */
+  width: 80px; /* Adjusted size */
   height: 80px;
 }
 
 .sidebar nav {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem; /* Espace entre les liens */
+  gap: 0.5rem; /* Spacing between links */
 }
 
 .sidebar nav a {
-  display: block; /* Pour que le padding et le background s'appliquent correctement */
+  display: block; /* Ensures padding and background are applied correctly */
   padding: 0.6rem 1rem;
-  border-radius: 6px; /* Coins arrondis */
+  border-radius: 6px; /* Rounded corners */
   color: var(
     --color-text
-  ); /* Utilise la variable CSS pour la couleur du texte */
+  ); /* Use the CSS variable for text color */
   text-decoration: none;
-  font-weight: 500; /* Un peu moins gras que 'bold' */
+  font-weight: 500; /* Slightly less bold than 'bold' */
   transition:
+   
     background-color 0.2s ease-in-out,
+   
     color 0.2s ease-in-out;
 }
 
 .sidebar nav a:hover {
-  background-color: var(--color-background-mute); /* Léger fond au survol */
+  background-color: var(
+    --color-background-mute
+  ); /* Light background on hover */
 }
 
 .sidebar nav a.router-link-exact-active {
   background-color: hsla(
+    
     160,
+   
     100%,
+   
     37%,
+   
     0.2
-  ); /* Utilise la couleur d'accentuation existante mais en fond */
-  color: hsla(160, 100%, 37%, 1); /* Couleur d'accentuation pour le texte */
-  font-weight: 600; /* Un peu plus prononcé pour l'actif */
+  
+  ); /* Uses the existing accent color as background */
+  color: hsla(160, 100%, 37%, 1); /* Accent color for the text */
+  font-weight: 600; /* Slightly more pronounced for the active link */
 }
 
 main {
-  flex-grow: 1; /* Prend tout l'espace restant */
-  padding: 2rem; /* Marge intérieure pour le contenu */
-  overflow-y: auto; /* Ajoute une barre de défilement si le contenu dépasse */
-  background-color: var(--color-background); /* Fond principal */
+  flex-grow: 1; /* Takes up all remaining space */
+  padding: 2rem; /* Inner margin for content */
+  overflow-y: auto; /* Adds a scrollbar if content overflows */
+  background-color: var(--color-background); /* Main background */
 }
 
 /* Removes @media styles specific to the old header */
