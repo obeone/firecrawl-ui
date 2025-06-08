@@ -14,13 +14,47 @@
       </div>
 
       <div class="form-group">
-        <label for="mappingOptions">Mapping Options (JSON):</label>
-        <textarea
-          id="mappingOptions"
-          v-model="mappingOptionsText"
-          placeholder='e.g. { "key": "value" }'
-          rows="5"
-        ></textarea>
+        <label for="search">Search Query:</label>
+        <input
+          id="search"
+          v-model="search"
+          type="text"
+          placeholder="Optional search terms"
+        />
+      </div>
+
+      <div class="form-group checkbox">
+        <label>
+          <input type="checkbox" v-model="ignoreSitemap" /> Ignore Sitemap
+        </label>
+      </div>
+
+      <div class="form-group checkbox">
+        <label>
+          <input type="checkbox" v-model="sitemapOnly" /> Sitemap Only
+        </label>
+      </div>
+
+      <div class="form-group checkbox">
+        <label>
+          <input type="checkbox" v-model="includeSubdomains" /> Include Subdomains
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label for="limit">Limit:</label>
+        <input
+          id="limit"
+          v-model.number="limit"
+          type="number"
+          min="1"
+          max="30000"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="timeout">Timeout (ms):</label>
+        <input id="timeout" v-model.number="timeout" type="number" min="0" />
       </div>
 
       <button type="submit">Find URLs</button>
@@ -44,6 +78,12 @@ import { ref, inject } from 'vue'
 import type { MappingApi, MapUrlsRequest } from '@/api-client'
 
 /**
+ * MapView lets users map URLs starting from a base URL.
+ * The component exposes common mapping options such as search
+ * query, sitemap handling and link limits.
+ */
+
+/**
  * Access the Mapping API instance provided by the api plugin.
  */
 const api = inject('api') as { mapping?: MappingApi } | undefined
@@ -53,8 +93,18 @@ if (!api?.mapping) {
 
 /** Base URL entered by the user. */
 const baseUrl = ref('')
-/** JSON string for optional mapping options. */
-const mappingOptionsText = ref('')
+/** Search query used when mapping URLs. */
+const search = ref('')
+/** Ignore the website sitemap when crawling. */
+const ignoreSitemap = ref(true)
+/** Only return links found in the website sitemap. */
+const sitemapOnly = ref(false)
+/** Include subdomains of the website. */
+const includeSubdomains = ref(false)
+/** Maximum number of links to return. */
+const limit = ref(5000)
+/** Request timeout in milliseconds. */
+const timeout = ref<number | null>(null)
 /** List of URLs returned by the API. */
 const urls = ref<string[]>([])
 /** Indicates whether the API request is in progress. */
@@ -63,21 +113,18 @@ const loading = ref(false)
 const error = ref('')
 
 /**
- * Handle form submission
- * Parses mapping options JSON and simulates URL finding logic
+ * Handle form submission and fetch mapped URLs from the API.
  */
 async function handleSubmit(): Promise<void> {
-  let options: Record<string, unknown> = {}
-  try {
-    options = mappingOptionsText.value
-      ? JSON.parse(mappingOptionsText.value)
-      : {}
-  } catch {
-    error.value = 'Invalid JSON in mapping options'
-    return
+  const payload: MapUrlsRequest = {
+    url: baseUrl.value,
+    search: search.value || undefined,
+    ignoreSitemap: ignoreSitemap.value,
+    sitemapOnly: sitemapOnly.value,
+    includeSubdomains: includeSubdomains.value,
+    limit: limit.value || undefined,
+    timeout: timeout.value ?? undefined
   }
-
-  const payload: MapUrlsRequest = { url: baseUrl.value, ...options }
 
   loading.value = true
   error.value = ''
@@ -164,6 +211,12 @@ button:hover {
   list-style-type: disc;
   padding-left: 1.5rem;
   margin-bottom: 1rem;
+}
+
+.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .error {
