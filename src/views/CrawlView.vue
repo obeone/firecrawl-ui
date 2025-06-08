@@ -194,6 +194,100 @@
               tags.</small
             >
           </div>
+          <div class="form-group">
+            <label for="timeout">Timeout (ms):</label>
+            <input
+              id="timeout"
+              v-model.number="formData.scrapeOptions.timeout"
+              type="number"
+              min="0"
+            />
+          </div>
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              v-model="formData.scrapeOptions.skipTlsVerification"
+            />
+            Skip TLS Verification
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" v-model="formData.scrapeOptions.blockAds" />
+            Block Ads
+          </label>
+          <div class="form-group">
+            <label for="proxy">Proxy:</label>
+            <select id="proxy" v-model="formData.scrapeOptions.proxy">
+              <option value="">Default</option>
+              <option value="basic">Basic</option>
+              <option value="stealth">Stealth</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="locationCountry">Location Country:</label>
+            <input
+              id="locationCountry"
+              v-model="formData.scrapeOptions.location.country"
+              type="text"
+              placeholder="US"
+            />
+          </div>
+          <div class="form-group">
+            <label for="locationLanguages">Location Languages:</label>
+            <input
+              id="locationLanguages"
+              v-model="locationLanguagesInput"
+              type="text"
+              placeholder="en-US, fr"
+              @blur="parseLocationLanguages"
+            />
+          </div>
+          <div class="form-group">
+            <label for="jsonSchema">JSON Options Schema (JSON):</label>
+            <textarea
+              id="jsonSchema"
+              v-model="jsonOptionsSchemaInput"
+              @blur="parseJsonOptionsSchema"
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label for="jsonSystemPrompt">JSON System Prompt:</label>
+            <textarea
+              id="jsonSystemPrompt"
+              v-model="formData.scrapeOptions.jsonOptions.systemPrompt"
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label for="jsonPrompt">JSON Prompt:</label>
+            <textarea
+              id="jsonPrompt"
+              v-model="formData.scrapeOptions.jsonOptions.prompt"
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label for="changeModes">Change Tracking Modes:</label>
+            <input
+              id="changeModes"
+              v-model="changeTrackingModesInput"
+              type="text"
+              placeholder="git-diff, json"
+              @blur="parseChangeTrackingModes"
+            />
+          </div>
+          <div class="form-group">
+            <label for="changeSchema">Change Tracking Schema (JSON):</label>
+            <textarea
+              id="changeSchema"
+              v-model="changeTrackingSchemaInput"
+              @blur="parseChangeTrackingSchema"
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label for="changePrompt">Change Tracking Prompt:</label>
+            <textarea
+              id="changePrompt"
+              v-model="formData.scrapeOptions.changeTrackingOptions.prompt"
+            ></textarea>
+          </div>
         </div>
       </fieldset>
 
@@ -385,6 +479,24 @@ interface ScrapeOptions {
   mobile?: boolean;
   removeBase64Images?: boolean;
   actions?: any[]; // Based on OpenAPI, actions is an array of Action objects
+  skipTlsVerification?: boolean;
+  timeout?: number;
+  jsonOptions?: {
+    schema?: object;
+    systemPrompt?: string;
+    prompt?: string;
+  };
+  location?: {
+    country?: string;
+    languages?: string[];
+  };
+  blockAds?: boolean;
+  proxy?: string;
+  changeTrackingOptions?: {
+    modes?: string[];
+    schema?: object;
+    prompt?: string;
+  };
 }
 
 /**
@@ -447,6 +559,13 @@ export default defineComponent({
         mobile: false,
         removeBase64Images: false,
         actions: [],
+        skipTlsVerification: false,
+        timeout: undefined,
+        jsonOptions: {},
+        location: { country: undefined, languages: [] },
+        blockAds: true,
+        proxy: undefined,
+        changeTrackingOptions: {},
       },
       webhookOptions: {
         url: undefined,
@@ -463,6 +582,10 @@ export default defineComponent({
     const excludeTagsInput = ref("");
     const webhookHeadersInput = ref("");
     const webhookMetadataInput = ref("");
+    const locationLanguagesInput = ref("");
+    const jsonOptionsSchemaInput = ref("");
+    const changeTrackingSchemaInput = ref("");
+    const changeTrackingModesInput = ref("");
 
     // State for collapsible sections
     const isCrawlerOptionsCollapsed = ref(true);
@@ -527,6 +650,50 @@ export default defineComponent({
       } catch {
         error.value = "Invalid JSON for webhook metadata";
       }
+    };
+
+    const parseLocationLanguages = () => {
+      formData.value.scrapeOptions.location =
+        formData.value.scrapeOptions.location || {};
+      formData.value.scrapeOptions.location.languages = locationLanguagesInput.value
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    };
+
+    const parseJsonOptionsSchema = () => {
+      try {
+        formData.value.scrapeOptions.jsonOptions =
+          formData.value.scrapeOptions.jsonOptions || {};
+        formData.value.scrapeOptions.jsonOptions.schema = jsonOptionsSchemaInput.value
+          ? JSON.parse(jsonOptionsSchemaInput.value)
+          : undefined;
+      } catch {
+        error.value = "Invalid JSON for JSON schema";
+      }
+    };
+
+    const parseChangeTrackingSchema = () => {
+      try {
+        formData.value.scrapeOptions.changeTrackingOptions =
+          formData.value.scrapeOptions.changeTrackingOptions || {};
+        formData.value.scrapeOptions.changeTrackingOptions.schema =
+          changeTrackingSchemaInput.value
+            ? JSON.parse(changeTrackingSchemaInput.value)
+            : undefined;
+      } catch {
+        error.value = "Invalid JSON for change tracking schema";
+      }
+    };
+
+    const parseChangeTrackingModes = () => {
+      formData.value.scrapeOptions.changeTrackingOptions =
+        formData.value.scrapeOptions.changeTrackingOptions || {};
+      formData.value.scrapeOptions.changeTrackingOptions.modes =
+        changeTrackingModesInput.value
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
     };
 
     const loading = ref(false);
@@ -602,6 +769,20 @@ export default defineComponent({
           excludeTagsInput.value = (crawl.scrapeOptions.excludeTags || []).join(
             ", ",
           );
+          locationLanguagesInput.value =
+            (crawl.scrapeOptions.location?.languages || []).join(", ");
+          jsonOptionsSchemaInput.value = crawl.scrapeOptions.jsonOptions?.schema
+            ? JSON.stringify(crawl.scrapeOptions.jsonOptions.schema)
+            : "";
+          changeTrackingSchemaInput.value =
+            crawl.scrapeOptions.changeTrackingOptions?.schema
+              ? JSON.stringify(
+                  crawl.scrapeOptions.changeTrackingOptions.schema,
+                )
+              : "";
+          changeTrackingModesInput.value = (
+            crawl.scrapeOptions.changeTrackingOptions?.modes || []
+          ).join(", ");
         }
       } catch (err: any) {
         console.error(`Error fetching crawl files for ID ${id}:`, err);
@@ -705,6 +886,10 @@ export default defineComponent({
       parseExcludes();
       parseIncludeTags();
       parseExcludeTags();
+      parseLocationLanguages();
+      parseJsonOptionsSchema();
+      parseChangeTrackingSchema();
+      parseChangeTrackingModes();
       parseWebhookHeaders();
       parseWebhookMetadata();
 
@@ -737,8 +922,11 @@ export default defineComponent({
       if (crawler.allowExternalLinks) payload.allowExternalLinks = true;
 
       const scrape = formData.value.scrapeOptions;
-      const scrapePayload: any = { formats: scrape.formats };
-      if (scrape.onlyMainContent) scrapePayload.onlyMainContent = true;
+      const scrapePayload: any = {};
+      if (scrape.formats && scrape.formats.length > 0)
+        scrapePayload.formats = scrape.formats;
+      if (scrape.onlyMainContent === false)
+        scrapePayload.onlyMainContent = false;
       if (scrape.includeTags.length > 0)
         scrapePayload.includeTags = scrape.includeTags;
       if (scrape.excludeTags.length > 0)
@@ -750,8 +938,47 @@ export default defineComponent({
       if (scrape.removeBase64Images) scrapePayload.removeBase64Images = true;
       if (scrape.actions && scrape.actions.length > 0)
         scrapePayload.actions = scrape.actions;
+      if (scrape.skipTlsVerification)
+        scrapePayload.skipTlsVerification = true;
+      if (scrape.timeout !== undefined) scrapePayload.timeout = scrape.timeout;
+      if (scrape.jsonOptions) {
+        const jsonOpts: any = {};
+        if (scrape.jsonOptions.schema)
+          jsonOpts.schema = scrape.jsonOptions.schema;
+        if (scrape.jsonOptions.systemPrompt)
+          jsonOpts.systemPrompt = scrape.jsonOptions.systemPrompt;
+        if (scrape.jsonOptions.prompt) jsonOpts.prompt = scrape.jsonOptions.prompt;
+        if (Object.keys(jsonOpts).length > 0) scrapePayload.jsonOptions = jsonOpts;
+      }
+      if (scrape.location) {
+        const loc: any = {};
+        if (scrape.location.country) loc.country = scrape.location.country;
+        if (
+          scrape.location.languages &&
+          scrape.location.languages.length > 0
+        )
+          loc.languages = scrape.location.languages;
+        if (Object.keys(loc).length > 0) scrapePayload.location = loc;
+      }
+      if (scrape.blockAds === false) scrapePayload.blockAds = false;
+      if (scrape.proxy) scrapePayload.proxy = scrape.proxy;
+      if (scrape.changeTrackingOptions) {
+        const change: any = {};
+        if (
+          scrape.changeTrackingOptions.modes &&
+          scrape.changeTrackingOptions.modes.length > 0
+        )
+          change.modes = scrape.changeTrackingOptions.modes;
+        if (scrape.changeTrackingOptions.schema)
+          change.schema = scrape.changeTrackingOptions.schema;
+        if (scrape.changeTrackingOptions.prompt)
+          change.prompt = scrape.changeTrackingOptions.prompt;
+        if (Object.keys(change).length > 0)
+          scrapePayload.changeTrackingOptions = change;
+      }
 
-      payload.scrapeOptions = scrapePayload;
+      if (Object.keys(scrapePayload).length > 0)
+        payload.scrapeOptions = scrapePayload;
 
       // Include webhook options only when a URL is provided
       if (
@@ -916,10 +1143,18 @@ export default defineComponent({
       excludeTagsInput,
       webhookHeadersInput,
       webhookMetadataInput,
+      locationLanguagesInput,
+      jsonOptionsSchemaInput,
+      changeTrackingSchemaInput,
+      changeTrackingModesInput,
       parseIncludes,
       parseExcludes,
       parseIncludeTags,
       parseExcludeTags,
+      parseLocationLanguages,
+      parseJsonOptionsSchema,
+      parseChangeTrackingSchema,
+      parseChangeTrackingModes,
       parseWebhookHeaders,
       parseWebhookMetadata,
       loading,
