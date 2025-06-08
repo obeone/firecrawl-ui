@@ -29,9 +29,31 @@
             max="100"
           />
         </label>
+        <label>
+          Language:
+          <input type="text" v-model="options.lang" placeholder="en" />
+        </label>
+        <label>
+          Country:
+          <input type="text" v-model="options.country" placeholder="us" />
+        </label>
+        <label>
+          Location:
+          <input type="text" v-model="options.location" />
+        </label>
+        <label>
+          Time range (tbs):
+          <input type="text" v-model="options.tbs" />
+        </label>
+        <label>
+          Timeout (ms):
+          <input type="number" v-model.number="options.timeout" min="0" />
+        </label>
       </fieldset>
 
       <button type="submit">Search</button>
+      <span v-if="loading" class="status">Loading...</span>
+      <span v-if="error" class="status error">{{ error }}</span>
     </form>
 
     <section v-if="results.length" class="results">
@@ -80,10 +102,26 @@ if (!api?.search) {
 }
 
 const query = ref('')
-const options = ref({
+interface SearchOptions {
+  includeMetadata: boolean
+  extractContent: boolean
+  maxResults: number
+  lang: string
+  country: string
+  location: string
+  tbs: string
+  timeout?: number
+}
+
+const options = ref<SearchOptions>({
   includeMetadata: true,
   extractContent: false,
   maxResults: 5,
+  lang: 'en',
+  country: 'us',
+  location: '',
+  tbs: '',
+  timeout: undefined
 })
 
 const loading = ref(false)
@@ -91,9 +129,11 @@ const error = ref('')
 const results = ref<SearchResult[]>([])
 
 /**
- * Send the search request to the API and populate results.
+ * Execute the search with the current query and options.
+ *
+ * @returns Promise resolving when the request completes
  */
-async function onSearch() {
+async function onSearch(): Promise<void> {
   results.value = []
   error.value = ''
   loading.value = true
@@ -101,7 +141,14 @@ async function onSearch() {
   const payload: SearchRequest = {
     query: query.value,
     limit: options.value.maxResults,
-    scrapeOptions: options.value.extractContent ? { formats: ['extract'] } : undefined
+    ...(options.value.tbs && { tbs: options.value.tbs }),
+    ...(options.value.lang && { lang: options.value.lang }),
+    ...(options.value.country && { country: options.value.country }),
+    ...(options.value.location && { location: options.value.location }),
+    ...(options.value.timeout && { timeout: options.value.timeout }),
+    ...(options.value.extractContent && {
+      scrapeOptions: { formats: ['extract'] }
+    })
   }
 
   try {
@@ -162,5 +209,14 @@ async function onSearch() {
   border-left: 3px solid #007acc;
   padding: 0.5rem;
   margin-top: 0.5rem;
+}
+
+.status {
+  margin-left: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.status.error {
+  color: #a94442;
 }
 </style>
