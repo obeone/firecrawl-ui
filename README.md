@@ -25,11 +25,11 @@ This project aims to provide a user-friendly way to leverage the power of Firecr
 
 ## Features
 
-✨ Scrape individual URLs
-🚀 Launch crawling jobs with custom depth
-🧠 Extract data using Firecrawl's AI tools
-🔑 Configure and store your API key locally
-📊 View or export results
+- ✨ Scrape individual URLs
+- 🚀 Launch crawling jobs with custom depth
+- 🧠 Extract data using Firecrawl's AI tools
+- 🔑 Configure and store your API key locally
+- 📊 View or export results
 
 ## Quick Start
 
