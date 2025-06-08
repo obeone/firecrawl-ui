@@ -1,5 +1,5 @@
 <template>
-  <div class="scrape-config-container">
+  <div class="page-container">
     <form @submit.prevent="onSearch" class="scrape-config-form">
       <label for="query">Search Query:</label>
       <input
@@ -51,17 +51,22 @@
         </label>
       </fieldset>
 
-      <button type="submit">Search</button>
+      <button type="submit" class="primary-button">Search</button>
       <span v-if="loading" class="status">Loading...</span>
       <span v-if="error" class="status error">{{ error }}</span>
     </form>
 
-  <section v-if="results.length" class="results">
-    <h2>Search Results</h2>
+    <section v-if="results.length" class="results">
+      <h2>Search Results</h2>
       <ul>
         <li v-for="(result, index) in results" :key="index" class="result-item">
-          <a :href="result.url" target="_blank" rel="noopener noreferrer">{{ result.title }}</a>
-          <div v-if="options.includeMetadata && result.metadata" class="metadata">
+          <a :href="result.url" target="_blank" rel="noopener noreferrer">{{
+            result.title
+          }}</a>
+          <div
+            v-if="options.includeMetadata && result.metadata"
+            class="metadata"
+          >
             <small>{{ result.metadata.title }}</small>
           </div>
           <!-- Content extraction is available for download but not shown inline -->
@@ -83,64 +88,64 @@
 </template>
 
 <script setup lang="ts">
-import { ref, inject, computed } from 'vue'
-import type { SearchApi, SearchRequest } from '@/api-client/search.js'
-import JSZip from 'jszip'
-import { saveAs } from 'file-saver'
-import axios from 'axios'
+import { ref, inject, computed } from "vue";
+import type { SearchApi, SearchRequest } from "@/api-client/search.js";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+import axios from "axios";
 
 interface SearchResult {
-  title: string
-  url: string
-  description?: string
-  markdown?: string | null
-  html?: string | null
-  rawHtml?: string | null
-  links?: string[]
-  screenshot?: string | null
+  title: string;
+  url: string;
+  description?: string;
+  markdown?: string | null;
+  html?: string | null;
+  rawHtml?: string | null;
+  links?: string[];
+  screenshot?: string | null;
   metadata?: {
-    title?: string
-    description?: string
-    sourceURL?: string
-    statusCode?: number
-    error?: string | null
-  }
+    title?: string;
+    description?: string;
+    sourceURL?: string;
+    statusCode?: number;
+    error?: string | null;
+  };
 }
 
-const api = inject('api') as { search?: SearchApi } | undefined
+const api = inject("api") as { search?: SearchApi } | undefined;
 if (!api?.search) {
-  throw new Error('Search API is not available')
+  throw new Error("Search API is not available");
 }
 
-const query = ref('')
+const query = ref("");
 interface SearchOptions {
-  includeMetadata: boolean
-  extractContent: boolean
-  maxResults: number
-  lang: string
-  country: string
-  location: string
-  tbs: string
-  timeout?: number
+  includeMetadata: boolean;
+  extractContent: boolean;
+  maxResults: number;
+  lang: string;
+  country: string;
+  location: string;
+  tbs: string;
+  timeout?: number;
 }
 
 const options = ref<SearchOptions>({
   includeMetadata: true,
   extractContent: false,
   maxResults: 5,
-  lang: 'en',
-  country: 'us',
-  location: '',
-  tbs: '',
-  timeout: undefined
-})
+  lang: "en",
+  country: "us",
+  location: "",
+  tbs: "",
+  timeout: undefined,
+});
 
-const loading = ref(false)
-const error = ref('')
-const results = ref<SearchResult[]>([])
-const requestedFormats = ref<string[]>([])
+const loading = ref(false);
+const error = ref("");
+const results = ref<SearchResult[]>([]);
+const requestedFormats = ref<string[]>([]);
 
-const activeFormats = computed(() => requestedFormats.value)
+const activeFormats = computed(() => requestedFormats.value);
 
 /**
  * Execute the search with the current query and options.
@@ -148,9 +153,9 @@ const activeFormats = computed(() => requestedFormats.value)
  * @returns Promise resolving when the request completes
  */
 async function onSearch(): Promise<void> {
-  results.value = []
-  error.value = ''
-  loading.value = true
+  results.value = [];
+  error.value = "";
+  loading.value = true;
 
   const payload: SearchRequest = {
     query: query.value,
@@ -161,19 +166,18 @@ async function onSearch(): Promise<void> {
     ...(options.value.location && { location: options.value.location }),
     ...(options.value.timeout && { timeout: options.value.timeout }),
     ...(options.value.extractContent && {
-      scrapeOptions: { formats: ['markdown'] }
-    })
-  }
+      scrapeOptions: { formats: ["markdown"] },
+    }),
+  };
 
   try {
-    const response = await api.search.search(payload)
-    requestedFormats.value =
-      payload.scrapeOptions?.formats ?? []
-    results.value = (response.data.data || []).map(normalizeResult)
+    const response = await api.search.search(payload);
+    requestedFormats.value = payload.scrapeOptions?.formats ?? [];
+    results.value = (response.data.data || []).map(normalizeResult);
   } catch (err: any) {
-    error.value = err?.message || 'Search request failed'
+    error.value = err?.message || "Search request failed";
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
@@ -195,10 +199,10 @@ function normalizeResult(item: SearchResult): SearchResult {
       ? {
           ...item.metadata,
           title: fixEncoding(item.metadata.title),
-          description: fixEncoding(item.metadata.description)
+          description: fixEncoding(item.metadata.description),
         }
-      : undefined
-  }
+      : undefined,
+  };
 }
 
 /**
@@ -209,26 +213,26 @@ function normalizeResult(item: SearchResult): SearchResult {
  */
 function fixEncoding(value?: string | null): string | undefined {
   if (value == null) {
-    return undefined
+    return undefined;
   }
   try {
-    const decoded = decodeURIComponent(escape(value))
-    if (!decoded.includes('\ufffd')) {
-      return decoded
+    const decoded = decodeURIComponent(escape(value));
+    if (!decoded.includes("\ufffd")) {
+      return decoded;
     }
   } catch {
     // Ignore decoding errors
   }
   try {
-    const bytes = Uint8Array.from([...value].map((c) => c.charCodeAt(0)))
-    const decoded = new TextDecoder('utf-8').decode(bytes)
-    if (!decoded.includes('\ufffd')) {
-      return decoded
+    const bytes = Uint8Array.from([...value].map((c) => c.charCodeAt(0)));
+    const decoded = new TextDecoder("utf-8").decode(bytes);
+    if (!decoded.includes("\ufffd")) {
+      return decoded;
     }
   } catch {
     // Ignore decoding errors
   }
-  return value
+  return value;
 }
 
 /**
@@ -238,10 +242,10 @@ function fixEncoding(value?: string | null): string | undefined {
  * @returns Sanitized filename string
  */
 function sanitizeFilename(url: string): string {
-  let name = url.replace(/^https?:\/\//, '')
-  name = name.replace(/[?#].*$/, '')
-  name = name.replace(/[^a-zA-Z0-9]+/g, '_')
-  return name || 'result'
+  let name = url.replace(/^https?:\/\//, "");
+  name = name.replace(/[?#].*$/, "");
+  name = name.replace(/[^a-zA-Z0-9]+/g, "_");
+  return name || "result";
 }
 
 /**
@@ -251,65 +255,64 @@ function sanitizeFilename(url: string): string {
  */
 async function handleDownload(type: string): Promise<void> {
   if (!results.value.length) {
-    return
+    return;
   }
 
-  if (type === 'Full JSON') {
+  if (type === "Full JSON") {
     const blob = new Blob([JSON.stringify(results.value, null, 2)], {
-      type: 'application/json'
-    })
-    saveAs(blob, 'search-results.json')
-    return
+      type: "application/json",
+    });
+    saveAs(blob, "search-results.json");
+    return;
   }
 
-  const zip = new JSZip()
-  const fetches: Promise<void>[] = []
+  const zip = new JSZip();
+  const fetches: Promise<void>[] = [];
 
   results.value.forEach((page, index) => {
-    const base = sanitizeFilename(page.url || index.toString())
-    const prefix = (index + 1).toString().padStart(3, '0')
+    const base = sanitizeFilename(page.url || index.toString());
+    const prefix = (index + 1).toString().padStart(3, "0");
     switch (type) {
-      case 'markdown':
+      case "markdown":
         if (page.markdown) {
-          zip.file(`${prefix}-${base}.md`, page.markdown)
+          zip.file(`${prefix}-${base}.md`, page.markdown);
         }
-        break
-      case 'html':
+        break;
+      case "html":
         if (page.html) {
-          zip.file(`${prefix}-${base}.html`, page.html)
+          zip.file(`${prefix}-${base}.html`, page.html);
         }
-        break
-      case 'rawHtml':
+        break;
+      case "rawHtml":
         if (page.rawHtml) {
-          zip.file(`${prefix}-${base}.raw.html`, page.rawHtml)
+          zip.file(`${prefix}-${base}.raw.html`, page.rawHtml);
         }
-        break
-      case 'links':
+        break;
+      case "links":
         if (page.links && page.links.length) {
-          zip.file(`${prefix}-${base}.txt`, page.links.join('\n'))
+          zip.file(`${prefix}-${base}.txt`, page.links.join("\n"));
         }
-        break
-      case 'screenshot':
-      case 'screenshot@fullPage':
+        break;
+      case "screenshot":
+      case "screenshot@fullPage":
         if (page.screenshot) {
           const p = axios
-            .get(page.screenshot, { responseType: 'blob' })
+            .get(page.screenshot, { responseType: "blob" })
             .then((res) => {
-              zip.file(`${prefix}-${base}.png`, res.data)
-            })
-          fetches.push(p)
+              zip.file(`${prefix}-${base}.png`, res.data);
+            });
+          fetches.push(p);
         }
-        break
+        break;
       default:
-        break
+        break;
     }
-  })
+  });
 
-  await Promise.all(fetches)
-  const blob = await zip.generateAsync({ type: 'blob' })
-  saveAs(blob, `search-${type}-archive.zip`)
+  await Promise.all(fetches);
+  const blob = await zip.generateAsync({ type: "blob" });
+  saveAs(blob, `search-${type}-archive.zip`);
 }
-
 </script>
 
 <style scoped>

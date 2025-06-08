@@ -1,5 +1,5 @@
 <template>
-  <div class="scrape-config-container">
+  <div class="page-container">
     <h1>Crawl Configuration</h1>
     <form class="scrape-config-form" @submit.prevent="handleSubmit">
       <!-- URL Section -->
@@ -345,7 +345,7 @@
         </div>
       </fieldset>
 
-      <button type="submit">Submit Crawl</button>
+      <button type="submit" class="primary-button">Submit Crawl</button>
     </form>
 
     <div v-if="loading" class="status loading">
@@ -405,11 +405,7 @@
 
       <div class="download-section">
         <h3>Download Results</h3>
-        <div
-          v-for="fmt in selectedFormats"
-          :key="fmt"
-          class="download-btn"
-        >
+        <div v-for="fmt in selectedFormats" :key="fmt" class="download-btn">
           <button
             class="primary-button"
             @click="handleDownload(fmt, selectedCrawl.id)"
@@ -852,12 +848,10 @@ export default defineComponent({
           jsonOptionsSchemaInput.value = crawl.scrapeOptions.jsonOptions?.schema
             ? JSON.stringify(crawl.scrapeOptions.jsonOptions.schema)
             : "";
-          changeTrackingSchemaInput.value =
-            crawl.scrapeOptions.changeTrackingOptions?.schema
-              ? JSON.stringify(
-                  crawl.scrapeOptions.changeTrackingOptions.schema,
-                )
-              : "";
+          changeTrackingSchemaInput.value = crawl.scrapeOptions
+            .changeTrackingOptions?.schema
+            ? JSON.stringify(crawl.scrapeOptions.changeTrackingOptions.schema)
+            : "";
           changeTrackingModesInput.value =
             crawl.scrapeOptions.changeTrackingOptions?.modes?.join(", ") || "";
         }
@@ -914,9 +908,7 @@ export default defineComponent({
       const jobId = jobIdParam || result.value?.id;
       if (!jobId) {
         error.value = "No crawl job found to download results.";
-        console.error(
-          "Attempted to download without a crawl job identifier.",
-        );
+        console.error("Attempted to download without a crawl job identifier.");
         return;
       }
 

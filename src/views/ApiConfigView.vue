@@ -1,5 +1,5 @@
 <template>
-  <div class="scrape-config-container">
+  <div class="page-container">
     <h1>API Configuration</h1>
     <p>A valid API key is required to use Firecrawl.</p>
     <ApiKeyInput />
@@ -12,27 +12,27 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
-import { useRouter } from 'vue-router'
-import ApiKeyInput from '@/components/ApiKeyInput.vue'
+import { defineComponent } from "vue";
+import { useRouter } from "vue-router";
+import ApiKeyInput from "@/components/ApiKeyInput.vue";
 
 export default defineComponent({
-  name: 'ApiConfigView',
+  name: "ApiConfigView",
   components: {
-    ApiKeyInput
+    ApiKeyInput,
   },
   setup() {
-    const router = useRouter()
+    const router = useRouter();
 
     const handleContinue = () => {
-      router.push({ name: 'home' })
-    }
+      router.push({ name: "home" });
+    };
 
     return {
-      handleContinue
-    }
-  }
-})
+      handleContinue,
+    };
+  },
+});
 </script>
 
 <style scoped>

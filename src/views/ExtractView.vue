@@ -1,5 +1,5 @@
 <template>
-  <div class="extract-view">
+  <div class="page-container extract-view">
     <h1>Extract Data</h1>
     <form @submit.prevent="runExtraction" class="extract-form">
       <div class="form-group">
@@ -45,8 +45,12 @@
         </label>
       </div>
 
-      <button type="submit" :disabled="loading || !!schemaError">
-        {{ loading ? 'Running...' : 'Extract' }}
+      <button
+        type="submit"
+        class="primary-button"
+        :disabled="loading || !!schemaError"
+      >
+        {{ loading ? "Running..." : "Extract" }}
       </button>
     </form>
 
@@ -63,24 +67,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, ref } from 'vue';
-import { ExtractionApi, type ExtractDataRequest, type ExtractResponse } from '@/api-client';
+import { computed, inject, ref } from "vue";
+import {
+  ExtractionApi,
+  type ExtractDataRequest,
+  type ExtractResponse,
+} from "@/api-client";
 
 /**
  * Injection of the API client. The apiPlugin must provide an `extraction` instance.
  */
-const api = inject('api') as { extraction?: ExtractionApi } | undefined;
+const api = inject("api") as { extraction?: ExtractionApi } | undefined;
 if (!api?.extraction) {
-  throw new Error('Extraction API is not available');
+  throw new Error("Extraction API is not available");
 }
 
-const urlInput = ref('');
-const promptInput = ref('');
-const schemaString = ref('');
+const urlInput = ref("");
+const promptInput = ref("");
+const schemaString = ref("");
 const options = ref({ enableWebSearch: false, showSources: false });
 const loading = ref(false);
-const error = ref('');
-const result = ref<ExtractResponse['data'] | null>(null);
+const error = ref("");
+const result = ref<ExtractResponse["data"] | null>(null);
 const schemaError = ref<string | null>(null);
 
 /**
@@ -103,7 +111,7 @@ const parsedSchema = computed(() => {
 
 /** Format result as pretty JSON. */
 const formattedResult = computed(() =>
-  result.value ? JSON.stringify(result.value, null, 2) : ''
+  result.value ? JSON.stringify(result.value, null, 2) : "",
 );
 
 /**
@@ -113,11 +121,11 @@ const runExtraction = async (): Promise<void> => {
   if (schemaError.value) return;
 
   const urls = urlInput.value
-    .split('\n')
+    .split("\n")
     .map((u) => u.trim())
     .filter((u) => u);
   if (!urls.length) {
-    error.value = 'Please provide at least one URL.';
+    error.value = "Please provide at least one URL.";
     return;
   }
 
@@ -126,21 +134,21 @@ const runExtraction = async (): Promise<void> => {
     ...(promptInput.value && { prompt: promptInput.value }),
     ...(parsedSchema.value && { schema: parsedSchema.value }),
     ...(options.value.enableWebSearch && { enableWebSearch: true }),
-    ...(options.value.showSources && { showSources: true })
+    ...(options.value.showSources && { showSources: true }),
   } as ExtractDataRequest;
 
   try {
     loading.value = true;
-    error.value = '';
+    error.value = "";
     const response = await api.extraction.extractData(payload);
     const respData = response.data;
     if (respData.success && (respData as any).data) {
       result.value = (respData as any).data;
     } else {
-      throw new Error((respData as any).error || 'Extraction failed');
+      throw new Error((respData as any).error || "Extraction failed");
     }
   } catch (err: any) {
-    error.value = err?.message || 'Request failed';
+    error.value = err?.message || "Request failed";
     result.value = null;
   } finally {
     loading.value = false;
@@ -153,11 +161,11 @@ const runExtraction = async (): Promise<void> => {
 const downloadResult = (): void => {
   if (!result.value) return;
   const blob = new Blob([JSON.stringify(result.value, null, 2)], {
-    type: 'application/json'
+    type: "application/json",
   });
-  const link = document.createElement('a');
+  const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = 'extraction_result.json';
+  link.download = "extraction_result.json";
   link.click();
   URL.revokeObjectURL(link.href);
 };
@@ -186,7 +194,7 @@ textarea {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: "Courier New", Courier, monospace;
 }
 
 .options {
