@@ -4,7 +4,7 @@ import ScrapeView from '../views/ScrapeView.vue'
 import CrawlView from '../views/CrawlView.vue'
 import ApiConfigView from '../views/ApiConfigView.vue'
 import ExtractView from '../views/ExtractView.vue' // Import the new view
-import MapView from '../components/MapView.vue' // Import MapView component
+import MapView from '../components/MapView.vue'
 import SearchView from '../components/SearchView.vue' // Import SearchView component
 
 const router = createRouter({
@@ -35,9 +35,9 @@ const router = createRouter({
       name: 'extract',
       component: ExtractView
     },
-    { // Add the route for MapView
-      path: '/mapview',
-      name: 'mapview',
+    {
+      path: '/map',
+      name: 'map',
       component: MapView
     },
     { // Add the route for SearchView

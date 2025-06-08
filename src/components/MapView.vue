@@ -26,6 +26,9 @@
       <button type="submit">Find URLs</button>
     </form>
 
+    <div v-if="error" class="error">{{ error }}</div>
+    <div v-if="loading" class="status">Loading...</div>
+
     <div v-if="urls.length" class="results">
       <h3>Found URLs</h3>
       <ul>
@@ -36,52 +39,71 @@
   </div>
 </template>
 
-<script setup>
-import { ref } from 'vue';
+<script setup lang="ts">
+import { ref, inject } from 'vue'
+import type { MappingApi, MapUrlsRequest } from '@/api-client'
 
 /**
- * MapView component logic
- * - baseUrl: the base URL input by the user
- * - mappingOptionsText: JSON string for mapping options input
- * - urls: array of found URLs to display
+ * Access the Mapping API instance provided by the api plugin.
  */
-const baseUrl = ref('');
-const mappingOptionsText = ref('');
-const urls = ref([]);
+const api = inject('api') as { mapping?: MappingApi } | undefined
+if (!api?.mapping) {
+  throw new Error('Mapping API is not available')
+}
+
+/** Base URL entered by the user. */
+const baseUrl = ref('')
+/** JSON string for optional mapping options. */
+const mappingOptionsText = ref('')
+/** List of URLs returned by the API. */
+const urls = ref<string[]>([])
+/** Indicates whether the API request is in progress. */
+const loading = ref(false)
+/** Holds any error message from the API call. */
+const error = ref('')
 
 /**
  * Handle form submission
  * Parses mapping options JSON and simulates URL finding logic
  */
-function handleSubmit() {
-  let options = {};
+async function handleSubmit(): Promise<void> {
+  let options: Record<string, unknown> = {}
   try {
-    options = mappingOptionsText.value ? JSON.parse(mappingOptionsText.value) : {};
-  } catch (e) {
-    alert('Invalid JSON in mapping options');
-    return;
+    options = mappingOptionsText.value
+      ? JSON.parse(mappingOptionsText.value)
+      : {}
+  } catch {
+    error.value = 'Invalid JSON in mapping options'
+    return
   }
 
-  // Simulate URL finding logic based on baseUrl and options
-  // For demonstration, just create some dummy URLs
-  urls.value = [
-    baseUrl.value,
-    baseUrl.value + '/page1',
-    baseUrl.value + '/page2?param=' + (options.param || 'default'),
-  ];
+  const payload: MapUrlsRequest = { url: baseUrl.value, ...options }
+
+  loading.value = true
+  error.value = ''
+  try {
+    const response = await api.mapping.mapUrls(payload)
+    urls.value = response.data.links ?? []
+  } catch (err: any) {
+    error.value = err?.message || 'Failed to map URLs'
+    urls.value = []
+  } finally {
+    loading.value = false
+  }
 }
 
 /**
  * Download the found URLs as a JSON file
  */
-function downloadJson() {
-  const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(urls.value, null, 2));
-  const downloadAnchorNode = document.createElement('a');
-  downloadAnchorNode.setAttribute('href', dataStr);
-  downloadAnchorNode.setAttribute('download', 'urls.json');
-  document.body.appendChild(downloadAnchorNode);
-  downloadAnchorNode.click();
-  downloadAnchorNode.remove();
+function downloadJson(): void {
+  const blob = new Blob([JSON.stringify(urls.value, null, 2)], {
+    type: 'application/json'
+  })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = 'urls.json'
+  link.click()
+  URL.revokeObjectURL(link.href)
 }
 </script>
 
@@ -142,5 +164,14 @@ button:hover {
   list-style-type: disc;
   padding-left: 1.5rem;
   margin-bottom: 1rem;
+}
+
+.error {
+  color: #d9534f;
+  margin-top: 0.5rem;
+}
+
+.status {
+  margin-top: 0.5rem;
 }
 </style>
