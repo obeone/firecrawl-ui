@@ -20,7 +20,7 @@
           class="collapsible-header"
           @click="isCrawlerOptionsCollapsed = !isCrawlerOptionsCollapsed"
         >
-          Crawler Options
+          {{ crawlerOptionsArrow }} Crawler Options
         </legend>
         <div v-show="!isCrawlerOptionsCollapsed">
           <div class="grid-layout">
@@ -136,7 +136,7 @@
           class="collapsible-header"
           @click="isScrapeOptionsCollapsed = !isScrapeOptionsCollapsed"
         >
-          Scrape Options
+          {{ scrapeOptionsArrow }} Scrape Options
         </legend>
         <div v-show="!isScrapeOptionsCollapsed">
           <div class="form-group">
@@ -297,7 +297,7 @@
           class="collapsible-header"
           @click="isWebhookOptionsCollapsed = !isWebhookOptionsCollapsed"
         >
-          Webhook Options (Optional)
+          {{ webhookOptionsArrow }} Webhook Options (Optional)
         </legend>
         <div v-show="!isWebhookOptionsCollapsed">
           <div class="grid-layout">
@@ -592,6 +592,16 @@ export default defineComponent({
     const isCrawlerOptionsCollapsed = ref(true);
     const isScrapeOptionsCollapsed = ref(true);
     const isWebhookOptionsCollapsed = ref(true);
+
+    const crawlerOptionsArrow = computed(() =>
+      isCrawlerOptionsCollapsed.value ? "▶" : "▼",
+    );
+    const scrapeOptionsArrow = computed(() =>
+      isScrapeOptionsCollapsed.value ? "▶" : "▼",
+    );
+    const webhookOptionsArrow = computed(() =>
+      isWebhookOptionsCollapsed.value ? "▶" : "▼",
+    );
 
     /**
      * Parse the includes input string into an array for the API payload.
@@ -1238,6 +1248,9 @@ export default defineComponent({
       selectCrawl,
       simulatedFiles,
       activeFormats,
+      crawlerOptionsArrow,
+      scrapeOptionsArrow,
+      webhookOptionsArrow,
       // Expose saveHistory if needed elsewhere, though not strictly necessary for this task
       // saveHistory,
     };
@@ -1341,6 +1354,11 @@ export default defineComponent({
 
 .selected-crawl {
   background-color: #eef6ff;
+}
+
+.collapsible-header {
+  cursor: pointer;
+  user-select: none;
 }
 
 .error-icon {
