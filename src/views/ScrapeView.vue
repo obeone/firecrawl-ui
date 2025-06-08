@@ -233,9 +233,13 @@
       <div class="result-header">
         <h2>Results</h2>
         <div class="download-options">
-          <button @click="downloadResult('json')">Download JSON</button>
-          <button @click="downloadResult('csv')">Download CSV</button>
-          <button @click="downloadResult('txt')">Download Text</button>
+          <button
+            v-for="fmt in downloadFormats"
+            :key="fmt"
+            @click="downloadResult(fmt)"
+          >
+            Download {{ fmt }}
+          </button>
         </div>
       </div>
       <pre>{{ result }}</pre>
@@ -244,19 +248,14 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, inject, watch } from "vue";
+import { defineComponent, ref, inject, watch, computed } from "vue";
 import { useRouter } from "vue-router";
-// Removed duplicate imports for ScrapingApi and ScrapeResponse from the block below
 import {
   ScrapeAndExtractFromUrlRequestFormatsEnum,
-  type ScrapeAndExtractFromUrlRequest, // Correct type for the request object
-  type ScrapeResponse, // Correct type for the response - KEEP THIS ONE
-  type ScrapingApi, // Correct type for the API - KEEP THIS ONE
-  // Types for nested options within ScrapeAndExtractFromUrlRequest (if needed for clarity, but often optional)
-  // type ScrapeAndExtractFromUrlRequestPageOptions, // Example if it existed
-  // type ScrapeAndExtractFromUrlRequestScrapeOptions, // Example if it existed
-  type ScrapeAndExtractFromUrlRequestExtract, // Correct type for extractor options
-  // type ScrapeAndExtractFromUrlRequestChangeTrackingOptions // Example if it existed
+  type ScrapeAndExtractFromUrlRequest,
+  type ScrapeResponse,
+  type ScrapingApi,
+  type ScrapeAndExtractFromUrlRequestExtract,
 } from "../api-client/api";
 
 type ScrapeResult = ScrapeResponse;
@@ -300,38 +299,6 @@ interface FormDataChangeTrackingOptions {
   frequency: number; // frequency in minutes to check for changes
 }
 
-interface FormData {
-  url: string;
-  pageOptions: FormDataPageOptions;
-  scrapeOptions: FormDataScrapeOptions;
-  extractorOptions?: FormDataExtractorOptions; // Added extractorOptions for JSON format
-  changeTrackingOptions: FormDataChangeTrackingOptions; // Added changeTrackingOptions
-}
-
-interface FormDataChangeTrackingOptions {
-  threshold: number; // percentage threshold for change detection
-  frequency: number; // frequency in minutes to check for changes
-}
-
-interface FormDataExtractorOptions
-  extends Partial<ScrapeAndExtractFromUrlRequestExtract> {
-  // Add specific fields if needed for UI binding, otherwise Partial is fine
-}
-
-// interface FormDataChangeTrackingOptions { // Add later if needed
-//   mode?: string;
-//   schema?: object;
-//   prompt?: string;
-// }
-
-interface FormData {
-  url: string;
-  pageOptions: FormDataPageOptions;
-  scrapeOptions: FormDataScrapeOptions;
-  // extractorOptions?: FormDataExtractorOptions; // Add later
-  changeTrackingOptions: FormDataChangeTrackingOptions; // Add later
-}
-
 export default defineComponent({
   name: "ScrapeView",
   setup() {
@@ -373,6 +340,9 @@ export default defineComponent({
     const loading = ref(false);
     const error = ref("");
     const result = ref<ScrapeResult | null>(null);
+    const downloadFormats = computed(() =>
+      Array.from(new Set(["json", ...formData.value.scrapeOptions.formats])),
+    );
 
     const isValidUrl = (url: string) => {
       try {
@@ -509,44 +479,53 @@ export default defineComponent({
     const downloadResult = (format: string) => {
       if (!result.value?.data) return;
 
-      let dataStr, mimeType, extension;
-      const dataToExport = result.value.data;
+      const formatMap: Record<string, string> = {
+        extract: "llm_extraction",
+        "screenshot@fullPage": "screenshot",
+      };
 
-      switch (format) {
-        case "csv":
-          const headers = Object.keys(dataToExport).filter(
-            (key) =>
-              key !== "metadata" &&
-              typeof dataToExport[key as keyof typeof dataToExport] !==
-                "object",
-          );
-          dataStr = headers.join(",") + "\n";
-          dataStr += headers
-            .map(
-              (header) =>
-                `"${dataToExport[header as keyof typeof dataToExport] ?? ""}"`,
-            )
-            .join(",");
-          mimeType = "text/csv";
-          extension = "csv";
-          break;
+      const key = formatMap[format] ?? format;
+      const data: unknown =
+        format === "json"
+          ? result.value.data
+          : result.value.data[key as keyof typeof result.value.data];
 
-        case "txt":
-          dataStr = JSON.stringify(dataToExport, null, 2);
-          mimeType = "text/plain";
-          extension = "txt";
-          break;
-
-        default: // json
-          dataStr = JSON.stringify(dataToExport, null, 2);
-          mimeType = "application/json";
-          extension = "json";
+      if (format.startsWith("screenshot") && typeof data === "string") {
+        const link = document.createElement("a");
+        link.href = data;
+        link.setAttribute("download", `scrape-result-${format}.png`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return;
       }
 
-      const dataUri = `data:${mimeType};charset=utf-8,${encodeURIComponent(dataStr)}`;
+      if (data === undefined) return;
+
+      let mimeType = "application/json";
+      let extension = "json";
+      let contentStr = "";
+
+      if (typeof data === "string") {
+        contentStr = data;
+        if (format === "markdown") {
+          mimeType = "text/markdown";
+          extension = "md";
+        } else if (format === "html" || format === "rawHtml") {
+          mimeType = "text/html";
+          extension = "html";
+        } else {
+          mimeType = "text/plain";
+          extension = "txt";
+        }
+      } else {
+        contentStr = JSON.stringify(data, null, 2);
+      }
+
+      const dataUri = `data:${mimeType};charset=utf-8,${encodeURIComponent(contentStr)}`;
       const link = document.createElement("a");
       link.setAttribute("href", dataUri);
-      link.setAttribute("download", `scrape-result.${extension}`);
+      link.setAttribute("download", `scrape-result-${format}.${extension}`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -589,6 +568,7 @@ export default defineComponent({
       result,
       handleSubmit,
       downloadResult,
+      downloadFormats,
       extractorOptionsJson,
       extractorOptionsError,
       ScrapeAndExtractFromUrlRequestFormatsEnum, // Expose enum for template
