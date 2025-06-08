@@ -551,6 +551,11 @@ interface FormData {
   webhookOptions: WebhookOptions;
 }
 
+/**
+ * Component allowing users to configure and run crawl jobs.
+ *
+ * @returns Component options for the crawl view.
+ */
 export default defineComponent({
   name: "CrawlView",
   setup() {

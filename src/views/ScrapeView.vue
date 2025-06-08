@@ -299,6 +299,11 @@ interface FormDataChangeTrackingOptions {
   frequency: number; // frequency in minutes to check for changes
 }
 
+/**
+ * Component for scraping a single URL with advanced options.
+ *
+ * @returns Component options for the scraping view.
+ */
 export default defineComponent({
   name: "ScrapeView",
   setup() {

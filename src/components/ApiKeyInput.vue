@@ -42,6 +42,12 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted } from "vue";
 
+/**
+ * Component allowing users to configure and store the Firecrawl API key.
+ *
+ * @returns Component options for the API key input view.
+ */
+
 export default defineComponent({
   name: "ApiKeyInput",
   setup() {
