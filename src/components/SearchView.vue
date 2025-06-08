@@ -64,10 +64,7 @@
           <div v-if="options.includeMetadata && result.metadata" class="metadata">
             <small>{{ result.metadata.title }}</small>
           </div>
-          <div v-if="result.markdown" class="extracted-content">
-            <h3>Extracted Content</h3>
-            <p>{{ result.markdown }}</p>
-          </div>
+          <!-- Content extraction is available for download but not shown inline -->
         </li>
       </ul>
       <div class="download-section">
@@ -215,10 +212,23 @@ function fixEncoding(value?: string | null): string | undefined {
     return undefined
   }
   try {
-    return decodeURIComponent(escape(value))
+    const decoded = decodeURIComponent(escape(value))
+    if (!decoded.includes('\ufffd')) {
+      return decoded
+    }
   } catch {
-    return value
+    // Ignore decoding errors
   }
+  try {
+    const bytes = Uint8Array.from([...value].map((c) => c.charCodeAt(0)))
+    const decoded = new TextDecoder('utf-8').decode(bytes)
+    if (!decoded.includes('\ufffd')) {
+      return decoded
+    }
+  } catch {
+    // Ignore decoding errors
+  }
+  return value
 }
 
 /**
@@ -329,6 +339,15 @@ async function handleDownload(type: string): Promise<void> {
 
 .result-item {
   margin-bottom: 1rem;
+}
+
+.result-item a {
+  color: #4fc08d;
+  text-decoration: none;
+}
+
+.result-item a:hover {
+  text-decoration: underline;
 }
 
 .metadata {
