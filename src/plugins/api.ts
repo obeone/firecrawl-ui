@@ -1,5 +1,5 @@
 import type { App } from 'vue'
-import { BillingApi, CrawlingApi, ExtractionApi, MappingApi, ScrapingApi } from '../api-client/index.js'
+import { BillingApi, CrawlingApi, ExtractionApi, MappingApi, ScrapingApi, SearchApi } from '../api-client/index.js'
 import apiConfig from '../config/api.js'
 
 const apiPlugin = {
@@ -9,7 +9,8 @@ const apiPlugin = {
       crawling: new CrawlingApi(apiConfig),
       extraction: new ExtractionApi(apiConfig),
       mapping: new MappingApi(apiConfig),
-      scraping: new ScrapingApi(apiConfig)
+      scraping: new ScrapingApi(apiConfig),
+      search: new SearchApi(apiConfig)
     }
     app.provide('api', apis)
     app.config.globalProperties.$api = apis
