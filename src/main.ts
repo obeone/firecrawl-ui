@@ -4,14 +4,7 @@ import App from "./App.vue";
 import apiPlugin from "./plugins/api.js";
 import router from "./router/index.js";
 import ApiKeyInput from "./components/ApiKeyInput.vue";
-import "./assets/main.css"; // Import global CSS
-import { createApp } from "vue";
-import App from "./App.vue";
-import apiPlugin from "./plugins/api.js";
-import router from "./router/index.js";
-import ApiKeyInput from "./components/ApiKeyInput.vue";
 
-const app = createApp(App);
 const app = createApp(App);
 
 // Global error handling
@@ -22,11 +15,7 @@ app.config.errorHandler = (err, instance, info) => {
   }
   console.error("Error:", err, info);
 };
-  console.error("Error:", err, info);
-};
 
-app.use(apiPlugin);
-app.use(router);
 app.use(apiPlugin);
 app.use(router);
 
