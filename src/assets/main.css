@@ -108,6 +108,25 @@ a,
   margin-top: 1.5rem;
 }
 
+.primary-button {
+  background: linear-gradient(90deg, #4fc08d 60%, #2c7a7b 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.8rem 2.2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px 0 rgba(79,192,141,0.10);
+  transition: background 0.2s, transform 0.1s;
+  margin-top: 1.5rem;
+}
+
+.primary-button:hover {
+  background: linear-gradient(90deg, #2c7a7b 60%, #4fc08d 100%);
+  transform: translateY(-2px) scale(1.03);
+}
+
 .scrape-config-form button:hover,
 .scrape-config-form input[type="submit"]:hover {
   background: linear-gradient(90deg, #2c7a7b 60%, #4fc08d 100%);
