@@ -19,6 +19,22 @@ It allows you to scrape pages, launch crawls and extract structured data through
 npm install
 ```
 
+## Environment Variables
+Set the following variables to configure API access:
+
+- `VITE_FIRECRAWL_API_KEY` - your Firecrawl API key
+- `VITE_FIRECRAWL_API_BASE_URL` - base URL of the Firecrawl API
+
+Create a `.env` file in the project root with these variables:
+
+```sh
+VITE_FIRECRAWL_API_KEY=your_api_key
+VITE_FIRECRAWL_API_BASE_URL=https://api.firecrawl.dev/v1
+```
+
+These variables are read in `src/config/api.ts`.
+
+
 ## Development
 Run the dev server with hot reload:
 ```sh
