@@ -20,7 +20,7 @@
           class="collapsible-header"
           @click="isCrawlerOptionsCollapsed = !isCrawlerOptionsCollapsed"
         >
-          Crawler Options
+          {{ crawlerOptionsArrow }} Crawler Options
         </legend>
         <div v-show="!isCrawlerOptionsCollapsed">
           <div class="grid-layout">
@@ -136,7 +136,7 @@
           class="collapsible-header"
           @click="isScrapeOptionsCollapsed = !isScrapeOptionsCollapsed"
         >
-          Scrape Options
+          {{ scrapeOptionsArrow }} Scrape Options
         </legend>
         <div v-show="!isScrapeOptionsCollapsed">
           <div class="form-group">
@@ -297,7 +297,7 @@
           class="collapsible-header"
           @click="isWebhookOptionsCollapsed = !isWebhookOptionsCollapsed"
         >
-          Webhook Options (Optional)
+          {{ webhookOptionsArrow }} Webhook Options (Optional)
         </legend>
         <div v-show="!isWebhookOptionsCollapsed">
           <div class="grid-layout">
@@ -358,7 +358,7 @@
       <div>
         <h3>Error occurred</h3>
         <p>{{ error }}</p>
-        <button @click="error = ''">Try again</button>
+        <button class="primary-button" @click="error = ''">Try again</button>
       </div>
     </div>
 
@@ -379,33 +379,13 @@
     >
       <h2>Download Results</h2>
       <div v-for="fmt in activeFormats" :key="fmt" class="download-btn">
-        <button @click="handleDownload(fmt)">Download {{ fmt }} Archive</button>
+        <button class="primary-button" @click="handleDownload(fmt)">
+          Download {{ fmt }} Archive
+        </button>
       </div>
-      <button @click="handleDownload('Full JSON')">Download Full JSON</button>
-    </div>
-
-    <!-- Section for crawl history -->
-    <div class="crawl-history-section">
-      <h2>Crawl History</h2>
-      <div v-if="crawlHistory.length > 0">
-        <ul>
-          <li
-            v-for="crawl in crawlHistory"
-            :key="crawl.id"
-            :class="{ 'selected-crawl': selectedCrawlId === crawl.id }"
-          >
-            <strong>{{ crawl.url }}</strong>
-            – {{ new Date(crawl.createdAt).toLocaleString() }} – Status:
-            {{ crawl.status }}
-            <button type="button" @click.prevent="selectCrawl(crawl.id)">
-              View Details
-            </button>
-          </li>
-        </ul>
-      </div>
-      <div v-else>
-        <p>No crawl history available.</p>
-      </div>
+      <button class="primary-button" @click="handleDownload('Full JSON')">
+        Download Full JSON
+      </button>
     </div>
 
     <!-- Section for selected crawl details -->
@@ -423,7 +403,62 @@
         <li v-for="file in simulatedFiles" :key="file">{{ file }}</li>
       </ul>
 
-      <button @click="selectedCrawlId = null">Hide Details</button>
+      <div class="download-section">
+        <h3>Download Results</h3>
+        <div
+          v-for="fmt in selectedFormats"
+          :key="fmt"
+          class="download-btn"
+        >
+          <button
+            class="primary-button"
+            @click="handleDownload(fmt, selectedCrawl.id)"
+          >
+            Download {{ fmt }} Archive
+          </button>
+        </div>
+        <button
+          class="primary-button"
+          @click="handleDownload('Full JSON', selectedCrawl.id)"
+        >
+          Download Full JSON
+        </button>
+      </div>
+
+      <button class="primary-button" @click="selectedCrawlId = null">
+        Hide Details
+      </button>
+    </div>
+
+    <!-- Section for crawl history -->
+    <div class="crawl-history-section">
+      <h2>Crawl History</h2>
+      <button class="primary-button" type="button" @click="clearHistory">
+        Clear History
+      </button>
+      <div v-if="crawlHistory.length > 0">
+        <ul>
+          <li
+            v-for="crawl in crawlHistory"
+            :key="crawl.id"
+            :class="{ 'selected-crawl': selectedCrawlId === crawl.id }"
+          >
+            <strong>{{ crawl.url }}</strong>
+            – {{ new Date(crawl.createdAt).toLocaleString() }} – Status:
+            {{ crawl.status }}
+            <button
+              class="primary-button"
+              type="button"
+              @click.prevent="selectCrawl(crawl.id)"
+            >
+              View Details
+            </button>
+          </li>
+        </ul>
+      </div>
+      <div v-else>
+        <p>No crawl history available.</p>
+      </div>
     </div>
   </div>
 </template>
@@ -533,9 +568,8 @@ export default defineComponent({
       scraping: ScrapingApi;
     };
 
-    // Reactive form data with default values
-    // Initialisation du formulaire avec des valeurs par défaut explicites pour éviter les undefined
-    // Correction : utiliser undefined pour respecter les types TypeScript
+    // Reactive form data with explicit defaults to avoid undefined values.
+    // Use undefined where appropriate to satisfy TypeScript types.
     const formData = ref<FormData>({
       url: "",
       crawlerOptions: {
@@ -592,6 +626,16 @@ export default defineComponent({
     const isCrawlerOptionsCollapsed = ref(true);
     const isScrapeOptionsCollapsed = ref(true);
     const isWebhookOptionsCollapsed = ref(true);
+
+    const crawlerOptionsArrow = computed(() =>
+      isCrawlerOptionsCollapsed.value ? "▶" : "▼",
+    );
+    const scrapeOptionsArrow = computed(() =>
+      isScrapeOptionsCollapsed.value ? "▶" : "▼",
+    );
+    const webhookOptionsArrow = computed(() =>
+      isWebhookOptionsCollapsed.value ? "▶" : "▼",
+    );
 
     /**
      * Parse the includes input string into an array for the API payload.
@@ -736,6 +780,16 @@ export default defineComponent({
     });
 
     /**
+     * Get the formats requested for the selected crawl history item.
+     */
+    const selectedFormats = computed(() => {
+      if (selectedCrawl.value) {
+        return selectedCrawl.value.scrapeOptions?.formats || [];
+      }
+      return [] as string[];
+    });
+
+    /**
      * Save the current crawl history to LocalStorage.
      */
     const saveHistory = () => {
@@ -746,13 +800,18 @@ export default defineComponent({
     };
 
     /**
-     * Select a crawl from history and fetch its files.
-     * Replaces simulated file logic with a real API call.
-     * @param id - The ID of the selected crawl.
+     * Clear the crawl history and remove the stored data.
      */
+    const clearHistory = () => {
+      crawlHistory.value = [];
+      selectedCrawlId.value = null;
+      localStorage.removeItem(HISTORY_STORAGE_KEY);
+    };
+
     /**
-     * Sélectionne un crawl dans l'historique et synchronise les champs d'entrée du formulaire.
-     * @param id - L'identifiant du crawl sélectionné.
+     * Select a crawl from history and sync form fields.
+     * Retrieves file names from the API instead of file content.
+     * @param id - The ID of the selected crawl.
      */
     const selectCrawl = async (id: string) => {
       selectedCrawlId.value = id;
@@ -760,16 +819,18 @@ export default defineComponent({
       error.value = "";
 
       try {
-        // Récupère les fichiers pour le crawl sélectionné via l'API
+        // Fetch files for the selected crawl via the API
         const response = await api.crawling.getCrawlStatus(id);
         simulatedFiles.value =
-          response.data.data
-            ?.map((file) => file.markdown)
-            .filter((content): content is string => content !== undefined) ||
-          [];
+          response.data.data?.map((page, index) => {
+            const base = sanitizeFilename(
+              page.metadata?.sourceURL || page.url || index.toString(),
+            );
+            return `${index.toString().padStart(3, "0")}-${base}`;
+          }) || [];
         console.log(`Fetched files for crawl ID: ${id}`, response.data);
 
-        // Synchronise les champs d'entrée texte avec les valeurs du crawl sélectionné si disponibles
+        // Sync text inputs with values from the selected crawl if available
         const crawl = crawlHistory.value.find((c) => c.id === id);
         if (crawl && crawl.crawlerOptions) {
           includesInput.value = (crawl.crawlerOptions.includes || []).join(
@@ -786,19 +847,19 @@ export default defineComponent({
           excludeTagsInput.value = (crawl.scrapeOptions.excludeTags || []).join(
             ", ",
           );
-          locationLanguagesInput.value = (
-            crawl.scrapeOptions.location?.languages || []
-          ).join(", ");
+          locationLanguagesInput.value =
+            crawl.scrapeOptions.location?.languages?.join(", ") || "";
           jsonOptionsSchemaInput.value = crawl.scrapeOptions.jsonOptions?.schema
             ? JSON.stringify(crawl.scrapeOptions.jsonOptions.schema)
             : "";
-          changeTrackingSchemaInput.value = crawl.scrapeOptions
-            .changeTrackingOptions?.schema
-            ? JSON.stringify(crawl.scrapeOptions.changeTrackingOptions.schema)
-            : "";
-          changeTrackingModesInput.value = (
-            crawl.scrapeOptions.changeTrackingOptions?.modes || []
-          ).join(", ");
+          changeTrackingSchemaInput.value =
+            crawl.scrapeOptions.changeTrackingOptions?.schema
+              ? JSON.stringify(
+                  crawl.scrapeOptions.changeTrackingOptions.schema,
+                )
+              : "";
+          changeTrackingModesInput.value =
+            crawl.scrapeOptions.changeTrackingOptions?.modes?.join(", ") || "";
         }
       } catch (err: any) {
         console.error(`Error fetching crawl files for ID ${id}:`, err);
@@ -825,6 +886,18 @@ export default defineComponent({
     };
 
     /**
+     * Sanitize a URL so it can be safely used as part of a filename.
+     * @param url - The URL to sanitize.
+     * @returns A filename-safe string derived from the URL.
+     */
+    function sanitizeFilename(url: string): string {
+      let name = url.replace(/^https?:\/\//, "");
+      name = name.replace(/[?#].*$/, "");
+      name = name.replace(/[^a-zA-Z0-9]+/g, "_");
+      return name || "page";
+    }
+
+    /**
      * Handle download of crawl results.
      * @param type - The type of download (e.g., 'Archive', 'Full JSON').
      */
@@ -834,19 +907,18 @@ export default defineComponent({
      * Creates a Blob from the response and triggers a file download.
      * @param type - The type of download ('Archive' or 'Full JSON').
      */
-    const handleDownload = async (type: string) => {
-      console.log(`Handling download of ${type} for the active crawl.`);
+    const handleDownload = async (type: string, jobIdParam?: string) => {
+      console.log(`Handling download of ${type}.`);
       error.value = "";
 
-      if (!result.value || !result.value.id) {
-        error.value = "No active crawl job found to download results.";
+      const jobId = jobIdParam || result.value?.id;
+      if (!jobId) {
+        error.value = "No crawl job found to download results.";
         console.error(
-          "Attempted to download without an active crawl job result.",
+          "Attempted to download without a crawl job identifier.",
         );
         return;
       }
-
-      const jobId = result.value.id;
 
       try {
         const pages = await fetchAllCrawlData(jobId);
@@ -863,32 +935,35 @@ export default defineComponent({
         const fetches: Promise<void>[] = [];
 
         pages.forEach((page, index) => {
+          const base = sanitizeFilename(
+            page.metadata?.sourceURL || page.url || index.toString(),
+          );
           const prefix = index.toString().padStart(3, "0");
           switch (type) {
             case "markdown":
               if (page.markdown) {
-                zip.file(`${prefix}.md`, page.markdown);
+                zip.file(`${prefix}-${base}.md`, page.markdown);
               }
               break;
             case "html":
               if (page.html) {
-                zip.file(`${prefix}.html`, page.html);
+                zip.file(`${prefix}-${base}.html`, page.html);
               }
               break;
             case "rawHtml":
               if (page.rawHtml) {
-                zip.file(`${prefix}.raw.html`, page.rawHtml);
+                zip.file(`${prefix}-${base}.raw.html`, page.rawHtml);
               }
               break;
             case "links":
               if (page.links) {
-                zip.file(`${prefix}.txt`, page.links.join("\n"));
+                zip.file(`${prefix}-${base}.txt`, page.links.join("\n"));
               }
               break;
             case "json":
               if (page.llm_extraction) {
                 zip.file(
-                  `${prefix}.json`,
+                  `${prefix}-${base}.json`,
                   JSON.stringify(page.llm_extraction, null, 2),
                 );
               }
@@ -896,7 +971,7 @@ export default defineComponent({
             case "changeTracking":
               if (page.changeTracking) {
                 zip.file(
-                  `${prefix}.json`,
+                  `${prefix}-${base}.json`,
                   JSON.stringify(page.changeTracking, null, 2),
                 );
               }
@@ -907,7 +982,7 @@ export default defineComponent({
                 const p = axios
                   .get(page.screenshot, { responseType: "blob" })
                   .then((res) => {
-                    zip.file(`${prefix}.png`, res.data);
+                    zip.file(`${prefix}-${base}.png`, res.data);
                   });
                 fetches.push(p);
               }
@@ -1190,8 +1265,7 @@ export default defineComponent({
       }
     });
 
-    // Cleanup interval on component unmount
-    // Nettoyage de l'intervalle de polling lors du démontage du composant
+    // Cleanup polling interval when the component unmounts
     onUnmounted(() => {
       if (intervalId) {
         clearInterval(intervalId);
@@ -1238,6 +1312,11 @@ export default defineComponent({
       selectCrawl,
       simulatedFiles,
       activeFormats,
+      selectedFormats,
+      crawlerOptionsArrow,
+      scrapeOptionsArrow,
+      webhookOptionsArrow,
+      clearHistory,
       // Expose saveHistory if needed elsewhere, though not strictly necessary for this task
       // saveHistory,
     };
@@ -1341,6 +1420,11 @@ export default defineComponent({
 
 .selected-crawl {
   background-color: #eef6ff;
+}
+
+.collapsible-header {
+  cursor: pointer;
+  user-select: none;
 }
 
 .error-icon {
