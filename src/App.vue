@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from "vue-router";
+import { RouterLink } from "vue-router";
 </script>
 
 <template>
@@ -12,10 +13,19 @@ import { RouterLink } from "vue-router";
         width="80"
         height="80"
       />
+      <img
+        alt="Vue logo"
+        class="logo"
+        src="@/assets/logo.svg"
+        width="80"
+        height="80"
+      />
       <nav>
         <RouterLink to="/">Home</RouterLink>
         <RouterLink to="/scrape">Scrape</RouterLink>
         <RouterLink to="/crawl">Crawl</RouterLink>
+        <RouterLink to="/extract">Extract</RouterLink>
+        <!-- Add link to ExtractView -->
         <RouterLink to="/extract">Extract</RouterLink>
         <!-- Add link to ExtractView -->
         <RouterLink to="/map">Map</RouterLink>
@@ -74,11 +84,15 @@ import { RouterLink } from "vue-router";
   display: block; /* Ensures padding and background are applied correctly */
   padding: 0.6rem 1rem;
   border-radius: 6px; /* Rounded corners */
-  color: var(--color-text); /* Use the CSS variable for text color */
+  color: var(
+    --color-text
+  ); /* Use the CSS variable for text color */
   text-decoration: none;
   font-weight: 500; /* Slightly less bold than 'bold' */
   transition:
+   
     background-color 0.2s ease-in-out,
+   
     color 0.2s ease-in-out;
 }
 
@@ -90,10 +104,15 @@ import { RouterLink } from "vue-router";
 
 .sidebar nav a.router-link-exact-active {
   background-color: hsla(
+    
     160,
+   
     100%,
+   
     37%,
+   
     0.2
+  
   ); /* Uses the existing accent color as background */
   color: hsla(160, 100%, 37%, 1); /* Accent color for the text */
   font-weight: 600; /* Slightly more pronounced for the active link */

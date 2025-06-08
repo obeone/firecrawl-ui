@@ -1,5 +1,4 @@
 /* tslint:disable */
-/* eslint-disable */
 /**
  * Firecrawl API
  * API for interacting with Firecrawl services to perform web scraping and crawling tasks.
@@ -12,8 +11,6 @@
  * Do not edit the class manually.
  */
 
-
 export * from "./api.js";
 export * from "./configuration.js";
 export * from "./search.js";
-

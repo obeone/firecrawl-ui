@@ -1,5 +1,9 @@
 import { Configuration } from "../api-client/configuration.js";
 
+/**
+ * Returns the base URL for the Firecrawl API
+ * @returns {string} The base URL from local storage, environment variables, or default
+ */
 const getBaseUrl = () => {
   return (
     localStorage.getItem("firecrawl_base_url") ||
@@ -8,6 +12,10 @@ const getBaseUrl = () => {
   );
 };
 
+/**
+ * Returns the API key for the Firecrawl API
+ * @returns {string} The API key from local storage, environment variables, or empty string
+ */
 const getApiKey = () => {
   // Retrieves the API key from local storage or environment variables
   return (
@@ -17,6 +25,7 @@ const getApiKey = () => {
   );
 };
 
+// Create the API configuration
 const apiConfig = new Configuration({
   basePath: getBaseUrl(),
   apiKey: getApiKey,
