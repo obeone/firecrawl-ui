@@ -102,6 +102,8 @@ import IconSupport from "@/components/icons/IconSupport.vue";
  * @component
  * @example
  * <HomeView />
+ *
+ * @returns Component options for the home page.
  */
 export default defineComponent({
   name: "HomeView",
