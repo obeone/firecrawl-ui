@@ -11,6 +11,6 @@
  * Do not edit the class manually.
  */
 
-export * from "./api.js";
-export * from "./configuration.js";
-export * from "./search.js";
+export * from './api.js';
+export * from './configuration.js';
+export * from './search.js';

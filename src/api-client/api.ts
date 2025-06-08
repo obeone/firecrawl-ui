@@ -11,9 +11,9 @@
  * Do not edit the class manually.
  */
 
-import type { Configuration } from "./configuration.js";
-import type { AxiosPromise, AxiosInstance, RawAxiosRequestConfig } from "axios";
-import globalAxios from "axios";
+import type { Configuration } from './configuration.js';
+import type { AxiosPromise, AxiosInstance, RawAxiosRequestConfig } from 'axios';
+import globalAxios from 'axios';
 // Some imports not used depending on template conditions
 // @ts-ignore
 import {
@@ -27,8 +27,8 @@ import {
   serializeDataIfNeeded,
   toPathString,
   createRequestFunction,
-} from "./common.js";
-import type { RequestArgs } from "./base.js";
+} from './common.js';
+import type { RequestArgs } from './base.js';
 // @ts-ignore
 import {
   BASE_PATH,
@@ -36,7 +36,7 @@ import {
   BaseAPI,
   RequiredError,
   operationServerMap,
-} from "./base.js";
+} from './base.js';
 
 /**
  *
@@ -133,7 +133,7 @@ export interface CancelBatchCrawl200Response {
 }
 
 export const CancelBatchCrawl200ResponseStatusEnum = {
-  Cancelled: "cancelled",
+  Cancelled: 'cancelled',
 } as const;
 
 export type CancelBatchCrawl200ResponseStatusEnum =
@@ -173,7 +173,7 @@ export interface Click {
 }
 
 export const ClickTypeEnum = {
-  Click: "click",
+  Click: 'click',
 } as const;
 
 export type ClickTypeEnum = (typeof ClickTypeEnum)[keyof typeof ClickTypeEnum];
@@ -437,11 +437,11 @@ export interface CrawlUrlsRequestScrapeOptions {
 }
 
 export const CrawlUrlsRequestScrapeOptionsFormatsEnum = {
-  Markdown: "markdown",
-  Html: "html",
-  RawHtml: "rawHtml",
-  Links: "links",
-  Screenshot: "screenshot",
+  Markdown: 'markdown',
+  Html: 'html',
+  RawHtml: 'rawHtml',
+  Links: 'links',
+  Screenshot: 'screenshot',
 } as const;
 
 export type CrawlUrlsRequestScrapeOptionsFormatsEnum =
@@ -486,10 +486,10 @@ export interface CrawlUrlsRequestWebhookOneOf {
 }
 
 export const CrawlUrlsRequestWebhookOneOfEventsEnum = {
-  Completed: "completed",
-  Page: "page",
-  Failed: "failed",
-  Started: "started",
+  Completed: 'completed',
+  Page: 'page',
+  Failed: 'failed',
+  Started: 'started',
 } as const;
 
 export type CrawlUrlsRequestWebhookOneOfEventsEnum =
@@ -515,7 +515,7 @@ export interface ExecuteJavaScript {
 }
 
 export const ExecuteJavaScriptTypeEnum = {
-  ExecuteJavascript: "executeJavascript",
+  ExecuteJavascript: 'executeJavascript',
 } as const;
 
 export type ExecuteJavaScriptTypeEnum =
@@ -608,13 +608,13 @@ export interface ExtractResponseData {
    * @type {string}
    * @memberof ExtractResponseData
    */
-  "&lt;property1&gt;"?: string;
+  '&lt;property1&gt;'?: string;
   /**
    *
    * @type {number}
    * @memberof ExtractResponseData
    */
-  "&lt;property2&gt;"?: number;
+  '&lt;property2&gt;'?: number;
 }
 /**
  *
@@ -769,11 +769,10 @@ export interface PressAKey {
 }
 
 export const PressAKeyTypeEnum = {
-  Press: "press",
+  Press: 'press',
 } as const;
 
-export type PressAKeyTypeEnum =
-  (typeof PressAKeyTypeEnum)[keyof typeof PressAKeyTypeEnum];
+export type PressAKeyTypeEnum = (typeof PressAKeyTypeEnum)[keyof typeof PressAKeyTypeEnum];
 
 /**
  *
@@ -790,11 +789,10 @@ export interface Scrape {
 }
 
 export const ScrapeTypeEnum = {
-  Scrape: "scrape",
+  Scrape: 'scrape',
 } as const;
 
-export type ScrapeTypeEnum =
-  (typeof ScrapeTypeEnum)[keyof typeof ScrapeTypeEnum];
+export type ScrapeTypeEnum = (typeof ScrapeTypeEnum)[keyof typeof ScrapeTypeEnum];
 
 /**
  *
@@ -928,13 +926,13 @@ export interface ScrapeAndExtractFromUrlRequest {
 }
 
 export const ScrapeAndExtractFromUrlRequestFormatsEnum = {
-  Markdown: "markdown",
-  Html: "html",
-  RawHtml: "rawHtml",
-  Links: "links",
-  Screenshot: "screenshot",
-  Extract: "extract",
-  ScreenshotfullPage: "screenshot@fullPage",
+  Markdown: 'markdown',
+  Html: 'html',
+  RawHtml: 'rawHtml',
+  Links: 'links',
+  Screenshot: 'screenshot',
+  Extract: 'extract',
+  ScreenshotfullPage: 'screenshot@fullPage',
 } as const;
 
 export type ScrapeAndExtractFromUrlRequestFormatsEnum =
@@ -1103,13 +1101,13 @@ export interface ScrapeAndExtractFromUrlsRequest {
 }
 
 export const ScrapeAndExtractFromUrlsRequestFormatsEnum = {
-  Markdown: "markdown",
-  Html: "html",
-  RawHtml: "rawHtml",
-  Links: "links",
-  Screenshot: "screenshot",
-  Extract: "extract",
-  ScreenshotfullPage: "screenshot@fullPage",
+  Markdown: 'markdown',
+  Html: 'html',
+  RawHtml: 'rawHtml',
+  Links: 'links',
+  Screenshot: 'screenshot',
+  Extract: 'extract',
+  ScreenshotfullPage: 'screenshot@fullPage',
 } as const;
 
 export type ScrapeAndExtractFromUrlsRequestFormatsEnum =
@@ -1290,7 +1288,7 @@ export interface ScrapeResponseDataMetadata {
    * @type {string}
    * @memberof ScrapeResponseDataMetadata
    */
-  "&lt;any other metadata&gt; "?: string;
+  '&lt;any other metadata&gt; '?: string;
   /**
    * The status code of the page
    * @type {number}
@@ -1325,11 +1323,10 @@ export interface Screenshot {
 }
 
 export const ScreenshotTypeEnum = {
-  Screenshot: "screenshot",
+  Screenshot: 'screenshot',
 } as const;
 
-export type ScreenshotTypeEnum =
-  (typeof ScreenshotTypeEnum)[keyof typeof ScreenshotTypeEnum];
+export type ScreenshotTypeEnum = (typeof ScreenshotTypeEnum)[keyof typeof ScreenshotTypeEnum];
 
 /**
  *
@@ -1358,18 +1355,16 @@ export interface Scroll {
 }
 
 export const ScrollTypeEnum = {
-  Scroll: "scroll",
+  Scroll: 'scroll',
 } as const;
 
-export type ScrollTypeEnum =
-  (typeof ScrollTypeEnum)[keyof typeof ScrollTypeEnum];
+export type ScrollTypeEnum = (typeof ScrollTypeEnum)[keyof typeof ScrollTypeEnum];
 export const ScrollDirectionEnum = {
-  Up: "up",
-  Down: "down",
+  Up: 'up',
+  Down: 'down',
 } as const;
 
-export type ScrollDirectionEnum =
-  (typeof ScrollDirectionEnum)[keyof typeof ScrollDirectionEnum];
+export type ScrollDirectionEnum = (typeof ScrollDirectionEnum)[keyof typeof ScrollDirectionEnum];
 
 /**
  *
@@ -1398,7 +1393,7 @@ export interface Wait {
 }
 
 export const WaitTypeEnum = {
-  Wait: "wait",
+  Wait: 'wait',
 } as const;
 
 export type WaitTypeEnum = (typeof WaitTypeEnum)[keyof typeof WaitTypeEnum];
@@ -1424,19 +1419,16 @@ export interface WriteText {
 }
 
 export const WriteTextTypeEnum = {
-  Write: "write",
+  Write: 'write',
 } as const;
 
-export type WriteTextTypeEnum =
-  (typeof WriteTextTypeEnum)[keyof typeof WriteTextTypeEnum];
+export type WriteTextTypeEnum = (typeof WriteTextTypeEnum)[keyof typeof WriteTextTypeEnum];
 
 /**
  * BillingApi - axios parameter creator
  * @export
  */
-export const BillingApiAxiosParamCreator = function (
-  configuration?: Configuration,
-) {
+export const BillingApiAxiosParamCreator = function (configuration?: Configuration) {
   return {
     /**
      *
@@ -1444,9 +1436,7 @@ export const BillingApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    getCreditUsage: async (
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
+    getCreditUsage: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
       const localVarPath = `/team/credit-usage`;
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -1456,7 +1446,7 @@ export const BillingApiAxiosParamCreator = function (
       }
 
       const localVarRequestOptions = {
-        method: "GET",
+        method: 'GET',
         ...baseOptions,
         ...options,
       };
@@ -1464,8 +1454,7 @@ export const BillingApiAxiosParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       setSearchParams(localVarUrlObj, localVarQueryParameter);
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
       localVarRequestOptions.headers = {
         ...localVarHeaderParameter,
         ...headersFromBaseOptions,
@@ -1496,18 +1485,12 @@ export const BillingApiFp = function (configuration?: Configuration) {
     async getCreditUsage(
       options?: RawAxiosRequestConfig,
     ): Promise<
-      (
-        axios?: AxiosInstance,
-        basePath?: string,
-      ) => AxiosPromise<GetCreditUsage200Response>
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<GetCreditUsage200Response>
     > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.getCreditUsage(options);
+      const localVarAxiosArgs = await localVarAxiosParamCreator.getCreditUsage(options);
       const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
       const localVarOperationServerBasePath =
-        operationServerMap["BillingApi.getCreditUsage"]?.[
-          localVarOperationServerIndex
-        ]?.url;
+        operationServerMap['BillingApi.getCreditUsage']?.[localVarOperationServerIndex]?.url;
       return (axios, basePath) =>
         createRequestFunction(
           localVarAxiosArgs,
@@ -1536,12 +1519,8 @@ export const BillingApiFactory = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    getCreditUsage(
-      options?: RawAxiosRequestConfig,
-    ): AxiosPromise<GetCreditUsage200Response> {
-      return localVarFp
-        .getCreditUsage(options)
-        .then((request) => request(axios, basePath));
+    getCreditUsage(options?: RawAxiosRequestConfig): AxiosPromise<GetCreditUsage200Response> {
+      return localVarFp.getCreditUsage(options).then((request) => request(axios, basePath));
     },
   };
 };
@@ -1571,9 +1550,7 @@ export class BillingApi extends BaseAPI {
  * CrawlingApi - axios parameter creator
  * @export
  */
-export const CrawlingApiAxiosParamCreator = function (
-  configuration?: Configuration,
-) {
+export const CrawlingApiAxiosParamCreator = function (configuration?: Configuration) {
   return {
     /**
      *
@@ -1587,9 +1564,9 @@ export const CrawlingApiAxiosParamCreator = function (
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'id' is not null or undefined
-      assertParamExists("cancelBatchCrawl", "id", id);
+      assertParamExists('cancelBatchCrawl', 'id', id);
       const localVarPath = `/batch/scrape/{id}`.replace(
-        `{${"id"}}`,
+        `{${'id'}}`,
         encodeURIComponent(String(id)),
       );
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
@@ -1600,7 +1577,7 @@ export const CrawlingApiAxiosParamCreator = function (
       }
 
       const localVarRequestOptions = {
-        method: "DELETE",
+        method: 'DELETE',
         ...baseOptions,
         ...options,
       };
@@ -1608,8 +1585,7 @@ export const CrawlingApiAxiosParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       setSearchParams(localVarUrlObj, localVarQueryParameter);
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
       localVarRequestOptions.headers = {
         ...localVarHeaderParameter,
         ...headersFromBaseOptions,
@@ -1628,16 +1604,10 @@ export const CrawlingApiAxiosParamCreator = function (
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    cancelCrawl: async (
-      id: string,
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
+    cancelCrawl: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
       // verify required parameter 'id' is not null or undefined
-      assertParamExists("cancelCrawl", "id", id);
-      const localVarPath = `/crawl/{id}`.replace(
-        `{${"id"}}`,
-        encodeURIComponent(String(id)),
-      );
+      assertParamExists('cancelCrawl', 'id', id);
+      const localVarPath = `/crawl/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(id)));
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
       let baseOptions;
@@ -1646,7 +1616,7 @@ export const CrawlingApiAxiosParamCreator = function (
       }
 
       const localVarRequestOptions = {
-        method: "DELETE",
+        method: 'DELETE',
         ...baseOptions,
         ...options,
       };
@@ -1654,8 +1624,7 @@ export const CrawlingApiAxiosParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       setSearchParams(localVarUrlObj, localVarQueryParameter);
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
       localVarRequestOptions.headers = {
         ...localVarHeaderParameter,
         ...headersFromBaseOptions,
@@ -1679,7 +1648,7 @@ export const CrawlingApiAxiosParamCreator = function (
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'crawlUrlsRequest' is not null or undefined
-      assertParamExists("crawlUrls", "crawlUrlsRequest", crawlUrlsRequest);
+      assertParamExists('crawlUrls', 'crawlUrlsRequest', crawlUrlsRequest);
       const localVarPath = `/crawl`;
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -1689,18 +1658,17 @@ export const CrawlingApiAxiosParamCreator = function (
       }
 
       const localVarRequestOptions = {
-        method: "POST",
+        method: 'POST',
         ...baseOptions,
         ...options,
       };
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
 
-      localVarHeaderParameter["Content-Type"] = "application/json";
+      localVarHeaderParameter['Content-Type'] = 'application/json';
 
       setSearchParams(localVarUrlObj, localVarQueryParameter);
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
       localVarRequestOptions.headers = {
         ...localVarHeaderParameter,
         ...headersFromBaseOptions,
@@ -1729,11 +1697,8 @@ export const CrawlingApiAxiosParamCreator = function (
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'id' is not null or undefined
-      assertParamExists("getCrawlStatus", "id", id);
-      const localVarPath = `/crawl/{id}`.replace(
-        `{${"id"}}`,
-        encodeURIComponent(String(id)),
-      );
+      assertParamExists('getCrawlStatus', 'id', id);
+      const localVarPath = `/crawl/{id}`.replace(`{${'id'}}`, encodeURIComponent(String(id)));
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
       let baseOptions;
@@ -1742,7 +1707,7 @@ export const CrawlingApiAxiosParamCreator = function (
       }
 
       const localVarRequestOptions = {
-        method: "GET",
+        method: 'GET',
         ...baseOptions,
         ...options,
       };
@@ -1750,8 +1715,7 @@ export const CrawlingApiAxiosParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       setSearchParams(localVarUrlObj, localVarQueryParameter);
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
       localVarRequestOptions.headers = {
         ...localVarHeaderParameter,
         ...headersFromBaseOptions,
@@ -1784,18 +1748,12 @@ export const CrawlingApiFp = function (configuration?: Configuration) {
       id: string,
       options?: RawAxiosRequestConfig,
     ): Promise<
-      (
-        axios?: AxiosInstance,
-        basePath?: string,
-      ) => AxiosPromise<CancelBatchCrawl200Response>
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<CancelBatchCrawl200Response>
     > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.cancelBatchCrawl(id, options);
+      const localVarAxiosArgs = await localVarAxiosParamCreator.cancelBatchCrawl(id, options);
       const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
       const localVarOperationServerBasePath =
-        operationServerMap["CrawlingApi.cancelBatchCrawl"]?.[
-          localVarOperationServerIndex
-        ]?.url;
+        operationServerMap['CrawlingApi.cancelBatchCrawl']?.[localVarOperationServerIndex]?.url;
       return (axios, basePath) =>
         createRequestFunction(
           localVarAxiosArgs,
@@ -1815,20 +1773,12 @@ export const CrawlingApiFp = function (configuration?: Configuration) {
       id: string,
       options?: RawAxiosRequestConfig,
     ): Promise<
-      (
-        axios?: AxiosInstance,
-        basePath?: string,
-      ) => AxiosPromise<CancelBatchCrawl200Response>
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<CancelBatchCrawl200Response>
     > {
-      const localVarAxiosArgs = await localVarAxiosParamCreator.cancelCrawl(
-        id,
-        options,
-      );
+      const localVarAxiosArgs = await localVarAxiosParamCreator.cancelCrawl(id, options);
       const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
       const localVarOperationServerBasePath =
-        operationServerMap["CrawlingApi.cancelCrawl"]?.[
-          localVarOperationServerIndex
-        ]?.url;
+        operationServerMap['CrawlingApi.cancelCrawl']?.[localVarOperationServerIndex]?.url;
       return (axios, basePath) =>
         createRequestFunction(
           localVarAxiosArgs,
@@ -1847,18 +1797,14 @@ export const CrawlingApiFp = function (configuration?: Configuration) {
     async crawlUrls(
       crawlUrlsRequest: CrawlUrlsRequest,
       options?: RawAxiosRequestConfig,
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrawlResponse>
-    > {
+    ): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrawlResponse>> {
       const localVarAxiosArgs = await localVarAxiosParamCreator.crawlUrls(
         crawlUrlsRequest,
         options,
       );
       const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
       const localVarOperationServerBasePath =
-        operationServerMap["CrawlingApi.crawlUrls"]?.[
-          localVarOperationServerIndex
-        ]?.url;
+        operationServerMap['CrawlingApi.crawlUrls']?.[localVarOperationServerIndex]?.url;
       return (axios, basePath) =>
         createRequestFunction(
           localVarAxiosArgs,
@@ -1877,21 +1823,11 @@ export const CrawlingApiFp = function (configuration?: Configuration) {
     async getCrawlStatus(
       id: string,
       options?: RawAxiosRequestConfig,
-    ): Promise<
-      (
-        axios?: AxiosInstance,
-        basePath?: string,
-      ) => AxiosPromise<CrawlStatusResponseObj>
-    > {
-      const localVarAxiosArgs = await localVarAxiosParamCreator.getCrawlStatus(
-        id,
-        options,
-      );
+    ): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrawlStatusResponseObj>> {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.getCrawlStatus(id, options);
       const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
       const localVarOperationServerBasePath =
-        operationServerMap["CrawlingApi.getCrawlStatus"]?.[
-          localVarOperationServerIndex
-        ]?.url;
+        operationServerMap['CrawlingApi.getCrawlStatus']?.[localVarOperationServerIndex]?.url;
       return (axios, basePath) =>
         createRequestFunction(
           localVarAxiosArgs,
@@ -1925,9 +1861,7 @@ export const CrawlingApiFactory = function (
       id: string,
       options?: RawAxiosRequestConfig,
     ): AxiosPromise<CancelBatchCrawl200Response> {
-      return localVarFp
-        .cancelBatchCrawl(id, options)
-        .then((request) => request(axios, basePath));
+      return localVarFp.cancelBatchCrawl(id, options).then((request) => request(axios, basePath));
     },
     /**
      *
@@ -1940,9 +1874,7 @@ export const CrawlingApiFactory = function (
       id: string,
       options?: RawAxiosRequestConfig,
     ): AxiosPromise<CancelBatchCrawl200Response> {
-      return localVarFp
-        .cancelCrawl(id, options)
-        .then((request) => request(axios, basePath));
+      return localVarFp.cancelCrawl(id, options).then((request) => request(axios, basePath));
     },
     /**
      *
@@ -1970,9 +1902,7 @@ export const CrawlingApiFactory = function (
       id: string,
       options?: RawAxiosRequestConfig,
     ): AxiosPromise<CrawlStatusResponseObj> {
-      return localVarFp
-        .getCrawlStatus(id, options)
-        .then((request) => request(axios, basePath));
+      return localVarFp.getCrawlStatus(id, options).then((request) => request(axios, basePath));
     },
   };
 };
@@ -2020,10 +1950,7 @@ export interface CrawlingApi {
    * @param id The ID of the crawl job.
    * @param options The request options.
    */
-  getCrawlStatus(
-    id: string,
-    options?: RawAxiosRequestConfig,
-  ): AxiosPromise<CrawlStatusResponseObj>;
+  getCrawlStatus(id: string, options?: RawAxiosRequestConfig): AxiosPromise<CrawlStatusResponseObj>;
   /**
    * Get the files generated by a completed crawl job.
    * @param id The ID of the crawl job.
@@ -2046,11 +1973,7 @@ export class CrawlingApi extends BaseAPI {
    * @param basePath Optional base path.
    * @param axios Optional Axios instance.
    */
-  constructor(
-    configuration?: Configuration,
-    basePath?: string,
-    axios?: AxiosInstance,
-  ) {
+  constructor(configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
     super(configuration, basePath, axios);
   }
 
@@ -2087,10 +2010,7 @@ export class CrawlingApi extends BaseAPI {
    * @throws {RequiredError}
    * @memberof CrawlingApi
    */
-  public crawlUrls(
-    crawlUrlsRequest: CrawlUrlsRequest,
-    options?: RawAxiosRequestConfig,
-  ) {
+  public crawlUrls(crawlUrlsRequest: CrawlUrlsRequest, options?: RawAxiosRequestConfig) {
     return CrawlingApiFp(this.configuration)
       .crawlUrls(crawlUrlsRequest, options)
       .then((request) => request(this.axios, this.basePath));
@@ -2114,9 +2034,7 @@ export class CrawlingApi extends BaseAPI {
  * ExtractionApi - axios parameter creator
  * @export
  */
-export const ExtractionApiAxiosParamCreator = function (
-  configuration?: Configuration,
-) {
+export const ExtractionApiAxiosParamCreator = function (configuration?: Configuration) {
   return {
     /**
      *
@@ -2130,11 +2048,7 @@ export const ExtractionApiAxiosParamCreator = function (
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'extractDataRequest' is not null or undefined
-      assertParamExists(
-        "extractData",
-        "extractDataRequest",
-        extractDataRequest,
-      );
+      assertParamExists('extractData', 'extractDataRequest', extractDataRequest);
       const localVarPath = `/extract`;
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -2144,18 +2058,17 @@ export const ExtractionApiAxiosParamCreator = function (
       }
 
       const localVarRequestOptions = {
-        method: "POST",
+        method: 'POST',
         ...baseOptions,
         ...options,
       };
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
 
-      localVarHeaderParameter["Content-Type"] = "application/json";
+      localVarHeaderParameter['Content-Type'] = 'application/json';
 
       setSearchParams(localVarUrlObj, localVarQueryParameter);
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
       localVarRequestOptions.headers = {
         ...localVarHeaderParameter,
         ...headersFromBaseOptions,
@@ -2180,8 +2093,7 @@ export const ExtractionApiAxiosParamCreator = function (
  * @export
  */
 export const ExtractionApiFp = function (configuration?: Configuration) {
-  const localVarAxiosParamCreator =
-    ExtractionApiAxiosParamCreator(configuration);
+  const localVarAxiosParamCreator = ExtractionApiAxiosParamCreator(configuration);
   return {
     /**
      *
@@ -2193,21 +2105,14 @@ export const ExtractionApiFp = function (configuration?: Configuration) {
     async extractData(
       extractDataRequest: ExtractDataRequest,
       options?: RawAxiosRequestConfig,
-    ): Promise<
-      (
-        axios?: AxiosInstance,
-        basePath?: string,
-      ) => AxiosPromise<ExtractResponse>
-    > {
+    ): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ExtractResponse>> {
       const localVarAxiosArgs = await localVarAxiosParamCreator.extractData(
         extractDataRequest,
         options,
       );
       const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
       const localVarOperationServerBasePath =
-        operationServerMap["ExtractionApi.extractData"]?.[
-          localVarOperationServerIndex
-        ]?.url;
+        operationServerMap['ExtractionApi.extractData']?.[localVarOperationServerIndex]?.url;
       return (axios, basePath) =>
         createRequestFunction(
           localVarAxiosArgs,
@@ -2268,11 +2173,7 @@ export class ExtractionApi extends BaseAPI {
    * @param basePath Optional base path.
    * @param axios Optional Axios instance.
    */
-  constructor(
-    configuration?: Configuration,
-    basePath?: string,
-    axios?: AxiosInstance,
-  ) {
+  constructor(configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
     super(configuration, basePath, axios);
   }
 
@@ -2283,10 +2184,7 @@ export class ExtractionApi extends BaseAPI {
    * @throws {RequiredError}
    * @memberof ExtractionApi
    */
-  public extractData(
-    extractDataRequest: ExtractDataRequest,
-    options?: RawAxiosRequestConfig,
-  ) {
+  public extractData(extractDataRequest: ExtractDataRequest, options?: RawAxiosRequestConfig) {
     return ExtractionApiFp(this.configuration)
       .extractData(extractDataRequest, options)
       .then((request) => request(this.axios, this.basePath));
@@ -2297,9 +2195,7 @@ export class ExtractionApi extends BaseAPI {
  * MappingApi - axios parameter creator
  * @export
  */
-export const MappingApiAxiosParamCreator = function (
-  configuration?: Configuration,
-) {
+export const MappingApiAxiosParamCreator = function (configuration?: Configuration) {
   return {
     /**
      *
@@ -2313,7 +2209,7 @@ export const MappingApiAxiosParamCreator = function (
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'mapUrlsRequest' is not null or undefined
-      assertParamExists("mapUrls", "mapUrlsRequest", mapUrlsRequest);
+      assertParamExists('mapUrls', 'mapUrlsRequest', mapUrlsRequest);
       const localVarPath = `/map`;
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -2323,18 +2219,17 @@ export const MappingApiAxiosParamCreator = function (
       }
 
       const localVarRequestOptions = {
-        method: "POST",
+        method: 'POST',
         ...baseOptions,
         ...options,
       };
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
 
-      localVarHeaderParameter["Content-Type"] = "application/json";
+      localVarHeaderParameter['Content-Type'] = 'application/json';
 
       setSearchParams(localVarUrlObj, localVarQueryParameter);
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
       localVarRequestOptions.headers = {
         ...localVarHeaderParameter,
         ...headersFromBaseOptions,
@@ -2371,17 +2266,11 @@ export const MappingApiFp = function (configuration?: Configuration) {
     async mapUrls(
       mapUrlsRequest: MapUrlsRequest,
       options?: RawAxiosRequestConfig,
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<MapResponse>
-    > {
-      const localVarAxiosArgs = await localVarAxiosParamCreator.mapUrls(
-        mapUrlsRequest,
-        options,
-      );
+    ): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<MapResponse>> {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.mapUrls(mapUrlsRequest, options);
       const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
       const localVarOperationServerBasePath =
-        operationServerMap["MappingApi.mapUrls"]?.[localVarOperationServerIndex]
-          ?.url;
+        operationServerMap['MappingApi.mapUrls']?.[localVarOperationServerIndex]?.url;
       return (axios, basePath) =>
         createRequestFunction(
           localVarAxiosArgs,
@@ -2442,11 +2331,7 @@ export class MappingApi extends BaseAPI {
    * @param basePath Optional base path.
    * @param axios Optional Axios instance.
    */
-  constructor(
-    configuration?: Configuration,
-    basePath?: string,
-    axios?: AxiosInstance,
-  ) {
+  constructor(configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
     super(configuration, basePath, axios);
   }
 
@@ -2457,10 +2342,7 @@ export class MappingApi extends BaseAPI {
    * @throws {RequiredError}
    * @memberof MappingApi
    */
-  public mapUrls(
-    mapUrlsRequest: MapUrlsRequest,
-    options?: RawAxiosRequestConfig,
-  ) {
+  public mapUrls(mapUrlsRequest: MapUrlsRequest, options?: RawAxiosRequestConfig) {
     return MappingApiFp(this.configuration)
       .mapUrls(mapUrlsRequest, options)
       .then((request) => request(this.axios, this.basePath));
@@ -2471,9 +2353,7 @@ export class MappingApi extends BaseAPI {
  * ScrapingApi - axios parameter creator
  * @export
  */
-export const ScrapingApiAxiosParamCreator = function (
-  configuration?: Configuration,
-) {
+export const ScrapingApiAxiosParamCreator = function (configuration?: Configuration) {
   return {
     /**
      *
@@ -2487,9 +2367,9 @@ export const ScrapingApiAxiosParamCreator = function (
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'id' is not null or undefined
-      assertParamExists("getBatchScrapeStatus", "id", id);
+      assertParamExists('getBatchScrapeStatus', 'id', id);
       const localVarPath = `/batch/scrape/{id}`.replace(
-        `{${"id"}}`,
+        `{${'id'}}`,
         encodeURIComponent(String(id)),
       );
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
@@ -2500,7 +2380,7 @@ export const ScrapingApiAxiosParamCreator = function (
       }
 
       const localVarRequestOptions = {
-        method: "GET",
+        method: 'GET',
         ...baseOptions,
         ...options,
       };
@@ -2508,8 +2388,7 @@ export const ScrapingApiAxiosParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       setSearchParams(localVarUrlObj, localVarQueryParameter);
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
       localVarRequestOptions.headers = {
         ...localVarHeaderParameter,
         ...headersFromBaseOptions,
@@ -2534,8 +2413,8 @@ export const ScrapingApiAxiosParamCreator = function (
     ): Promise<RequestArgs> => {
       // verify required parameter 'scrapeAndExtractFromUrlRequest' is not null or undefined
       assertParamExists(
-        "scrapeAndExtractFromUrl",
-        "scrapeAndExtractFromUrlRequest",
+        'scrapeAndExtractFromUrl',
+        'scrapeAndExtractFromUrlRequest',
         scrapeAndExtractFromUrlRequest,
       );
       const localVarPath = `/scrape`;
@@ -2547,18 +2426,17 @@ export const ScrapingApiAxiosParamCreator = function (
       }
 
       const localVarRequestOptions = {
-        method: "POST",
+        method: 'POST',
         ...baseOptions,
         ...options,
       };
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
 
-      localVarHeaderParameter["Content-Type"] = "application/json";
+      localVarHeaderParameter['Content-Type'] = 'application/json';
 
       setSearchParams(localVarUrlObj, localVarQueryParameter);
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
       localVarRequestOptions.headers = {
         ...localVarHeaderParameter,
         ...headersFromBaseOptions,
@@ -2588,8 +2466,8 @@ export const ScrapingApiAxiosParamCreator = function (
     ): Promise<RequestArgs> => {
       // verify required parameter 'scrapeAndExtractFromUrlsRequest' is not null or undefined
       assertParamExists(
-        "scrapeAndExtractFromUrls",
-        "scrapeAndExtractFromUrlsRequest",
+        'scrapeAndExtractFromUrls',
+        'scrapeAndExtractFromUrlsRequest',
         scrapeAndExtractFromUrlsRequest,
       );
       const localVarPath = `/batch/scrape`;
@@ -2601,18 +2479,17 @@ export const ScrapingApiAxiosParamCreator = function (
       }
 
       const localVarRequestOptions = {
-        method: "POST",
+        method: 'POST',
         ...baseOptions,
         ...options,
       };
       const localVarHeaderParameter = {} as any;
       const localVarQueryParameter = {} as any;
 
-      localVarHeaderParameter["Content-Type"] = "application/json";
+      localVarHeaderParameter['Content-Type'] = 'application/json';
 
       setSearchParams(localVarUrlObj, localVarQueryParameter);
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
       localVarRequestOptions.headers = {
         ...localVarHeaderParameter,
         ...headersFromBaseOptions,
@@ -2650,18 +2527,12 @@ export const ScrapingApiFp = function (configuration?: Configuration) {
       id: string,
       options?: RawAxiosRequestConfig,
     ): Promise<
-      (
-        axios?: AxiosInstance,
-        basePath?: string,
-      ) => AxiosPromise<BatchScrapeStatusResponseObj>
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<BatchScrapeStatusResponseObj>
     > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.getBatchScrapeStatus(id, options);
+      const localVarAxiosArgs = await localVarAxiosParamCreator.getBatchScrapeStatus(id, options);
       const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
       const localVarOperationServerBasePath =
-        operationServerMap["ScrapingApi.getBatchScrapeStatus"]?.[
-          localVarOperationServerIndex
-        ]?.url;
+        operationServerMap['ScrapingApi.getBatchScrapeStatus']?.[localVarOperationServerIndex]?.url;
       return (axios, basePath) =>
         createRequestFunction(
           localVarAxiosArgs,
@@ -2680,19 +2551,15 @@ export const ScrapingApiFp = function (configuration?: Configuration) {
     async scrapeAndExtractFromUrl(
       scrapeAndExtractFromUrlRequest: ScrapeAndExtractFromUrlRequest,
       options?: RawAxiosRequestConfig,
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<ScrapeResponse>
-    > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.scrapeAndExtractFromUrl(
-          scrapeAndExtractFromUrlRequest,
-          options,
-        );
+    ): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ScrapeResponse>> {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.scrapeAndExtractFromUrl(
+        scrapeAndExtractFromUrlRequest,
+        options,
+      );
       const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
       const localVarOperationServerBasePath =
-        operationServerMap["ScrapingApi.scrapeAndExtractFromUrl"]?.[
-          localVarOperationServerIndex
-        ]?.url;
+        operationServerMap['ScrapingApi.scrapeAndExtractFromUrl']?.[localVarOperationServerIndex]
+          ?.url;
       return (axios, basePath) =>
         createRequestFunction(
           localVarAxiosArgs,
@@ -2711,22 +2578,15 @@ export const ScrapingApiFp = function (configuration?: Configuration) {
     async scrapeAndExtractFromUrls(
       scrapeAndExtractFromUrlsRequest: ScrapeAndExtractFromUrlsRequest,
       options?: RawAxiosRequestConfig,
-    ): Promise<
-      (
-        axios?: AxiosInstance,
-        basePath?: string,
-      ) => AxiosPromise<BatchScrapeResponseObj>
-    > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.scrapeAndExtractFromUrls(
-          scrapeAndExtractFromUrlsRequest,
-          options,
-        );
+    ): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<BatchScrapeResponseObj>> {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.scrapeAndExtractFromUrls(
+        scrapeAndExtractFromUrlsRequest,
+        options,
+      );
       const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
       const localVarOperationServerBasePath =
-        operationServerMap["ScrapingApi.scrapeAndExtractFromUrls"]?.[
-          localVarOperationServerIndex
-        ]?.url;
+        operationServerMap['ScrapingApi.scrapeAndExtractFromUrls']?.[localVarOperationServerIndex]
+          ?.url;
       return (axios, basePath) =>
         createRequestFunction(
           localVarAxiosArgs,
@@ -2817,11 +2677,7 @@ export class ScrapingApi extends BaseAPI {
    * @param basePath Optional base path.
    * @param axios Optional Axios instance.
    */
-  constructor(
-    configuration?: Configuration,
-    basePath?: string,
-    axios?: AxiosInstance,
-  ) {
+  constructor(configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
     super(configuration, basePath, axios);
   }
 

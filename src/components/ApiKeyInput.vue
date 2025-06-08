@@ -13,9 +13,7 @@
         />
         <small>
           You can get your API key on
-          <a href="https://app.firecrawl.dev" target="_blank"
-            >the Firecrawl dashboard</a
-          >
+          <a href="https://app.firecrawl.dev" target="_blank">the Firecrawl dashboard</a>
         </small>
       </div>
       <div class="form-group">
@@ -33,14 +31,12 @@
     <div v-if="error" class="error-message">
       {{ error }}
     </div>
-    <div v-if="success" class="success-message">
-      API Key saved successfully!
-    </div>
+    <div v-if="success" class="success-message">API Key saved successfully!</div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted } from "vue";
+import { defineComponent, ref, onMounted } from 'vue';
 
 /**
  * Component allowing users to configure and store the Firecrawl API key.
@@ -49,40 +45,40 @@ import { defineComponent, ref, onMounted } from "vue";
  */
 
 export default defineComponent({
-  name: "ApiKeyInput",
+  name: 'ApiKeyInput',
   setup() {
-    const apiKey = ref(localStorage.getItem("firecrawl_api_key") || "");
-    const baseUrl = ref(localStorage.getItem("firecrawl_base_url") || "");
-    const error = ref("");
+    const apiKey = ref(localStorage.getItem('firecrawl_api_key') || '');
+    const baseUrl = ref(localStorage.getItem('firecrawl_base_url') || '');
+    const error = ref('');
     const success = ref(false);
 
     // Automatically display if no key is configured
     onMounted(() => {
       if (!apiKey.value) {
-        error.value = "Please configure your API key to continue";
+        error.value = 'Please configure your API key to continue';
       }
       // Retrieve the base URL on mount
-      baseUrl.value = localStorage.getItem("firecrawl_base_url") || "";
+      baseUrl.value = localStorage.getItem('firecrawl_base_url') || '';
     });
 
     const saveApiConfig = () => {
       try {
         if (!apiKey.value) {
-          throw new Error("Please enter a valid API key");
+          throw new Error('Please enter a valid API key');
         }
         // Save the API key
-        localStorage.setItem("firecrawl_api_key", apiKey.value);
+        localStorage.setItem('firecrawl_api_key', apiKey.value);
         // Save the base URL (even if empty to override any previous value if needed)
-        localStorage.setItem("firecrawl_base_url", baseUrl.value);
+        localStorage.setItem('firecrawl_base_url', baseUrl.value);
 
         success.value = true;
-        error.value = "";
+        error.value = '';
         setTimeout(() => (success.value = false), 3000);
 
         // Optional: Reload the page or reconfigure the API instance for immediate effect
         window.location.reload();
       } catch (err) {
-        error.value = err instanceof Error ? err.message : "Erreur inconnue";
+        error.value = err instanceof Error ? err.message : 'Erreur inconnue';
         success.value = false;
       }
     };

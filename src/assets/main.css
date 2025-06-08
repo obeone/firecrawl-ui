@@ -1,4 +1,4 @@
-@import "./base.css";
+@import './base.css';
 
 /* Styles for #app (lines 3-8) removed as they are managed by .app-layout in App.vue */
 
@@ -55,7 +55,7 @@ a,
   display: block;
 }
 
-.scrape-config-form input[type="text"],
+.scrape-config-form input[type='text'],
 .scrape-config-form select,
 .scrape-config-form textarea {
   width: 100%;
@@ -69,14 +69,14 @@ a,
   transition: border 0.2s;
 }
 
-.scrape-config-form input[type="text"]:focus,
+.scrape-config-form input[type='text']:focus,
 .scrape-config-form select:focus,
 .scrape-config-form textarea:focus {
   border: 1.5px solid #4fc08d;
   outline: none;
 }
 
-.scrape-config-form input[type="checkbox"] {
+.scrape-config-form input[type='checkbox'] {
   accent-color: #4fc08d;
   width: 1.1em;
   height: 1.1em;
@@ -98,7 +98,7 @@ a,
 }
 
 .scrape-config-form button,
-.scrape-config-form input[type="submit"] {
+.scrape-config-form input[type='submit'] {
   background: linear-gradient(90deg, #4fc08d 60%, #2c7a7b 100%);
   color: #fff;
   border: none;
@@ -136,7 +136,7 @@ a,
 }
 
 .scrape-config-form button:hover,
-.scrape-config-form input[type="submit"]:hover {
+.scrape-config-form input[type='submit']:hover {
   background: linear-gradient(90deg, #2c7a7b 60%, #4fc08d 100%);
   transform: translateY(-2px) scale(1.03);
 }

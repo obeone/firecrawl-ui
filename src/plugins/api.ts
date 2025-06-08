@@ -1,4 +1,4 @@
-import type { App } from "vue";
+import type { App } from 'vue';
 import {
   BillingApi,
   CrawlingApi,
@@ -6,8 +6,8 @@ import {
   MappingApi,
   ScrapingApi,
   SearchApi,
-} from "../api-client/index.js";
-import apiConfig from "../config/api.js";
+} from '../api-client/index.js';
+import apiConfig from '../config/api.js';
 
 /**
  * Vue plugin that registers Firecrawl API clients.
@@ -25,7 +25,7 @@ const apiPlugin = {
       scraping: new ScrapingApi(apiConfig),
       search: new SearchApi(apiConfig),
     };
-    app.provide("api", apis);
+    app.provide('api', apis);
     app.config.globalProperties.$api = apis;
   },
 };

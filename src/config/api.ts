@@ -1,4 +1,4 @@
-import { Configuration } from "../api-client/configuration.js";
+import { Configuration } from '../api-client/configuration.js';
 
 /**
  * Returns the base URL for the Firecrawl API
@@ -6,9 +6,9 @@ import { Configuration } from "../api-client/configuration.js";
  */
 const getBaseUrl = () => {
   return (
-    localStorage.getItem("firecrawl_base_url") ||
+    localStorage.getItem('firecrawl_base_url') ||
     import.meta.env.VITE_FIRECRAWL_API_BASE_URL ||
-    "https://api.firecrawl.dev/v1"
+    'https://api.firecrawl.dev/v1'
   );
 };
 
@@ -18,11 +18,7 @@ const getBaseUrl = () => {
  */
 const getApiKey = () => {
   // Retrieves the API key from local storage or environment variables
-  return (
-    localStorage.getItem("firecrawl_api_key") ||
-    import.meta.env.VITE_FIRECRAWL_API_KEY ||
-    ""
-  );
+  return localStorage.getItem('firecrawl_api_key') || import.meta.env.VITE_FIRECRAWL_API_KEY || '';
 };
 
 // Create the API configuration
@@ -31,7 +27,7 @@ const apiConfig = new Configuration({
   apiKey: getApiKey,
   baseOptions: {
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     },
   },
 });

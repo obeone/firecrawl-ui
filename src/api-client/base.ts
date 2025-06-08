@@ -11,26 +11,23 @@
  * Do not edit the class manually.
  */
 
-import type { Configuration } from "./configuration.js";
+import type { Configuration } from './configuration.js';
 // Some imports not used depending on template conditions
 // @ts-ignore
-import type { AxiosPromise, AxiosInstance, RawAxiosRequestConfig } from "axios";
-import globalAxios from "axios";
+import type { AxiosPromise, AxiosInstance, RawAxiosRequestConfig } from 'axios';
+import globalAxios from 'axios';
 
-export const BASE_PATH = "http://docker.internal.snapp.fr:8003/v1".replace(
-  /\/+$/,
-  "",
-);
+export const BASE_PATH = 'http://docker.internal.snapp.fr:8003/v1'.replace(/\/+$/, '');
 
 /**
  *
  * @export
  */
 export const COLLECTION_FORMATS = {
-  csv: ",",
-  ssv: " ",
-  tsv: "\t",
-  pipes: "|",
+  csv: ',',
+  ssv: ' ',
+  tsv: '\t',
+  pipes: '|',
 };
 
 /**
@@ -75,7 +72,7 @@ export class RequiredError extends Error {
     msg?: string,
   ) {
     super(msg);
-    this.name = "RequiredError";
+    this.name = 'RequiredError';
   }
 }
 

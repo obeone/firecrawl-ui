@@ -13,25 +13,19 @@
         <IconDocumentation class="icon" />
         <h2>Scrape</h2>
         <p>Extract structured data from any web page.</p>
-        <router-link to="/scrape" class="feature-link"
-          >Access Scraping</router-link
-        >
+        <router-link to="/scrape" class="feature-link">Access Scraping</router-link>
       </div>
       <div class="feature-card">
         <IconEcosystem class="icon" />
         <h2>Crawl</h2>
         <p>Explore websites in depth and collect data on a large scale.</p>
-        <router-link to="/crawl" class="feature-link"
-          >Access Crawling</router-link
-        >
+        <router-link to="/crawl" class="feature-link">Access Crawling</router-link>
       </div>
       <div class="feature-card">
         <IconTooling class="icon" />
         <h2>Extract</h2>
         <p>Extract content and metadata from URLs with advanced options.</p>
-        <router-link to="/extract" class="feature-link"
-          >Access Extraction</router-link
-        >
+        <router-link to="/extract" class="feature-link">Access Extraction</router-link>
       </div>
       <div class="feature-card">
         <IconCommunity class="icon" />
@@ -43,24 +37,20 @@
         <IconSupport class="icon" />
         <h2>Search</h2>
         <p>Search and filter quickly in your crawl and scrape results.</p>
-        <router-link to="/search" class="feature-link"
-          >Access Search</router-link
-        >
+        <router-link to="/search" class="feature-link">Access Search</router-link>
       </div>
       <div class="feature-card">
         <IconSupport class="icon" />
         <h2>API Configuration</h2>
         <p>Configure your API keys and access points for custom workflows.</p>
-        <router-link to="/api-config" class="feature-link"
-          >Configure API</router-link
-        >
+        <router-link to="/api-config" class="feature-link">Configure API</router-link>
       </div>
     </div>
     <div class="about">
       <h2>About Firecrawl UI</h2>
       <p>
-        Firecrawl UI is a modern and intuitive interface for web data
-        extraction, crawling and analysis.<br />
+        Firecrawl UI is a modern and intuitive interface for web data extraction, crawling and
+        analysis.<br />
         <strong>Main Features:</strong>
       </p>
       <ul>
@@ -70,14 +60,9 @@
         <li>Flexible API configuration and key management.</li>
         <li>Mapping interface to explore page relationships.</li>
       </ul>
-      <p class="local-note">
-        All features run locally; your data never leaves your machine.
-      </p>
+      <p class="local-note">All features run locally; your data never leaves your machine.</p>
       <p>
-        <a
-          href="https://github.com/firecrawl/firecrawl-ui"
-          target="_blank"
-          class="about-link"
+        <a href="https://github.com/firecrawl/firecrawl-ui" target="_blank" class="about-link"
           >Documentation & Support</a
         >
       </p>
@@ -86,13 +71,13 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
+import { defineComponent } from 'vue';
 // Importing icons and components for a modern home page
-import IconDocumentation from "@/components/icons/IconDocumentation.vue";
-import IconEcosystem from "@/components/icons/IconEcosystem.vue";
-import IconTooling from "@/components/icons/IconTooling.vue";
-import IconCommunity from "@/components/icons/IconCommunity.vue";
-import IconSupport from "@/components/icons/IconSupport.vue";
+import IconDocumentation from '@/components/icons/IconDocumentation.vue';
+import IconEcosystem from '@/components/icons/IconEcosystem.vue';
+import IconTooling from '@/components/icons/IconTooling.vue';
+import IconCommunity from '@/components/icons/IconCommunity.vue';
+import IconSupport from '@/components/icons/IconSupport.vue';
 
 /**
  * HomeView
@@ -106,7 +91,7 @@ import IconSupport from "@/components/icons/IconSupport.vue";
  * @returns Component options for the home page.
  */
 export default defineComponent({
-  name: "HomeView",
+  name: 'HomeView',
   components: {
     IconDocumentation,
     IconEcosystem,
@@ -153,7 +138,7 @@ export default defineComponent({
 }
 
 h1 {
-  font-family: "Montserrat", "Segoe UI", Arial, sans-serif;
+  font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
   font-size: 2.8rem;
   font-weight: 800;
   margin-bottom: 0.5rem;
@@ -165,7 +150,7 @@ h1 {
   font-size: 1.2rem;
   color: var(--text-muted);
   margin-bottom: 0.5rem;
-  font-family: "Inter", Arial, sans-serif;
+  font-family: 'Inter', Arial, sans-serif;
 }
 
 .features {
@@ -207,7 +192,7 @@ h1 {
   font-size: 1.18rem;
   margin-bottom: 0.4rem;
   color: var(--text-main);
-  font-family: "Montserrat", Arial, sans-serif;
+  font-family: 'Montserrat', Arial, sans-serif;
   font-weight: 700;
 }
 
@@ -226,7 +211,7 @@ h1 {
   border-radius: 5px;
   text-decoration: none;
   font-weight: 600;
-  font-family: "Inter", Arial, sans-serif;
+  font-family: 'Inter', Arial, sans-serif;
   font-size: 1rem;
   margin-top: auto;
   display: block;
@@ -250,7 +235,7 @@ h1 {
   box-shadow: var(--card-shadow);
   padding: 2rem 2.5rem;
   color: #f3f3f3;
-  font-family: "Inter", Arial, sans-serif;
+  font-family: 'Inter', Arial, sans-serif;
   line-height: 1.6;
 }
 
@@ -258,7 +243,7 @@ h1 {
   font-size: 1.5rem;
   color: var(--primary);
   margin-bottom: 0.7rem;
-  font-family: "Montserrat", Arial, sans-serif;
+  font-family: 'Montserrat', Arial, sans-serif;
   font-weight: 700;
 }
 
@@ -288,7 +273,7 @@ h1 {
   border-radius: 5px;
   text-decoration: none;
   font-weight: 600;
-  font-family: "Inter", Arial, sans-serif;
+  font-family: 'Inter', Arial, sans-serif;
   font-size: 1rem;
   transition: background 0.2s;
 }

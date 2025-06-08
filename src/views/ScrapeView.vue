@@ -10,10 +10,7 @@
 
       <div class="form-group">
         <label>
-          <input
-            type="checkbox"
-            v-model="formData.scrapeOptions.onlyMainContent"
-          />
+          <input type="checkbox" v-model="formData.scrapeOptions.onlyMainContent" />
           Only Main Content
         </label>
       </div>
@@ -28,18 +25,13 @@
           <option value="screenshot">Screenshot (Viewport)</option>
           <option value="screenshot@fullPage">Screenshot (Full Page)</option>
           <option value="json">JSON (Requires Extractor Options)</option>
-          <option value="changeTracking">
-            Change Tracking (Requires Markdown)
-          </option>
+          <option value="changeTracking">Change Tracking (Requires Markdown)</option>
         </select>
         <small>Select one or more formats.</small>
       </div>
 
       <!-- Change Tracking Options (conditional) -->
-      <div
-        v-if="formData.scrapeOptions.formats.includes('changeTracking')"
-        class="form-group"
-      >
+      <div v-if="formData.scrapeOptions.formats.includes('changeTracking')" class="form-group">
         <label for="changeTrackingThreshold">Change Threshold (%):</label>
         <input
           id="changeTrackingThreshold"
@@ -69,10 +61,7 @@
         </legend>
         <div v-show="!isScrapeOptionsCollapsed">
           <label>
-            <input
-              type="checkbox"
-              v-model="formData.scrapeOptions.onlyMainContent"
-            />
+            <input type="checkbox" v-model="formData.scrapeOptions.onlyMainContent" />
             Only Main Content (exclude headers, footers, etc.)
           </label>
           <div class="form-group">
@@ -139,10 +128,7 @@
               Emulate Mobile Device
             </label>
             <label class="checkbox-label">
-              <input
-                type="checkbox"
-                v-model="formData.pageOptions.skipTlsVerification"
-              />
+              <input type="checkbox" v-model="formData.pageOptions.skipTlsVerification" />
               Skip TLS Verification
             </label>
             <label class="checkbox-label">
@@ -150,10 +136,7 @@
               Block Ads & Popups
             </label>
             <label class="checkbox-label">
-              <input
-                type="checkbox"
-                v-model="formData.pageOptions.removeBase64Images"
-              />
+              <input type="checkbox" v-model="formData.pageOptions.removeBase64Images" />
               Remove Base64 Images
             </label>
           </div>
@@ -193,9 +176,7 @@
 
       <div
         v-if="
-          formData.scrapeOptions.formats.includes(
-            ScrapeAndExtractFromUrlRequestFormatsEnum.Extract,
-          )
+          formData.scrapeOptions.formats.includes(ScrapeAndExtractFromUrlRequestFormatsEnum.Extract)
         "
         class="form-group"
       >
@@ -233,11 +214,7 @@
       <div class="result-header">
         <h2>Results</h2>
         <div class="download-options">
-          <button
-            v-for="fmt in downloadFormats"
-            :key="fmt"
-            @click="downloadResult(fmt)"
-          >
+          <button v-for="fmt in downloadFormats" :key="fmt" @click="downloadResult(fmt)">
             Download {{ fmt }}
           </button>
         </div>
@@ -248,15 +225,15 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, inject, watch, computed } from "vue";
-import { useRouter } from "vue-router";
+import { defineComponent, ref, inject, watch, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import {
   ScrapeAndExtractFromUrlRequestFormatsEnum,
   type ScrapeAndExtractFromUrlRequest,
   type ScrapeResponse,
   type ScrapingApi,
   type ScrapeAndExtractFromUrlRequestExtract,
-} from "../api-client/api";
+} from '../api-client/api';
 
 type ScrapeResult = ScrapeResponse;
 
@@ -268,7 +245,7 @@ interface FormDataPageOptions {
   timeout?: number;
   blockAds?: boolean;
   removeBase64Images?: boolean;
-  proxy?: string | "basic" | "stealth";
+  proxy?: string | 'basic' | 'stealth';
   headers?: Record<string, string>;
   action?: string;
   location?: string;
@@ -281,8 +258,7 @@ interface FormDataScrapeOptions {
   excludeTags?: string;
 }
 
-interface FormDataExtractorOptions
-  extends Partial<ScrapeAndExtractFromUrlRequestExtract> {
+interface FormDataExtractorOptions extends Partial<ScrapeAndExtractFromUrlRequestExtract> {
   // Add specific fields if needed for UI binding, otherwise Partial is fine
 }
 
@@ -305,14 +281,14 @@ interface FormDataChangeTrackingOptions {
  * @returns Component options for the scraping view.
  */
 export default defineComponent({
-  name: "ScrapeView",
+  name: 'ScrapeView',
   setup() {
     const router = useRouter();
-    const api = inject("api") as { scraping: ScrapingApi };
+    const api = inject('api') as { scraping: ScrapingApi };
 
     // Initialize formData with nested structure and default values
     const formData = ref<FormData>({
-      url: "",
+      url: '',
       pageOptions: {
         waitFor: undefined, // Use undefined for optional numbers initially
         mobile: false,
@@ -320,16 +296,16 @@ export default defineComponent({
         timeout: undefined, // Default is 30000ms in API, let API handle default if undefined
         blockAds: true, // Default from docs
         removeBase64Images: true, // Default from docs
-        proxy: "", // Default to Auto/empty string
+        proxy: '', // Default to Auto/empty string
         headers: {},
-        action: "GET",
-        location: "",
+        action: 'GET',
+        location: '',
       },
       scrapeOptions: {
         onlyMainContent: true, // Default from docs
         formats: [ScrapeAndExtractFromUrlRequestFormatsEnum.Markdown], // Default format
-        includeTags: "",
-        excludeTags: "",
+        includeTags: '',
+        excludeTags: '',
       },
       extractorOptions: {}, // Added extractorOptions initial empty object
       changeTrackingOptions: {
@@ -343,10 +319,10 @@ export default defineComponent({
     const isPageOptionsCollapsed = ref(true);
 
     const loading = ref(false);
-    const error = ref("");
+    const error = ref('');
     const result = ref<ScrapeResult | null>(null);
     const downloadFormats = computed(() =>
-      Array.from(new Set(["json", ...formData.value.scrapeOptions.formats])),
+      Array.from(new Set(['json', ...formData.value.scrapeOptions.formats])),
     );
 
     const isValidUrl = (url: string) => {
@@ -360,7 +336,7 @@ export default defineComponent({
 
     const handleSubmit = async () => {
       if (!isValidUrl(formData.value.url)) {
-        error.value = "Please enter a valid URL (e.g. https://example.com)";
+        error.value = 'Please enter a valid URL (e.g. https://example.com)';
         return;
       }
 
@@ -368,7 +344,7 @@ export default defineComponent({
         !formData.value.scrapeOptions.formats ||
         formData.value.scrapeOptions.formats.length === 0
       ) {
-        error.value = "Please select at least one output format";
+        error.value = 'Please select at least one output format';
         return;
       }
 
@@ -395,8 +371,8 @@ export default defineComponent({
           removeBase64Images: false,
         }), // Default is true
         ...(formData.value.pageOptions.proxy &&
-          formData.value.pageOptions.proxy !== "" && {
-            proxy: formData.value.pageOptions.proxy as "basic" | "stealth",
+          formData.value.pageOptions.proxy !== '' && {
+            proxy: formData.value.pageOptions.proxy as 'basic' | 'stealth',
           }),
         ...(formData.value.pageOptions.headers &&
           Object.keys(formData.value.pageOptions.headers).length > 0 && {
@@ -404,7 +380,7 @@ export default defineComponent({
           }),
         // Removed incorrect mapping of HTTP action to API actions
         ...(formData.value.pageOptions.location &&
-          formData.value.pageOptions.location !== "" && {
+          formData.value.pageOptions.location !== '' && {
             location: { country: formData.value.pageOptions.location },
           }), // Map location string to Location object with 'country' property
 
@@ -415,18 +391,18 @@ export default defineComponent({
           onlyMainContent: false,
         }), // Default is true
         ...(formData.value.scrapeOptions.includeTags &&
-          formData.value.scrapeOptions.includeTags.trim() !== "" && {
+          formData.value.scrapeOptions.includeTags.trim() !== '' && {
             includeTags: formData.value.scrapeOptions.includeTags
-              .split(",")
+              .split(',')
               .map((tag) => tag.trim())
-              .filter((tag) => tag !== ""),
+              .filter((tag) => tag !== ''),
           }),
         ...(formData.value.scrapeOptions.excludeTags &&
-          formData.value.scrapeOptions.excludeTags.trim() !== "" && {
+          formData.value.scrapeOptions.excludeTags.trim() !== '' && {
             excludeTags: formData.value.scrapeOptions.excludeTags
-              .split(",")
+              .split(',')
               .map((tag) => tag.trim())
-              .filter((tag) => tag !== ""),
+              .filter((tag) => tag !== ''),
           }),
 
         // Include extractorOptions and changeTrackingOptions directly if they exist
@@ -435,10 +411,9 @@ export default defineComponent({
         ) &&
           formData.value.extractorOptions &&
           Object.keys(formData.value.extractorOptions).length > 0 && {
-            extract: formData.value
-              .extractorOptions as ScrapeAndExtractFromUrlRequestExtract,
+            extract: formData.value.extractorOptions as ScrapeAndExtractFromUrlRequestExtract,
           }),
-        ...(formData.value.scrapeOptions.formats.includes("changeTracking") && {
+        ...(formData.value.scrapeOptions.formats.includes('changeTracking') && {
           changeTrackingOptions: {
             threshold: formData.value.changeTrackingOptions?.threshold ?? 10,
             frequency: formData.value.changeTrackingOptions?.frequency ?? 60,
@@ -454,27 +429,23 @@ export default defineComponent({
 
       try {
         loading.value = true;
-        error.value = "";
-        console.log(
-          "Sending scrape request:",
-          JSON.stringify(requestPayload, null, 2),
-        ); // Log payload for debugging
-        const response =
-          await api.scraping.scrapeAndExtractFromUrl(requestPayload);
+        error.value = '';
+        console.log('Sending scrape request:', JSON.stringify(requestPayload, null, 2)); // Log payload for debugging
+        const response = await api.scraping.scrapeAndExtractFromUrl(requestPayload);
         result.value = response.data;
       } catch (err: unknown) {
         if (err instanceof Error) {
-          if (err.message.includes("401")) {
-            router.push({ name: "ApiConfig" });
+          if (err.message.includes('401')) {
+            router.push({ name: 'ApiConfig' });
             return;
           }
-          error.value = err.message.includes("404")
-            ? "Page not found (404)"
-            : err.message.includes("Network Error")
-              ? "Network connection failed"
+          error.value = err.message.includes('404')
+            ? 'Page not found (404)'
+            : err.message.includes('Network Error')
+              ? 'Network connection failed'
               : err.message;
         } else {
-          error.value = "An unexpected error occurred";
+          error.value = 'An unexpected error occurred';
         }
       } finally {
         loading.value = false;
@@ -485,20 +456,20 @@ export default defineComponent({
       if (!result.value?.data) return;
 
       const formatMap: Record<string, string> = {
-        extract: "llm_extraction",
-        "screenshot@fullPage": "screenshot",
+        extract: 'llm_extraction',
+        'screenshot@fullPage': 'screenshot',
       };
 
       const key = formatMap[format] ?? format;
       const data: unknown =
-        format === "json"
+        format === 'json'
           ? result.value.data
           : result.value.data[key as keyof typeof result.value.data];
 
-      if (format.startsWith("screenshot") && typeof data === "string") {
-        const link = document.createElement("a");
+      if (format.startsWith('screenshot') && typeof data === 'string') {
+        const link = document.createElement('a');
         link.href = data;
-        link.setAttribute("download", `scrape-result-${format}.png`);
+        link.setAttribute('download', `scrape-result-${format}.png`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -507,30 +478,30 @@ export default defineComponent({
 
       if (data === undefined) return;
 
-      let mimeType = "application/json";
-      let extension = "json";
-      let contentStr = "";
+      let mimeType = 'application/json';
+      let extension = 'json';
+      let contentStr = '';
 
-      if (typeof data === "string") {
+      if (typeof data === 'string') {
         contentStr = data;
-        if (format === "markdown") {
-          mimeType = "text/markdown";
-          extension = "md";
-        } else if (format === "html" || format === "rawHtml") {
-          mimeType = "text/html";
-          extension = "html";
+        if (format === 'markdown') {
+          mimeType = 'text/markdown';
+          extension = 'md';
+        } else if (format === 'html' || format === 'rawHtml') {
+          mimeType = 'text/html';
+          extension = 'html';
         } else {
-          mimeType = "text/plain";
-          extension = "txt";
+          mimeType = 'text/plain';
+          extension = 'txt';
         }
       } else {
         contentStr = JSON.stringify(data, null, 2);
       }
 
       const dataUri = `data:${mimeType};charset=utf-8,${encodeURIComponent(contentStr)}`;
-      const link = document.createElement("a");
-      link.setAttribute("href", dataUri);
-      link.setAttribute("download", `scrape-result-${format}.${extension}`);
+      const link = document.createElement('a');
+      link.setAttribute('href', dataUri);
+      link.setAttribute('download', `scrape-result-${format}.${extension}`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -540,21 +511,19 @@ export default defineComponent({
     const extractorOptionsJson = ref(
       JSON.stringify(formData.value.extractorOptions || {}, null, 2),
     );
-    const extractorOptionsError = ref("");
+    const extractorOptionsError = ref('');
 
     watch(extractorOptionsJson, (newVal) => {
       try {
         formData.value.extractorOptions = newVal ? JSON.parse(newVal) : {};
-        extractorOptionsError.value = "";
+        extractorOptionsError.value = '';
       } catch (e) {
-        extractorOptionsError.value = "Invalid JSON format";
+        extractorOptionsError.value = 'Invalid JSON format';
       }
     });
 
     // JSON string for headers textarea binding
-    const headersJson = ref(
-      JSON.stringify(formData.value.pageOptions.headers || {}, null, 2),
-    );
+    const headersJson = ref(JSON.stringify(formData.value.pageOptions.headers || {}, null, 2));
 
     // Watch headersJson and update formData.pageOptions.headers accordingly
     watch(headersJson, (newVal) => {
@@ -605,10 +574,7 @@ export default defineComponent({
 }
 .grid-layout {
   display: grid;
-  grid-template-columns: repeat(
-    auto-fit,
-    minmax(200px, 1fr)
-  ); /* Responsive grid */
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive grid */
   gap: 15px; /* Gap between grid items */
 }
 .checkbox-label {
