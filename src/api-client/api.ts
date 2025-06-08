@@ -1951,6 +1951,28 @@ export class CrawlingApi extends BaseAPI {
     public getCrawlStatus(id: string, options?: RawAxiosRequestConfig) {
         return CrawlingApiFp(this.configuration).getCrawlStatus(id, options).then((request) => request(this.axios, this.basePath));
     }
+
+    /**
+     * Download the archive of a completed crawl job.
+     * @param {string} id The ID of the crawl job
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrawlingApi
+     */
+    public downloadArchive(id: string, options?: RawAxiosRequestConfig) {
+        return CrawlingApiFp(this.configuration).downloadArchive(id, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Get the full JSON result of a completed crawl job.
+     * @param {string} id The ID of the crawl job
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrawlingApi
+     */
+    public getCrawlResult(id: string, options?: RawAxiosRequestConfig) {
+        return CrawlingApiFp(this.configuration).getCrawlResult(id, options).then((request) => request(this.axios, this.basePath));
+    }
 }
 
 
