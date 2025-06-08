@@ -63,10 +63,10 @@
               >
             </div>
             <div class="form-group">
-              <label for="maxDepthDiscovery">Max Discovery Depth:</label>
+              <label for="maxDiscoveryDepth">Max Discovery Depth:</label>
               <input
-                id="maxDepthDiscovery"
-                v-model.number="formData.crawlerOptions.maxDepthDiscovery"
+                id="maxDiscoveryDepth"
+                v-model.number="formData.crawlerOptions.maxDiscoveryDepth"
                 type="number"
                 min="1"
                 placeholder="e.g. 2"
@@ -84,6 +84,18 @@
               />
               <small>Maximum number of pages to crawl (default: 10000).</small>
             </div>
+            <div class="form-group">
+              <label for="delay">Delay (seconds):</label>
+              <input
+                id="delay"
+                v-model.number="formData.crawlerOptions.delay"
+                type="number"
+                min="0"
+                step="0.1"
+                placeholder="e.g. 1.5"
+              />
+              <small>Delay between pages to respect rate limits.</small>
+            </div>
           </div>
           <div class="grid-layout">
             <label class="checkbox-label">
@@ -96,9 +108,9 @@
             <label class="checkbox-label">
               <input
                 type="checkbox"
-                v-model="formData.crawlerOptions.allowPathRevisits"
+                v-model="formData.crawlerOptions.ignoreQueryParameters"
               />
-              Allow Path Revisits
+              Ignore Query Parameters
             </label>
             <label class="checkbox-label">
               <input
@@ -182,6 +194,100 @@
               tags.</small
             >
           </div>
+          <div class="form-group">
+            <label for="timeout">Timeout (ms):</label>
+            <input
+              id="timeout"
+              v-model.number="formData.scrapeOptions.timeout"
+              type="number"
+              min="0"
+            />
+          </div>
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              v-model="formData.scrapeOptions.skipTlsVerification"
+            />
+            Skip TLS Verification
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" v-model="formData.scrapeOptions.blockAds" />
+            Block Ads
+          </label>
+          <div class="form-group">
+            <label for="proxy">Proxy:</label>
+            <select id="proxy" v-model="formData.scrapeOptions.proxy">
+              <option value="">Default</option>
+              <option value="basic">Basic</option>
+              <option value="stealth">Stealth</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="locationCountry">Location Country:</label>
+            <input
+              id="locationCountry"
+              v-model="formData.scrapeOptions.location.country"
+              type="text"
+              placeholder="US"
+            />
+          </div>
+          <div class="form-group">
+            <label for="locationLanguages">Location Languages:</label>
+            <input
+              id="locationLanguages"
+              v-model="locationLanguagesInput"
+              type="text"
+              placeholder="en-US, fr"
+              @blur="parseLocationLanguages"
+            />
+          </div>
+          <div class="form-group">
+            <label for="jsonSchema">JSON Options Schema (JSON):</label>
+            <textarea
+              id="jsonSchema"
+              v-model="jsonOptionsSchemaInput"
+              @blur="parseJsonOptionsSchema"
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label for="jsonSystemPrompt">JSON System Prompt:</label>
+            <textarea
+              id="jsonSystemPrompt"
+              v-model="formData.scrapeOptions.jsonOptions.systemPrompt"
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label for="jsonPrompt">JSON Prompt:</label>
+            <textarea
+              id="jsonPrompt"
+              v-model="formData.scrapeOptions.jsonOptions.prompt"
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label for="changeModes">Change Tracking Modes:</label>
+            <input
+              id="changeModes"
+              v-model="changeTrackingModesInput"
+              type="text"
+              placeholder="git-diff, json"
+              @blur="parseChangeTrackingModes"
+            />
+          </div>
+          <div class="form-group">
+            <label for="changeSchema">Change Tracking Schema (JSON):</label>
+            <textarea
+              id="changeSchema"
+              v-model="changeTrackingSchemaInput"
+              @blur="parseChangeTrackingSchema"
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label for="changePrompt">Change Tracking Prompt:</label>
+            <textarea
+              id="changePrompt"
+              v-model="formData.scrapeOptions.changeTrackingOptions.prompt"
+            ></textarea>
+          </div>
         </div>
       </fieldset>
 
@@ -205,22 +311,34 @@
               />
             </div>
             <div class="form-group">
-              <label for="webhookSecret">Webhook Secret:</label>
-              <input
-                id="webhookSecret"
-                v-model="formData.webhookOptions.secret"
-                type="text"
-                placeholder="Secret for verification"
-              />
+              <label for="webhookHeaders">Webhook Headers (JSON):</label>
+              <textarea
+                id="webhookHeaders"
+                v-model="webhookHeadersInput"
+                placeholder='{"Authorization": "token"}'
+                @blur="parseWebhookHeaders"
+              ></textarea>
             </div>
             <div class="form-group">
-              <label for="webhookEvent">Webhook Event:</label>
-              <select id="webhookEvent" v-model="formData.webhookOptions.event">
-                <option value="">Select event</option>
-                <option value="started">Started</option>
-                <option value="page">Page</option>
+              <label for="webhookMetadata">Webhook Metadata (JSON):</label>
+              <textarea
+                id="webhookMetadata"
+                v-model="webhookMetadataInput"
+                placeholder='{"source": "ui"}'
+                @blur="parseWebhookMetadata"
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <label for="webhookEvents">Webhook Events:</label>
+              <select
+                id="webhookEvents"
+                v-model="formData.webhookOptions.events"
+                multiple
+              >
                 <option value="completed">Completed</option>
+                <option value="page">Page</option>
                 <option value="failed">Failed</option>
+                <option value="started">Started</option>
               </select>
             </div>
           </div>
@@ -244,13 +362,6 @@
       </div>
     </div>
 
-    <div v-if="result" class="result">
-      <div class="result-header">
-        <h2>Crawl Job Submitted</h2>
-      </div>
-      <pre>{{ result }}</pre>
-    </div>
-
     <!-- Section for active crawl status -->
     <div v-if="crawling" class="crawl-status-section">
       <h2>Crawl Status</h2>
@@ -267,7 +378,9 @@
       class="download-section"
     >
       <h2>Download Results</h2>
-      <button @click="handleDownload('Archive')">Download Archive</button>
+      <div v-for="fmt in activeFormats" :key="fmt" class="download-btn">
+        <button @click="handleDownload(fmt)">Download {{ fmt }} Archive</button>
+      </div>
       <button @click="handleDownload('Full JSON')">Download Full JSON</button>
     </div>
 
@@ -279,14 +392,13 @@
           <li
             v-for="crawl in crawlHistory"
             :key="crawl.id"
-            @click="selectCrawl(crawl.id)"
             :class="{ 'selected-crawl': selectedCrawlId === crawl.id }"
           >
-            <strong>ID:</strong> {{ crawl.id }} | <strong>Date:</strong>
-            {{ new Date(crawl.createdAt).toLocaleString() }} |
-            <strong>Status:</strong> {{ crawl.status }}
-            <button @click.stop="selectCrawl(crawl.id)">
-              View Details / Access Files
+            <strong>{{ crawl.url }}</strong>
+            – {{ new Date(crawl.createdAt).toLocaleString() }} – Status:
+            {{ crawl.status }}
+            <button type="button" @click.prevent="selectCrawl(crawl.id)">
+              View Details
             </button>
           </li>
         </ul>
@@ -325,6 +437,9 @@ import {
   onUnmounted,
   computed,
 } from "vue";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+import axios from "axios";
 import { useRouter } from "vue-router";
 // Import the crawling API client (adjust import path as needed)
 import {
@@ -342,10 +457,11 @@ interface CrawlerOptions {
   includes?: string[];
   excludes?: string[];
   maxDepth?: number;
-  maxDepthDiscovery?: number;
+  maxDiscoveryDepth?: number;
   ignoreSitemap?: boolean;
-  allowPathRevisits?: boolean;
+  ignoreQueryParameters?: boolean;
   limit?: number;
+  delay?: number;
   allowExternalLinks?: boolean;
   navigateBacklinks?: boolean;
 }
@@ -364,6 +480,24 @@ interface ScrapeOptions {
   mobile?: boolean;
   removeBase64Images?: boolean;
   actions?: any[]; // Based on OpenAPI, actions is an array of Action objects
+  skipTlsVerification?: boolean;
+  timeout?: number;
+  jsonOptions?: {
+    schema?: object;
+    systemPrompt?: string;
+    prompt?: string;
+  };
+  location?: {
+    country?: string;
+    languages?: string[];
+  };
+  blockAds?: boolean;
+  proxy?: string;
+  changeTrackingOptions?: {
+    modes?: string[];
+    schema?: object;
+    prompt?: string;
+  };
 }
 
 /**
@@ -371,8 +505,9 @@ interface ScrapeOptions {
  */
 interface WebhookOptions {
   url?: string;
-  secret?: string;
-  event?: string;
+  headers?: Record<string, string>;
+  metadata?: Record<string, any>;
+  events?: string[];
 }
 
 /**
@@ -407,10 +542,11 @@ export default defineComponent({
         includes: [],
         excludes: [],
         maxDepth: undefined,
-        maxDepthDiscovery: undefined,
+        maxDiscoveryDepth: undefined,
         ignoreSitemap: false,
-        allowPathRevisits: false,
+        ignoreQueryParameters: false,
         limit: undefined,
+        delay: undefined,
         allowExternalLinks: false,
         navigateBacklinks: false,
       },
@@ -424,11 +560,19 @@ export default defineComponent({
         mobile: false,
         removeBase64Images: false,
         actions: [],
+        skipTlsVerification: false,
+        timeout: undefined,
+        jsonOptions: {},
+        location: { country: undefined, languages: [] },
+        blockAds: true,
+        proxy: undefined,
+        changeTrackingOptions: {},
       },
       webhookOptions: {
         url: undefined,
-        secret: undefined,
-        event: undefined,
+        headers: {},
+        metadata: {},
+        events: [],
       },
     });
 
@@ -437,6 +581,12 @@ export default defineComponent({
     const excludesInput = ref("");
     const includeTagsInput = ref("");
     const excludeTagsInput = ref("");
+    const webhookHeadersInput = ref("");
+    const webhookMetadataInput = ref("");
+    const locationLanguagesInput = ref("");
+    const jsonOptionsSchemaInput = ref("");
+    const changeTrackingSchemaInput = ref("");
+    const changeTrackingModesInput = ref("");
 
     // State for collapsible sections
     const isCrawlerOptionsCollapsed = ref(true);
@@ -483,6 +633,72 @@ export default defineComponent({
         .filter(Boolean);
     };
 
+    const parseWebhookHeaders = () => {
+      try {
+        formData.value.webhookOptions.headers = webhookHeadersInput.value
+          ? JSON.parse(webhookHeadersInput.value)
+          : {};
+      } catch {
+        error.value = "Invalid JSON for webhook headers";
+      }
+    };
+
+    const parseWebhookMetadata = () => {
+      try {
+        formData.value.webhookOptions.metadata = webhookMetadataInput.value
+          ? JSON.parse(webhookMetadataInput.value)
+          : {};
+      } catch {
+        error.value = "Invalid JSON for webhook metadata";
+      }
+    };
+
+    const parseLocationLanguages = () => {
+      formData.value.scrapeOptions.location =
+        formData.value.scrapeOptions.location || {};
+      formData.value.scrapeOptions.location.languages =
+        locationLanguagesInput.value
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+    };
+
+    const parseJsonOptionsSchema = () => {
+      try {
+        formData.value.scrapeOptions.jsonOptions =
+          formData.value.scrapeOptions.jsonOptions || {};
+        formData.value.scrapeOptions.jsonOptions.schema =
+          jsonOptionsSchemaInput.value
+            ? JSON.parse(jsonOptionsSchemaInput.value)
+            : undefined;
+      } catch {
+        error.value = "Invalid JSON for JSON schema";
+      }
+    };
+
+    const parseChangeTrackingSchema = () => {
+      try {
+        formData.value.scrapeOptions.changeTrackingOptions =
+          formData.value.scrapeOptions.changeTrackingOptions || {};
+        formData.value.scrapeOptions.changeTrackingOptions.schema =
+          changeTrackingSchemaInput.value
+            ? JSON.parse(changeTrackingSchemaInput.value)
+            : undefined;
+      } catch {
+        error.value = "Invalid JSON for change tracking schema";
+      }
+    };
+
+    const parseChangeTrackingModes = () => {
+      formData.value.scrapeOptions.changeTrackingOptions =
+        formData.value.scrapeOptions.changeTrackingOptions || {};
+      formData.value.scrapeOptions.changeTrackingOptions.modes =
+        changeTrackingModesInput.value
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+    };
+
     const loading = ref(false);
     const crawling = ref(false);
     const progress = ref(0);
@@ -503,6 +719,20 @@ export default defineComponent({
       return crawlHistory.value.find(
         (crawl) => crawl.id === selectedCrawlId.value,
       );
+    });
+
+    /**
+     * Get the formats requested for the active crawl.
+     * These are taken from the history entry for the current job ID.
+     */
+    const activeFormats = computed(() => {
+      if (result.value && result.value.id) {
+        const historyItem = crawlHistory.value.find(
+          (c) => c.id === result.value.id,
+        );
+        return historyItem?.scrapeOptions?.formats || [];
+      }
+      return [] as string[];
     });
 
     /**
@@ -556,11 +786,42 @@ export default defineComponent({
           excludeTagsInput.value = (crawl.scrapeOptions.excludeTags || []).join(
             ", ",
           );
+          locationLanguagesInput.value = (
+            crawl.scrapeOptions.location?.languages || []
+          ).join(", ");
+          jsonOptionsSchemaInput.value = crawl.scrapeOptions.jsonOptions?.schema
+            ? JSON.stringify(crawl.scrapeOptions.jsonOptions.schema)
+            : "";
+          changeTrackingSchemaInput.value = crawl.scrapeOptions
+            .changeTrackingOptions?.schema
+            ? JSON.stringify(crawl.scrapeOptions.changeTrackingOptions.schema)
+            : "";
+          changeTrackingModesInput.value = (
+            crawl.scrapeOptions.changeTrackingOptions?.modes || []
+          ).join(", ");
         }
       } catch (err: any) {
         console.error(`Error fetching crawl files for ID ${id}:`, err);
         error.value = `Failed to fetch crawl files for ID ${id}. ${err.message || err}`;
       }
+    };
+
+    /**
+     * Retrieve all pages for a crawl job, following pagination if necessary.
+     * @param jobId - The crawl job identifier.
+     * @returns Array of page data objects.
+     */
+    const fetchAllCrawlData = async (jobId: string) => {
+      const pages: any[] = [];
+      let response = await api.crawling.getCrawlStatus(jobId);
+      pages.push(...(response.data.data || []));
+      let next = response.data.next;
+      while (next) {
+        const nextResp = await api.crawling.axios.get(next);
+        pages.push(...(nextResp.data.data || []));
+        next = nextResp.data.next;
+      }
+      return pages;
     };
 
     /**
@@ -574,11 +835,9 @@ export default defineComponent({
      * @param type - The type of download ('Archive' or 'Full JSON').
      */
     const handleDownload = async (type: string) => {
-      // Make async to use await
       console.log(`Handling download of ${type} for the active crawl.`);
-      error.value = ""; // Clear previous errors
+      error.value = "";
 
-      // Ensure there is an active crawl job result with an ID
       if (!result.value || !result.value.id) {
         error.value = "No active crawl job found to download results.";
         console.error(
@@ -590,45 +849,78 @@ export default defineComponent({
       const jobId = result.value.id;
 
       try {
-        if (type === "Archive") {
-          // Call API to download archive, expecting a Blob response
-          const response = await api.crawling.downloadArchive(jobId);
-          const blob = response.data; // Assuming the API client returns the Blob directly
+        const pages = await fetchAllCrawlData(jobId);
 
-          // Create a temporary URL for the blob and trigger download
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.setAttribute("download", `crawl-archive-${jobId}.zip`); // Suggest a filename
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(url); // Clean up the object URL
-        } else if (type === "Full JSON") {
-          // Call API to get full JSON result
-          const response = await api.crawling.getCrawlResult(jobId);
-          const jsonData = response.data; // Assuming the API client returns the JSON data
-
-          // Convert JSON data to a Blob with application/json type
-          const blob = new Blob([JSON.stringify(jsonData, null, 2)], {
+        if (type === "Full JSON") {
+          const blob = new Blob([JSON.stringify(pages, null, 2)], {
             type: "application/json",
           });
-
-          // Create a temporary URL for the blob and trigger download
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.setAttribute("download", `crawl-result-${jobId}.json`); // Suggest a filename
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(url); // Clean up the object URL
-        } else {
-          // Log a warning for unknown download types
-          console.warn(`Unknown download type: ${type}`);
+          saveAs(blob, `crawl-result-${jobId}.json`);
+          return;
         }
+
+        const zip = new JSZip();
+        const fetches: Promise<void>[] = [];
+
+        pages.forEach((page, index) => {
+          const prefix = index.toString().padStart(3, "0");
+          switch (type) {
+            case "markdown":
+              if (page.markdown) {
+                zip.file(`${prefix}.md`, page.markdown);
+              }
+              break;
+            case "html":
+              if (page.html) {
+                zip.file(`${prefix}.html`, page.html);
+              }
+              break;
+            case "rawHtml":
+              if (page.rawHtml) {
+                zip.file(`${prefix}.raw.html`, page.rawHtml);
+              }
+              break;
+            case "links":
+              if (page.links) {
+                zip.file(`${prefix}.txt`, page.links.join("\n"));
+              }
+              break;
+            case "json":
+              if (page.llm_extraction) {
+                zip.file(
+                  `${prefix}.json`,
+                  JSON.stringify(page.llm_extraction, null, 2),
+                );
+              }
+              break;
+            case "changeTracking":
+              if (page.changeTracking) {
+                zip.file(
+                  `${prefix}.json`,
+                  JSON.stringify(page.changeTracking, null, 2),
+                );
+              }
+              break;
+            case "screenshot":
+            case "screenshot@fullPage":
+              if (page.screenshot) {
+                const p = axios
+                  .get(page.screenshot, { responseType: "blob" })
+                  .then((res) => {
+                    zip.file(`${prefix}.png`, res.data);
+                  });
+                fetches.push(p);
+              }
+              break;
+            default:
+              console.warn(`Unknown format: ${type}`);
+          }
+        });
+
+        await Promise.all(fetches);
+        const blob = await zip.generateAsync({ type: "blob" });
+        saveAs(blob, `crawl-${type}-archive-${jobId}.zip`);
       } catch (err: any) {
-        // Handle any errors during the API call or download process
         console.error(
           `Error during ${type} download for job ID ${jobId}:`,
           err,
@@ -659,6 +951,12 @@ export default defineComponent({
       parseExcludes();
       parseIncludeTags();
       parseExcludeTags();
+      parseLocationLanguages();
+      parseJsonOptionsSchema();
+      parseChangeTrackingSchema();
+      parseChangeTrackingModes();
+      parseWebhookHeaders();
+      parseWebhookMetadata();
 
       if (!isValidUrl(formData.value.url)) {
         error.value = "Please enter a valid URL (e.g. https://example.com)";
@@ -672,42 +970,106 @@ export default defineComponent({
         return;
       }
 
-      // Build the request payload according to the OpenAPI CrawlRequest schema
-      // Construction du payload avec toutes les options du formulaire, y compris maxDepthDiscovery
-      const payload: any = {
-        url: formData.value.url,
-        excludePaths: formData.value.crawlerOptions.excludes,
-        includePaths: formData.value.crawlerOptions.includes,
-        maxDepth: formData.value.crawlerOptions.maxDepth,
-        maxDepthDiscovery: formData.value.crawlerOptions.maxDepthDiscovery,
-        ignoreSitemap: formData.value.crawlerOptions.ignoreSitemap,
-        limit: formData.value.crawlerOptions.limit,
-        allowBackwardLinks: formData.value.crawlerOptions.navigateBacklinks,
-        allowExternalLinks: formData.value.crawlerOptions.allowExternalLinks,
-        scrapeOptions: {
-          formats: formData.value.scrapeOptions.formats,
-          onlyMainContent: formData.value.scrapeOptions.onlyMainContent,
-          includeTags: formData.value.scrapeOptions.includeTags,
-          excludeTags: formData.value.scrapeOptions.excludeTags,
-          headers: formData.value.scrapeOptions.headers,
-          waitFor: formData.value.scrapeOptions.waitFor,
-          mobile: formData.value.scrapeOptions.mobile,
-          removeBase64Images: formData.value.scrapeOptions.removeBase64Images,
-          actions: formData.value.scrapeOptions.actions,
-        },
-      };
+      // Build the request payload and only include defined options
+      const payload: any = { url: formData.value.url };
 
-      // Only include webhookOptions if at least one field is filled
-      // Inclure webhookOptions uniquement si au moins un champ est non vide et non une chaîne vide
+      const crawler = formData.value.crawlerOptions;
+      if (crawler.excludes.length > 0) payload.excludePaths = crawler.excludes;
+      if (crawler.includes.length > 0) payload.includePaths = crawler.includes;
+      if (crawler.maxDepth !== undefined) payload.maxDepth = crawler.maxDepth;
+      if (crawler.maxDiscoveryDepth !== undefined)
+        payload.maxDiscoveryDepth = crawler.maxDiscoveryDepth;
+      if (crawler.ignoreSitemap) payload.ignoreSitemap = true;
+      if (crawler.ignoreQueryParameters) payload.ignoreQueryParameters = true;
+      if (crawler.limit !== undefined) payload.limit = crawler.limit;
+      if (crawler.delay !== undefined) payload.delay = crawler.delay;
+      if (crawler.navigateBacklinks) payload.allowBackwardLinks = true;
+      if (crawler.allowExternalLinks) payload.allowExternalLinks = true;
+
+      const scrape = formData.value.scrapeOptions;
+      const scrapePayload: any = {};
+      if (scrape.formats && scrape.formats.length > 0)
+        scrapePayload.formats = scrape.formats;
+      if (scrape.onlyMainContent === false)
+        scrapePayload.onlyMainContent = false;
+      if (scrape.includeTags.length > 0)
+        scrapePayload.includeTags = scrape.includeTags;
+      if (scrape.excludeTags.length > 0)
+        scrapePayload.excludeTags = scrape.excludeTags;
+      if (scrape.headers && Object.keys(scrape.headers).length > 0)
+        scrapePayload.headers = scrape.headers;
+      if (scrape.waitFor !== undefined) scrapePayload.waitFor = scrape.waitFor;
+      if (scrape.mobile) scrapePayload.mobile = true;
+      if (scrape.removeBase64Images) scrapePayload.removeBase64Images = true;
+      if (scrape.actions && scrape.actions.length > 0)
+        scrapePayload.actions = scrape.actions;
+      if (scrape.skipTlsVerification) scrapePayload.skipTlsVerification = true;
+      if (scrape.timeout !== undefined) scrapePayload.timeout = scrape.timeout;
+      if (scrape.jsonOptions) {
+        const jsonOpts: any = {};
+        if (scrape.jsonOptions.schema)
+          jsonOpts.schema = scrape.jsonOptions.schema;
+        if (scrape.jsonOptions.systemPrompt)
+          jsonOpts.systemPrompt = scrape.jsonOptions.systemPrompt;
+        if (scrape.jsonOptions.prompt)
+          jsonOpts.prompt = scrape.jsonOptions.prompt;
+        if (Object.keys(jsonOpts).length > 0)
+          scrapePayload.jsonOptions = jsonOpts;
+      }
+      if (scrape.location) {
+        const loc: any = {};
+        if (scrape.location.country) loc.country = scrape.location.country;
+        if (scrape.location.languages && scrape.location.languages.length > 0)
+          loc.languages = scrape.location.languages;
+        if (Object.keys(loc).length > 0) scrapePayload.location = loc;
+      }
+      if (scrape.blockAds === false) scrapePayload.blockAds = false;
+      if (scrape.proxy) scrapePayload.proxy = scrape.proxy;
+      if (scrape.changeTrackingOptions) {
+        const change: any = {};
+        if (
+          scrape.changeTrackingOptions.modes &&
+          scrape.changeTrackingOptions.modes.length > 0
+        )
+          change.modes = scrape.changeTrackingOptions.modes;
+        if (scrape.changeTrackingOptions.schema)
+          change.schema = scrape.changeTrackingOptions.schema;
+        if (scrape.changeTrackingOptions.prompt)
+          change.prompt = scrape.changeTrackingOptions.prompt;
+        if (Object.keys(change).length > 0)
+          scrapePayload.changeTrackingOptions = change;
+      }
+
+      if (Object.keys(scrapePayload).length > 0)
+        payload.scrapeOptions = scrapePayload;
+
+      // Include webhook options only when a URL is provided
       if (
-        (formData.value.webhookOptions.url &&
-          formData.value.webhookOptions.url !== "") ||
-        (formData.value.webhookOptions.secret &&
-          formData.value.webhookOptions.secret !== "") ||
-        (formData.value.webhookOptions.event &&
-          formData.value.webhookOptions.event !== "")
+        formData.value.webhookOptions.url &&
+        formData.value.webhookOptions.url !== ""
       ) {
-        payload.webhookOptions = { ...formData.value.webhookOptions };
+        payload.webhook = {
+          url: formData.value.webhookOptions.url,
+        } as any;
+
+        if (
+          formData.value.webhookOptions.headers &&
+          Object.keys(formData.value.webhookOptions.headers).length > 0
+        ) {
+          payload.webhook.headers = formData.value.webhookOptions.headers;
+        }
+        if (
+          formData.value.webhookOptions.metadata &&
+          Object.keys(formData.value.webhookOptions.metadata).length > 0
+        ) {
+          payload.webhook.metadata = formData.value.webhookOptions.metadata;
+        }
+        if (
+          formData.value.webhookOptions.events &&
+          formData.value.webhookOptions.events.length > 0
+        ) {
+          payload.webhook.events = formData.value.webhookOptions.events;
+        }
       }
 
       try {
@@ -736,6 +1098,7 @@ export default defineComponent({
           });
           saveHistory(); // Save history after adding a new job
           fetchCrawlStatus(response.data.id);
+          loading.value = false; // hide loading spinner once polling starts
         }
       } catch (err: unknown) {
         if (err instanceof Error) {
@@ -842,10 +1205,22 @@ export default defineComponent({
       excludesInput,
       includeTagsInput,
       excludeTagsInput,
+      webhookHeadersInput,
+      webhookMetadataInput,
+      locationLanguagesInput,
+      jsonOptionsSchemaInput,
+      changeTrackingSchemaInput,
+      changeTrackingModesInput,
       parseIncludes,
       parseExcludes,
       parseIncludeTags,
       parseExcludeTags,
+      parseLocationLanguages,
+      parseJsonOptionsSchema,
+      parseChangeTrackingSchema,
+      parseChangeTrackingModes,
+      parseWebhookHeaders,
+      parseWebhookMetadata,
       loading,
       crawling,
       progress,
@@ -862,6 +1237,7 @@ export default defineComponent({
       selectedCrawl,
       selectCrawl,
       simulatedFiles,
+      activeFormats,
       // Expose saveHistory if needed elsewhere, though not strictly necessary for this task
       // saveHistory,
     };
@@ -956,6 +1332,15 @@ export default defineComponent({
 
 .download-section {
   margin-top: 20px;
+}
+
+.crawl-history-section li {
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.selected-crawl {
+  background-color: #eef6ff;
 }
 
 .error-icon {
