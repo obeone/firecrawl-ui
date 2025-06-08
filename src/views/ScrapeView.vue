@@ -246,17 +246,12 @@
 <script lang="ts">
 import { defineComponent, ref, inject, watch } from "vue";
 import { useRouter } from "vue-router";
-// Removed duplicate imports for ScrapingApi and ScrapeResponse from the block below
 import {
   ScrapeAndExtractFromUrlRequestFormatsEnum,
-  type ScrapeAndExtractFromUrlRequest, // Correct type for the request object
-  type ScrapeResponse, // Correct type for the response - KEEP THIS ONE
-  type ScrapingApi, // Correct type for the API - KEEP THIS ONE
-  // Types for nested options within ScrapeAndExtractFromUrlRequest (if needed for clarity, but often optional)
-  // type ScrapeAndExtractFromUrlRequestPageOptions, // Example if it existed
-  // type ScrapeAndExtractFromUrlRequestScrapeOptions, // Example if it existed
-  type ScrapeAndExtractFromUrlRequestExtract, // Correct type for extractor options
-  // type ScrapeAndExtractFromUrlRequestChangeTrackingOptions // Example if it existed
+  type ScrapeAndExtractFromUrlRequest,
+  type ScrapeResponse,
+  type ScrapingApi,
+  type ScrapeAndExtractFromUrlRequestExtract,
 } from "../api-client/api";
 
 type ScrapeResult = ScrapeResponse;
@@ -298,38 +293,6 @@ interface FormData {
 interface FormDataChangeTrackingOptions {
   threshold: number; // percentage threshold for change detection
   frequency: number; // frequency in minutes to check for changes
-}
-
-interface FormData {
-  url: string;
-  pageOptions: FormDataPageOptions;
-  scrapeOptions: FormDataScrapeOptions;
-  extractorOptions?: FormDataExtractorOptions; // Added extractorOptions for JSON format
-  changeTrackingOptions: FormDataChangeTrackingOptions; // Added changeTrackingOptions
-}
-
-interface FormDataChangeTrackingOptions {
-  threshold: number; // percentage threshold for change detection
-  frequency: number; // frequency in minutes to check for changes
-}
-
-interface FormDataExtractorOptions
-  extends Partial<ScrapeAndExtractFromUrlRequestExtract> {
-  // Add specific fields if needed for UI binding, otherwise Partial is fine
-}
-
-// interface FormDataChangeTrackingOptions { // Add later if needed
-//   mode?: string;
-//   schema?: object;
-//   prompt?: string;
-// }
-
-interface FormData {
-  url: string;
-  pageOptions: FormDataPageOptions;
-  scrapeOptions: FormDataScrapeOptions;
-  // extractorOptions?: FormDataExtractorOptions; // Add later
-  changeTrackingOptions: FormDataChangeTrackingOptions; // Add later
 }
 
 export default defineComponent({
