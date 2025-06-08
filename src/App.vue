@@ -101,6 +101,7 @@ function toggleMenu(): void {
   font-size: 1.5rem;
   padding: 0.5rem;
   cursor: pointer;
+  color: var(--color-heading); /* Visible in both light and dark modes */
 }
 
 main {
@@ -120,6 +121,10 @@ main {
 
   .menu-button {
     display: block;
+    position: fixed; /* Keep the button at the top left */
+    top: 1rem;
+    left: 1rem;
+    z-index: 1100;
   }
 
   .sidebar {
