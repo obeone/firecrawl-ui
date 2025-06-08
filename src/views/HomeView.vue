@@ -241,12 +241,15 @@ h1 {
 .about {
   margin-top: 2.5rem;
   width: 100%;
-  background: #232323;
+  /* Gradient background with accent border for visual separation */
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  border-left: 4px solid var(--accent);
   border-radius: 10px;
   box-shadow: var(--card-shadow);
   padding: 2rem 2.5rem;
   color: #f3f3f3;
   font-family: "Inter", Arial, sans-serif;
+  line-height: 1.6;
 }
 
 .about h2 {
@@ -258,10 +261,15 @@ h1 {
 }
 
 .about ul {
-  margin: 1rem 0 1.5rem 1.2rem;
+  margin: 1rem 0 1.5rem 1.5rem;
   padding: 0;
+  list-style-type: square;
   color: #f3f3f3;
   font-size: 1.05rem;
+}
+
+.about li {
+  margin: 0.5rem 0;
 }
 
 .local-note {
@@ -270,9 +278,10 @@ h1 {
   font-size: 1rem;
 }
 
+/* Accent gradient for the call-to-action link */
 .about-link {
   color: #fff;
-  background: var(--accent);
+  background: linear-gradient(90deg, var(--accent) 0%, #eab308 100%);
   padding: 0.5rem 1.2rem;
   border-radius: 5px;
   text-decoration: none;
