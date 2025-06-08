@@ -1,29 +1,43 @@
-# firecrawl-ui
+# Firecrawl UI
 
-This template should help get you started developing with Vue 3 in Vite.
+Firecrawl UI is a Vue 3 application for interacting with the [Firecrawl API](https://firecrawl.dev/).
+It allows you to scrape pages, launch crawls and extract structured data through a simple web interface.
 
-## Recommended IDE Setup
+## Features
+- Scrape individual URLs
+- Launch crawling jobs with custom depth
+- Extract data using Firecrawl's AI tools
+- Configure and store your API key locally
+- View or export results
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## Requirements
+- Node.js 18 or newer
+- npm 8 or newer
 
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
+## Installation
 ```sh
 npm install
 ```
 
-### Compile and Hot-Reload for Development
-
+## Development
+Run the dev server with hot reload:
 ```sh
 npm run dev
 ```
 
-### Compile and Minify for Production
-
+## Production Build
+Compile and minify the application:
 ```sh
 npm run build
 ```
+
+Preview the built app locally:
+```sh
+npm run preview
+```
+
+## API Specification
+The OpenAPI document describing all endpoints is available in `openapi.yaml`.
+
+## Contributing
+Contributions are welcome. Please open an issue or submit a pull request.
