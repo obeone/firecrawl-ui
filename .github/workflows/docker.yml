@@ -32,9 +32,31 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push images
         uses: docker/build-push-action@v5
+        id: docker_build
         with:
           context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/i386
           push: true
           tags: |
             ghcr.io/obeone/firecrawl-ui:latest
             obeoneorg/firecrawl-ui:latest
+      - name: Set up cosign
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign the container image with cosign
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          cosign sign --yes ghcr.io/obeone/firecrawl-ui@${DIGEST}
+          cosign sign --yes docker.io/obeoneorg/firecrawl-ui@${DIGEST}
+        env:
+          COSIGN_EXPERIMENTAL: true
+          DIGEST: ${{ steps.docker_build.outputs.digest }}
+
+      - name: Updage Docker Hub description
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: obeoneorg/firecrawl-ui
