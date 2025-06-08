@@ -147,7 +147,7 @@ async function onSearch(): Promise<void> {
     ...(options.value.location && { location: options.value.location }),
     ...(options.value.timeout && { timeout: options.value.timeout }),
     ...(options.value.extractContent && {
-      scrapeOptions: { formats: ['extract'] }
+      scrapeOptions: { formats: ['markdown'] }
     })
   }
 
