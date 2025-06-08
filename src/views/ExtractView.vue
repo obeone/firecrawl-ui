@@ -1,379 +1,280 @@
 <template>
-  <div class="scrape-config-container">
+  <div class="extract-container">
     <h1>Data Extraction</h1>
-
-    <!-- Form for URLs and options -->
-    <form class="scrape-config-form" @submit.prevent="submitExtraction">
+    <form class="extract-form" @submit.prevent="startExtraction">
       <div class="form-group">
-        <label for="urls">URLs (format <a href="https://docs.firecrawl.dev/api-reference/endpoint/extract#url-glob-patterns" target="_blank" rel="noopener noreferrer">glob</a>, one per line):</label>
-        <textarea id="urls" v-model="urls" rows="5" placeholder="Ex: https://example.com/blog/*" required></textarea>
+        <label for="urls">URLs (one per line):</label>
+        <textarea id="urls" v-model="urlsString" rows="4" required></textarea>
       </div>
-
-      <!-- Extraction Options -->
       <div class="form-group">
-        <label for="prompt">Extraction Prompt:</label>
-        <textarea id="prompt" v-model="extractionPrompt" rows="3" placeholder="Ex: Extract the title, author, and publication date of the article."></textarea>
+        <label for="prompt">Prompt:</label>
+        <textarea id="prompt" v-model="prompt" rows="3"></textarea>
       </div>
-
       <div class="form-group">
         <label for="schema">JSON Schema (optional):</label>
-        <textarea id="schema" v-model="jsonSchemaString" rows="5" placeholder='Ex: {\n  "title": "string",\n  "author": "string",\n  "publishedDate": "string"\n}'></textarea>
-        <small v-if="schemaError" class="schema-error">JSON format error: {{ schemaError }}</small>
+        <textarea id="schema" v-model="schemaString" rows="5"></textarea>
+        <small v-if="schemaError" class="schema-error">Error: {{ schemaError }}</small>
       </div>
-
-      <!-- Other options (Example) -->
-      <!--
-      <div class="form-group options-extra">
-        <label>Other options :</label>
-        <label>
-          <input type="checkbox" v-model="options.enableWebSearch"> Enable web search
-        </label>
-         <label>
-          <input type="checkbox" v-model="options.showSources"> Show sources
-        </label>
-      </div>
-      -->
-
       <button type="submit" :disabled="loading || !!schemaError">
-        {{ loading ? 'Extracting...' : 'Extract Data' }}
+        {{ loading ? 'Submitting...' : 'Start Extraction' }}
       </button>
     </form>
 
-    <!-- Display Results -->
-    <div v-if="loading && !results" class="loading">Extracting...</div>
-    <div v-if="error" class="error">Error: {{ error }}</div>
-    <div v-if="results" class="results">
-      <div class="results-header">
-        <h2>Extraction Results:</h2>
-        <button @click="downloadResults" :disabled="!results">Download JSON</button>
+    <div v-if="currentJobId" class="current-section">
+      <h2>Job {{ currentJobId }}</h2>
+      <p>Status: {{ currentStatus }}</p>
+      <div class="progress-container" v-if="currentStatus === 'processing'">
+        <div class="progress-bar" :style="{ width: progress + '%' }"></div>
       </div>
-      <pre>{{ formattedResults }}</pre>
+      <pre v-if="currentData">{{ preview }}</pre>
+      <button v-if="currentStatus === 'processing'" @click="cancelPolling">Cancel</button>
+      <div v-if="currentData" class="download-buttons">
+        <button @click="downloadJson">JSON</button>
+        <button v-if="userRequestedJson" @click="downloadUserJson">JSON user</button>
+        <button v-else @click="downloadText">Text</button>
+      </div>
+    </div>
+
+    <div class="history-section">
+      <h2>History</h2>
+      <ul v-if="history.length">
+        <li v-for="job in history" :key="job.id">
+          <strong>ID:</strong> {{ job.id }} |
+          <strong>Date:</strong> {{ new Date(job.createdAt).toLocaleString() }} |
+          <strong>Status:</strong> {{ job.status }}
+        </li>
+      </ul>
+      <p v-else>No extraction history.</p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject, watch } from 'vue';
-import { ExtractionApi, type ExtractDataRequest, type ExtractResponse } from '@/api-client';
+import { ref, computed, inject, onMounted, onUnmounted } from 'vue';
+import axios from 'axios';
+import { ExtractionApi } from '@/api-client';
+import apiConfig from '@/config/api';
 
-/**
- * Inject the API client for extraction operations.
- * The injected object should contain an 'extraction' property of type ExtractionApi.
- * Throws an error if the client or the extraction API is not provided.
- */
-const api = inject('api') as { extraction?: ExtractionApi } | undefined;
-if (!api || !api.extraction) {
-  throw new Error("API client or extraction API is not provided. Make sure the apiPlugin is installed and provides an 'extraction' property.");
+/** Job information stored in history. */
+interface ExtractJob {
+  id: string;
+  createdAt: number;
+  status: string;
+  urls: string[];
 }
 
-/**
- * --- State ---
- * urls: URLs in glob format, one per line.
- * extractionPrompt: Prompt for extraction.
- * jsonSchemaString: JSON schema as a string.
- * loading: Loading state for extraction.
- * error: Error message.
- * results: Store extraction results.
- * schemaError: Store JSON schema parsing errors.
- */
-const urls = ref(''); // URLs in glob format, one per line
-const extractionPrompt = ref(''); // Prompt for extraction
-const jsonSchemaString = ref(''); // JSON schema as a string
+const api = inject('api') as { extraction?: ExtractionApi } | undefined;
+if (!api || !api.extraction) {
+  throw new Error('API client or extraction API is not provided.');
+}
+
+const urlsString = ref('');
+const prompt = ref('');
+const schemaString = ref('');
+const schemaError = ref<string | null>(null);
 const loading = ref(false);
-const error = ref<string | null>(null);
-const results = ref<ExtractResponse['data'] | null>(null); // Store extraction results
-const schemaError = ref<string | null>(null); // Store JSON schema parsing errors
+const currentJobId = ref<string | null>(null);
+const currentStatus = ref('');
+const currentData = ref<any>(null);
+const history = ref<ExtractJob[]>([]);
 
-// --- Computed Properties ---
+const HISTORY_KEY = 'extractHistory';
+let pollInterval: any = null;
 
-/**
- * Computed property to parse the JSON schema string and handle errors.
- * Returns the parsed schema object, undefined if empty, or null if parsing fails.
- */
-const parsedJsonSchema = computed(() => {
-  if (!jsonSchemaString.value.trim()) {
+/** Parse the user provided schema string. */
+const parsedSchema = computed(() => {
+  if (!schemaString.value.trim()) {
     schemaError.value = null;
-    return undefined; // Return undefined if schema is empty
+    return undefined;
   }
   try {
-    const schema = JSON.parse(jsonSchemaString.value);
-    schemaError.value = null; // Clear error on successful parse
-    return schema;
-  } catch (e: any) {
-    schemaError.value = e.message; // Set error message
-    return null; // Return null indicates parsing error
-  }
-});
-
-/**
- * Computed property to format results as a pretty JSON string.
- */
-const formattedResults = computed(() => {
-  return results.value ? JSON.stringify(results.value, null, 2) : '';
-});
-
-/**
- * Watch for changes in jsonSchemaString to validate JSON in real-time.
- */
-watch(jsonSchemaString, (newValue) => {
-  if (!newValue.trim()) {
+    const parsed = JSON.parse(schemaString.value);
     schemaError.value = null;
-    return;
-  }
-  try {
-    JSON.parse(newValue);
-    schemaError.value = null;
+    return parsed;
   } catch (e: any) {
     schemaError.value = e.message;
+    return null;
   }
 });
 
+/** Total number of URLs to process. */
+const totalUrls = computed(() =>
+  urlsString.value
+    .split('\n')
+    .map((u) => u.trim())
+    .filter(Boolean).length
+);
 
-// --- Methods ---
+/** Progress based on processed URLs in the data object. */
+const progress = computed(() => {
+  if (currentStatus.value === 'completed') return 100;
+  if (!currentData.value) return 0;
+  const processed = Object.keys(currentData.value).length;
+  return totalUrls.value
+    ? Math.min(100, Math.round((processed / totalUrls.value) * 100))
+    : 0;
+});
 
-/**
- * Handles the extraction form submission.
- * Validates the schema, prepares the request payload, and calls the extraction API.
- * Updates loading, error, and results states accordingly.
- */
-const submitExtraction = async () => {
-  // Prevent submission if schema is invalid
-  if (schemaError.value) {
-    error.value = "Please correct the error in the JSON schema before submitting.";
-    return;
+/** Text preview of current extraction data. */
+const preview = computed(() =>
+  currentData.value ? JSON.stringify(currentData.value, null, 2) : ''
+);
+
+/** Indicate whether the user requested a JSON schema. */
+const userRequestedJson = computed(() => parsedSchema.value !== undefined);
+
+/** Save history to local storage. */
+const saveHistory = () => {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history.value));
+};
+
+/** Load history on component mount. */
+onMounted(() => {
+  const stored = localStorage.getItem(HISTORY_KEY);
+  if (stored) {
+    try {
+      history.value = JSON.parse(stored);
+    } catch {
+      history.value = [];
+    }
   }
+});
+
+/** Clear polling interval on unmount. */
+onUnmounted(() => {
+  if (pollInterval) clearInterval(pollInterval);
+});
+
+/** Start a new extraction job. */
+const startExtraction = async () => {
+  if (schemaError.value) return;
+  const urls = urlsString.value
+    .split('\n')
+    .map((u) => u.trim())
+    .filter(Boolean);
+  if (!urls.length) return;
 
   loading.value = true;
-  error.value = null;
-  // Keep previous results visible during loading? Optional: results.value = null;
-
-    // Prepare URL list from textarea input
-    const urlList = urls.value.split('\n').map(url => url.trim()).filter(url => url);
-    if (urlList.length === 0) {
-      error.value = "Please provide at least one URL or glob pattern.";
-      loading.value = false;
-      return;
-    }
-
-    // Construct the request payload according to OpenAPI spec
-    const requestPayload: ExtractDataRequest = {
-      urls: urlList,
-      // Only include extractionOptions if prompt or schema is provided
-      ...( (extractionPrompt.value || parsedJsonSchema.value) && {
-          extractionOptions: {
-            ...(extractionPrompt.value && { prompt: extractionPrompt.value }),
-            ...(parsedJsonSchema.value && { schema: parsedJsonSchema.value }),
-            // To enable extra options, uncomment and bind to your form:
-            // enableWebSearch: options.value.enableWebSearch,
-            // showSources: options.value.showSources,
-          }
-        }
-      ),
-      // Add scanOptions or scrapeOptions if needed
-      // scanOptions: { ... },
-      // scrapeOptions: { formats: ['markdown'] } // Example
-    };
-
   try {
-    console.log("Extraction Payload:", JSON.stringify(requestPayload, null, 2));
-    // Call the API using the injected client
-    const response = await api.extraction!.extract(requestPayload);
-
-    if (response.success && response.data) {
-      results.value = response.data; // Store the successful results
-      error.value = null; // Clear any previous error
-    } else {
-      // Handle cases where API returns success: false or no data
-      throw new Error(response.error || "Extraction failed without a specific error message.");
+    const payload: any = { urls };
+    if (prompt.value) payload.prompt = prompt.value;
+    if (parsedSchema.value && parsedSchema.value !== undefined) {
+      payload.schema = parsedSchema.value;
     }
-  } catch (err: any) {
-    // Handle API call errors (network, server errors, etc.)
-    const errorMessage = err.response?.data?.error || err.message || 'An unknown error occurred';
-    error.value = `Error during extraction: ${errorMessage}`;
-    results.value = null; // Clear results on error
-    console.error("API Extraction Error:", err.response?.data || err);
+    const response = await api.extraction!.extractData(payload);
+    if (response.success && response.id) {
+      currentJobId.value = response.id;
+      currentStatus.value = 'processing';
+      currentData.value = null;
+      const job: ExtractJob = {
+        id: response.id,
+        createdAt: Date.now(),
+        status: 'processing',
+        urls,
+      };
+      history.value.unshift(job);
+      saveHistory();
+      pollStatus(response.id);
+    } else {
+      throw new Error('Extraction failed');
+    }
+  } catch (err) {
+    console.error('Extraction start failed:', err);
   } finally {
-    loading.value = false; // Stop loading indicator
+    loading.value = false;
   }
 };
 
-/**
- * Downloads the extraction results as a JSON file.
- */
-const downloadResults = (): void => {
-  if (!results.value) return;
-
-  const dataStr = JSON.stringify(results.value, null, 2);
-  const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-
-  const exportFileDefaultName = 'extraction_results.json';
-
-  const linkElement = document.createElement('a');
-  linkElement.setAttribute('href', dataUri);
-  linkElement.setAttribute('download', exportFileDefaultName);
-  linkElement.click(); // Simulate click to trigger download
-  linkElement.remove(); // Clean up the element
+/** Poll extraction status and update preview. */
+const pollStatus = (id: string) => {
+  if (pollInterval) clearInterval(pollInterval);
+  pollInterval = setInterval(async () => {
+    try {
+      const resp = await axios.get(`${apiConfig.basePath}/extract/${id}`, {
+        headers: apiConfig.baseOptions?.headers,
+      });
+      currentStatus.value = resp.data.status;
+      currentData.value = resp.data.data;
+      const job = history.value.find((j) => j.id === id);
+      if (job) job.status = resp.data.status;
+      if (['completed', 'failed', 'cancelled'].includes(resp.data.status)) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+      saveHistory();
+    } catch (err) {
+      console.error('Polling failed:', err);
+    }
+  }, 1000);
 };
 
+/** Stop polling for the current job. */
+const cancelPolling = () => {
+  if (pollInterval) {
+    clearInterval(pollInterval);
+    pollInterval = null;
+    currentStatus.value = 'cancelled';
+  }
+};
+
+/** Generic helper to download a string as a file. */
+const downloadFile = (content: string, filename: string, type: string) => {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
+/** Download the entire result as JSON. */
+const downloadJson = () => {
+  if (!currentData.value) return;
+  downloadFile(JSON.stringify(currentData.value, null, 2), 'extract.json', 'application/json');
+};
+
+/** Download the user formatted JSON. */
+const downloadUserJson = () => {
+  if (!currentData.value) return;
+  downloadFile(JSON.stringify(currentData.value, null, 2), 'user.json', 'application/json');
+};
+
+/** Download the result as plain text. */
+const downloadText = () => {
+  if (!currentData.value) return;
+  downloadFile(String(currentData.value), 'extract.txt', 'text/plain');
+};
 </script>
 
 <style scoped>
-.extract-view {
-  max-width: 900px; /* Increased width */
+.extract-container {
+  max-width: 800px;
   margin: 20px auto;
   padding: 20px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-family: sans-serif;
 }
-
-h1, h2 {
-  text-align: center;
-  color: #333;
-}
-
 .form-group {
   margin-bottom: 15px;
 }
-
-label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
-  color: #444; /* Slightly darker label color */
-}
-
-textarea, input[type="checkbox"], input[type="text"] { /* Added input[type="text"] */
-  margin-right: 5px;
-  margin-top: 3px; /* Added small top margin */
-}
-
-textarea {
-  width: 100%;
-  padding: 10px; /* Increased padding */
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-sizing: border-box;
-  font-family: 'Courier New', Courier, monospace; /* Monospace for code/schema */
-  font-size: 0.9em;
-  margin-bottom: 5px; /* Space below textarea */
-}
-
-/* Style for the schema error message */
 .schema-error {
-  color: #d9534f; /* Bootstrap danger color */
-  font-size: 0.85em;
-  display: block;
-  margin-top: -2px; /* Adjust position */
+  color: #d9534f;
 }
-
-/* Style for extra options section if uncommented */
-.options-extra label {
-  display: inline-block;
-  margin-right: 15px;
-  font-weight: normal;
-}
-
-button[type="submit"] { /* Target submit button specifically */
-  display: block;
+.progress-container {
   width: 100%;
-  padding: 12px; /* Increased padding */
-  background-color: #5cb85c; /* Bootstrap success color */
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.2s ease; /* Smooth transition */
-  margin-top: 10px; /* Add margin above button */
+  background-color: #e0e0e0;
+  border-radius: 5px;
+  margin-top: 10px;
+  overflow: hidden;
 }
-
-button:disabled {
-  background-color: #aaa; /* Darker disabled color */
-  cursor: not-allowed;
+.progress-bar {
+  height: 20px;
+  background-color: #4caf50;
+  transition: width 0.5s ease;
 }
-
-button[type="submit"]:hover:not(:disabled) {
-  background-color: #4cae4c; /* Darker green on hover */
+.history-section {
+  margin-top: 30px;
 }
-
-.loading, .error, .results {
-  margin-top: 25px; /* Increased margin */
-  padding: 15px;
-  border-radius: 4px;
-  border: 1px solid transparent; /* Base border */
-}
-
-.loading {
-  background-color: #f0f0f0; /* Lighter gray */
-  border-color: #ddd;
-  text-align: center;
-  color: #555;
-}
-
-.error {
-  background-color: #f2dede; /* Bootstrap danger background */
-  border-color: #ebccd1; /* Bootstrap danger border */
-  color: #a94442; /* Bootstrap danger text */
-}
-
-.results {
-  background-color: #f9f9f9; /* Very light gray */
-  border-color: #eee;
-}
-
-.results-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px; /* Space between header and pre */
-}
-
-.results-header h2 {
-  margin: 0; /* Remove default margin */
-  text-align: left; /* Align header text left */
-}
-
-.results-header button {
-  padding: 6px 12px;
-  background-color: #337ab7; /* Bootstrap primary color */
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.2s ease;
-}
-
-.results-header button:disabled {
-  background-color: #aaa;
-  cursor: not-allowed;
-}
-
-.results-header button:hover:not(:disabled) {
-  background-color: #286090; /* Darker blue on hover */
-}
-
-
-pre {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  background-color: #fff;
-  padding: 15px; /* Increased padding */
-  border: 1px solid #ddd; /* Slightly darker border */
-  border-radius: 4px;
-  max-height: 500px; /* Increased max height */
-  overflow-y: auto;
-  font-size: 0.9em; /* Slightly smaller font */
-  line-height: 1.4; /* Improved line spacing */
-}
-
-/* Link style for glob format info */
-a {
-  color: #337ab7;
-  text-decoration: none;
-}
-a:hover {
-  text-decoration: underline;
+.download-buttons button {
+  margin-right: 10px;
 }
 </style>
