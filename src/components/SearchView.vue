@@ -56,8 +56,8 @@
       <span v-if="error" class="status error">{{ error }}</span>
     </form>
 
-    <section v-if="results.length" class="results">
-      <h2>Search Results</h2>
+  <section v-if="results.length" class="results">
+    <h2>Search Results</h2>
       <ul>
         <li v-for="(result, index) in results" :key="index" class="result-item">
           <a :href="result.url" target="_blank" rel="noopener noreferrer">{{ result.title }}</a>
@@ -70,13 +70,27 @@
           </div>
         </li>
       </ul>
+      <div class="download-section">
+        <h3>Download Results</h3>
+        <div v-for="fmt in activeFormats" :key="fmt" class="download-btn">
+          <button class="primary-button" @click="handleDownload(fmt)">
+            Download {{ fmt }} Archive
+          </button>
+        </div>
+        <button class="primary-button" @click="handleDownload('Full JSON')">
+          Download Full JSON
+        </button>
+      </div>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, inject } from 'vue'
+import { ref, inject, computed } from 'vue'
 import type { SearchApi, SearchRequest } from '@/api-client/search.js'
+import JSZip from 'jszip'
+import { saveAs } from 'file-saver'
+import axios from 'axios'
 
 interface SearchResult {
   title: string
@@ -127,6 +141,9 @@ const options = ref<SearchOptions>({
 const loading = ref(false)
 const error = ref('')
 const results = ref<SearchResult[]>([])
+const requestedFormats = ref<string[]>([])
+
+const activeFormats = computed(() => requestedFormats.value)
 
 /**
  * Execute the search with the current query and options.
@@ -153,12 +170,134 @@ async function onSearch(): Promise<void> {
 
   try {
     const response = await api.search.search(payload)
-    results.value = (response.data.data || []) as unknown as SearchResult[]
+    requestedFormats.value =
+      payload.scrapeOptions?.formats ?? []
+    results.value = (response.data.data || []).map(normalizeResult)
   } catch (err: any) {
     error.value = err?.message || 'Search request failed'
   } finally {
     loading.value = false
   }
+}
+
+/**
+ * Normalize potential encoding issues in a search result.
+ *
+ * @param item - Raw search result from the API
+ * @returns Normalized search result
+ */
+function normalizeResult(item: SearchResult): SearchResult {
+  return {
+    ...item,
+    title: fixEncoding(item.title),
+    description: fixEncoding(item.description),
+    markdown: fixEncoding(item.markdown),
+    html: fixEncoding(item.html),
+    rawHtml: fixEncoding(item.rawHtml),
+    metadata: item.metadata
+      ? {
+          ...item.metadata,
+          title: fixEncoding(item.metadata.title),
+          description: fixEncoding(item.metadata.description)
+        }
+      : undefined
+  }
+}
+
+/**
+ * Attempt to convert strings from Latin-1 to UTF-8 when needed.
+ *
+ * @param value - String that might be misencoded
+ * @returns Decoded string or the original value
+ */
+function fixEncoding(value?: string | null): string | undefined {
+  if (value == null) {
+    return undefined
+  }
+  try {
+    return decodeURIComponent(escape(value))
+  } catch {
+    return value
+  }
+}
+
+/**
+ * Replace characters that cannot be used in filenames.
+ *
+ * @param url - URL associated with the result
+ * @returns Sanitized filename string
+ */
+function sanitizeFilename(url: string): string {
+  let name = url.replace(/^https?:\/\//, '')
+  name = name.replace(/[?#].*$/, '')
+  name = name.replace(/[^a-zA-Z0-9]+/g, '_')
+  return name || 'result'
+}
+
+/**
+ * Download search results in the requested format or as full JSON.
+ *
+ * @param type - Format name or 'Full JSON'
+ */
+async function handleDownload(type: string): Promise<void> {
+  if (!results.value.length) {
+    return
+  }
+
+  if (type === 'Full JSON') {
+    const blob = new Blob([JSON.stringify(results.value, null, 2)], {
+      type: 'application/json'
+    })
+    saveAs(blob, 'search-results.json')
+    return
+  }
+
+  const zip = new JSZip()
+  const fetches: Promise<void>[] = []
+
+  results.value.forEach((page, index) => {
+    const base = sanitizeFilename(page.url || index.toString())
+    const prefix = (index + 1).toString().padStart(3, '0')
+    switch (type) {
+      case 'markdown':
+        if (page.markdown) {
+          zip.file(`${prefix}-${base}.md`, page.markdown)
+        }
+        break
+      case 'html':
+        if (page.html) {
+          zip.file(`${prefix}-${base}.html`, page.html)
+        }
+        break
+      case 'rawHtml':
+        if (page.rawHtml) {
+          zip.file(`${prefix}-${base}.raw.html`, page.rawHtml)
+        }
+        break
+      case 'links':
+        if (page.links && page.links.length) {
+          zip.file(`${prefix}-${base}.txt`, page.links.join('\n'))
+        }
+        break
+      case 'screenshot':
+      case 'screenshot@fullPage':
+        if (page.screenshot) {
+          const p = axios
+            .get(page.screenshot, { responseType: 'blob' })
+            .then((res) => {
+              zip.file(`${prefix}-${base}.png`, res.data)
+            })
+          fetches.push(p)
+        }
+        break
+      default:
+        break
+    }
+  })
+
+  await Promise.all(fetches)
+  const blob = await zip.generateAsync({ type: 'blob' })
+  saveAs(blob, `search-${type}-archive.zip`)
 }
 
 </script>
@@ -218,5 +357,9 @@ async function onSearch(): Promise<void> {
 
 .status.error {
   color: #a94442;
+}
+
+.download-section {
+  margin-top: 20px;
 }
 </style>
