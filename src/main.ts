@@ -1,25 +1,25 @@
- import './assets/main.css' // Import global CSS
-import { createApp } from 'vue'
-import App from './App.vue'
-import apiPlugin from './plugins/api.js'
-import router from './router/index.js'
-import ApiKeyInput from './components/ApiKeyInput.vue'
+import "./assets/main.css"; // Import global CSS
+import { createApp } from "vue";
+import App from "./App.vue";
+import apiPlugin from "./plugins/api.js";
+import router from "./router/index.js";
+import ApiKeyInput from "./components/ApiKeyInput.vue";
 
-const app = createApp(App)
+const app = createApp(App);
 
-// Gestion globale des erreurs
+// Global error handling
 app.config.errorHandler = (err, instance, info) => {
-  if (err instanceof Error && err.message.includes('401')) {
-    // Rediriger vers la page de configuration de l'API si erreur 401
-    router.push({ name: 'ApiConfig' })
+  if (err instanceof Error && err.message.includes("401")) {
+    // Redirect to API configuration page on 401 errors
+    router.push({ name: "ApiConfig" });
   }
-  console.error('Error:', err, info)
-}
+  console.error("Error:", err, info);
+};
 
-app.use(apiPlugin)
-app.use(router)
+app.use(apiPlugin);
+app.use(router);
 
-// Enregistrer le composant globalement
-app.component('ApiKeyInput', ApiKeyInput)
+// Register the component globally
+app.component("ApiKeyInput", ApiKeyInput);
 
-app.mount('#app')
+app.mount("#app");

@@ -3,7 +3,7 @@
 /* Styles for #app (lines 3-8) removed as they are managed by .app-layout in App.vue */
 
 /* General styles for commented-out links to avoid conflicts with the sidebar. */
-/* Si un style de lien global est nécessaire pour le contenu principal, il faudra le redéfinir ici de manière moins spécifique. */
+/* If a global link style is required for the main content, redefine it here with lower specificity. */
 /*
 a,
 .green {

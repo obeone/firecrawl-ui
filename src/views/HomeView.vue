@@ -64,14 +64,15 @@
         <strong>Main Features:</strong>
       </p>
       <ul>
-        <li>Scraping rapide et extraction de contenu structuré.</li>
-        <li>
-          Crawling multi-niveaux avec visualisation de la structure du site.
-        </li>
-        <li>Recherche avancée dans les résultats collectés.</li>
-        <li>Configuration flexible de l'API et gestion des clés.</li>
-        <li>Interface cartographique pour explorer les liens entre pages.</li>
+        <li>Fast scraping and structured content extraction.</li>
+        <li>Multi-level crawling with visualization of the site structure.</li>
+        <li>Advanced search within collected results.</li>
+        <li>Flexible API configuration and key management.</li>
+        <li>Mapping interface to explore page relationships.</li>
       </ul>
+      <p class="local-note">
+        All features run locally; your data never leaves your machine.
+      </p>
       <p>
         <a
           href="https://github.com/firecrawl/firecrawl-ui"
@@ -115,7 +116,7 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Palette modernisée */
+/* Modernized palette */
 :root {
   --primary-bg: #f7f8fa;
   --card-bg: #fff;
@@ -240,11 +241,11 @@ h1 {
 .about {
   margin-top: 2.5rem;
   width: 100%;
-  background: #fff;
+  background: #232323;
   border-radius: 10px;
   box-shadow: var(--card-shadow);
   padding: 2rem 2.5rem;
-  color: var(--text-main);
+  color: #f3f3f3;
   font-family: "Inter", Arial, sans-serif;
 }
 
@@ -259,8 +260,14 @@ h1 {
 .about ul {
   margin: 1rem 0 1.5rem 1.2rem;
   padding: 0;
-  color: var(--text-main);
+  color: #f3f3f3;
   font-size: 1.05rem;
+}
+
+.local-note {
+  color: #f3f3f3;
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
 }
 
 .about-link {
