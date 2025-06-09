@@ -83,6 +83,9 @@ import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import axios from 'axios';
 
+/**
+ * Defines the structure for a single search result item.
+ */
 interface SearchResult {
   title: string;
   url: string;
@@ -101,12 +104,9 @@ interface SearchResult {
   };
 }
 
-const api = inject('api') as { search?: SearchApi } | undefined;
-if (!api?.search) {
-  throw new Error('Search API is not available');
-}
-
-const query = ref('');
+/**
+ * Defines the structure for the search options.
+ */
 interface SearchOptions {
   includeMetadata: boolean;
   extractContent: boolean;
@@ -118,6 +118,23 @@ interface SearchOptions {
   timeout?: number;
 }
 
+/**
+ * Injects the API client, specifically the search API.
+ * Throws an error if the search API is not available.
+ */
+const api = inject('api') as { search?: SearchApi } | undefined;
+if (!api?.search) {
+  throw new Error('Search API is not available');
+}
+
+/**
+ * Reactive reference for the search query input.
+ */
+const query = ref('');
+
+/**
+ * Reactive reference for the search options, initialized with default values.
+ */
 const options = ref<SearchOptions>({
   includeMetadata: true,
   extractContent: false,
@@ -129,11 +146,26 @@ const options = ref<SearchOptions>({
   timeout: undefined,
 });
 
+/**
+ * Reactive flag indicating if a search request is in progress.
+ */
 const loading = ref(false);
+/**
+ * Reactive string to store any error messages from the search.
+ */
 const error = ref('');
+/**
+ * Reactive array to store the search results.
+ */
 const results = ref<SearchResult[]>([]);
+/**
+ * Reactive array to store the formats requested for content extraction.
+ */
 const requestedFormats = ref<string[]>([]);
 
+/**
+ * Computed property to determine the currently active download formats based on requested formats.
+ */
 const activeFormats = computed(() => requestedFormats.value);
 
 /**
@@ -171,10 +203,11 @@ async function onSearch(): Promise<void> {
 }
 
 /**
- * Normalize potential encoding issues in a search result.
+ * Normalizes a search result item by fixing potential encoding issues in its string properties.
+ * This ensures that displayed content is correctly rendered.
  *
- * @param item - Raw search result from the API
- * @returns Normalized search result
+ * @param item - The raw search result object received from the API.
+ * @returns A new SearchResult object with string properties normalized.
  */
 function normalizeResult(item: SearchResult): SearchResult {
   return {
@@ -195,59 +228,74 @@ function normalizeResult(item: SearchResult): SearchResult {
 }
 
 /**
- * Attempt to convert strings from Latin-1 to UTF-8 when needed.
+ * Attempts to fix potential character encoding issues in a given string,
+ * specifically trying to convert from Latin-1 to UTF-8 if misencoded.
+ * It handles null or undefined input gracefully.
  *
- * @param value - String that might be misencoded
- * @returns Decoded string or the original value
+ * @param value - The string that might have encoding issues. Can be null or undefined.
+ * @returns The decoded string if successful, or the original value if decoding fails or is not needed.
+ *          Returns `undefined` if the input `value` is `null` or `undefined`.
  */
 function fixEncoding(value?: string | null): string | undefined {
   if (value == null) {
     return undefined;
   }
   try {
+    // Attempt to decode assuming it was originally UTF-8 but escaped as Latin-1
     const decoded = decodeURIComponent(escape(value));
+    // Check for replacement character (U+FFFD) which indicates decoding failure
     if (!decoded.includes('\ufffd')) {
       return decoded;
     }
-  } catch {
-    // Ignore decoding errors
+  } catch (e) {
+    // Log or handle decoding errors if necessary, but for now, ignore and try next method
+    console.warn('First decoding attempt failed:', e);
   }
   try {
+    // Attempt to decode as UTF-8 from a byte array representation
     const bytes = Uint8Array.from([...value].map((c) => c.charCodeAt(0)));
     const decoded = new TextDecoder('utf-8').decode(bytes);
     if (!decoded.includes('\ufffd')) {
       return decoded;
     }
-  } catch {
-    // Ignore decoding errors
+  } catch (e) {
+    // Log or handle decoding errors if necessary, but for now, ignore
+    console.warn('Second decoding attempt failed:', e);
   }
+  // If all decoding attempts fail, return the original value
   return value;
 }
 
 /**
- * Replace characters that cannot be used in filenames.
+ * Sanitizes a URL to create a valid and readable filename.
+ * It removes protocol prefixes, query parameters, hash fragments,
+ * and replaces non-alphanumeric characters with underscores.
  *
- * @param url - URL associated with the result
- * @returns Sanitized filename string
+ * @param url - The URL string to be sanitized.
+ * @returns A sanitized string suitable for use as a filename. Returns 'result' if the sanitized name is empty.
  */
 function sanitizeFilename(url: string): string {
-  let name = url.replace(/^https?:\/\//, '');
-  name = name.replace(/[?#].*$/, '');
-  name = name.replace(/[^a-zA-Z0-9]+/g, '_');
-  return name || 'result';
+  let name = url.replace(/^https?:\/\//, ''); // Remove http(s)://
+  name = name.replace(/[?#].*$/, ''); // Remove query params and hash
+  name = name.replace(/[^a-zA-Z0-9]+/g, '_'); // Replace non-alphanumeric with underscore
+  return name || 'result'; // Ensure a non-empty filename
 }
 
 /**
- * Download search results in the requested format or as full JSON.
+ * Handles the download of search results in various formats (e.g., markdown, HTML, screenshots)
+ * or as a full JSON export. Results are zipped if multiple files are generated.
  *
- * @param type - Format name or 'Full JSON'
+ * @param type - The desired format for download (e.g., 'markdown', 'html', 'screenshot', 'Full JSON').
+ * @returns A Promise that resolves when the download process is complete.
  */
 async function handleDownload(type: string): Promise<void> {
   if (!results.value.length) {
+    // If no results are available, do nothing.
     return;
   }
 
   if (type === 'Full JSON') {
+    // Handle full JSON download separately as it's a single file.
     const blob = new Blob([JSON.stringify(results.value, null, 2)], {
       type: 'application/json',
     });
@@ -256,11 +304,13 @@ async function handleDownload(type: string): Promise<void> {
   }
 
   const zip = new JSZip();
-  const fetches: Promise<void>[] = [];
+  const fetches: Promise<void>[] = []; // Array to hold promises for async operations like screenshot fetches.
 
   results.value.forEach((page, index) => {
-    const base = sanitizeFilename(page.url || index.toString());
-    const prefix = (index + 1).toString().padStart(3, '0');
+    const base = sanitizeFilename(page.url || index.toString()); // Create a base filename from the URL or index.
+    const prefix = (index + 1).toString().padStart(3, '0'); // Add a numerical prefix for ordering.
+
+    // Add files to the zip archive based on the requested type.
     switch (type) {
       case 'markdown':
         if (page.markdown) {
@@ -283,25 +333,30 @@ async function handleDownload(type: string): Promise<void> {
         }
         break;
       case 'screenshot':
-      case 'screenshot@fullPage':
+      case 'screenshot@fullPage': // Both screenshot types are handled similarly for download.
         if (page.screenshot) {
+          // Fetch screenshot as a blob and add to zip.
           const p = axios.get(page.screenshot, { responseType: 'blob' }).then((res) => {
             zip.file(`${prefix}-${base}.png`, res.data);
           });
-          fetches.push(p);
+          fetches.push(p); // Add the promise to the fetches array.
         }
         break;
       default:
+        // Do nothing for unsupported types.
         break;
     }
   });
 
+  // Wait for all asynchronous fetches (e.g., screenshots) to complete.
   await Promise.all(fetches);
+  // Generate the zip file and trigger download.
   const blob = await zip.generateAsync({ type: 'blob' });
   saveAs(blob, `search-${type}-archive.zip`);
 }
 </script>
 
+<!-- Scoped styles for the SearchView component -->
 <style scoped>
 .search-view {
   max-width: 600px;

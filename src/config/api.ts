@@ -21,7 +21,7 @@ const getApiKey = () => {
   return localStorage.getItem('firecrawl_api_key') || import.meta.env.VITE_FIRECRAWL_API_KEY || '';
 };
 
-// Create the API configuration
+// Initializes the API configuration with base URL, API key, and default headers.
 const apiConfig = new Configuration({
   basePath: getBaseUrl(),
   apiKey: getApiKey,
@@ -31,6 +31,9 @@ const apiConfig = new Configuration({
     },
   },
 });
+
+// Dynamically adds the Authorization header if an API key is available.
+// This ensures that authenticated requests are properly handled.
 
 // Dynamically add the Authorization header if an API key is available
 const apiKey = getApiKey();

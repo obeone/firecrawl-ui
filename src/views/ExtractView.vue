@@ -74,14 +74,14 @@ if (!api?.extraction) {
   throw new Error('Extraction API is not available');
 }
 
-const urlInput = ref('');
-const promptInput = ref('');
-const schemaString = ref('');
-const options = ref({ enableWebSearch: false, showSources: false });
-const loading = ref(false);
-const error = ref('');
-const result = ref<ExtractResponse['data'] | null>(null);
-const schemaError = ref<string | null>(null);
+const urlInput = ref(''); // Stores the URLs entered by the user.
+const promptInput = ref(''); // Stores the prompt for data extraction.
+const schemaString = ref(''); // Stores the JSON schema string provided by the user.
+const options = ref({ enableWebSearch: false, showSources: false }); // Stores extraction options.
+const loading = ref(false); // Indicates if an extraction request is in progress.
+const error = ref(''); // Stores any error messages from the extraction process.
+const result = ref<ExtractResponse['data'] | null>(null); // Stores the successful extraction result.
+const schemaError = ref<string | null>(null); // Stores error messages related to JSON schema parsing.
 
 /**
  * Parse the schema string. If invalid, schemaError will contain the message.

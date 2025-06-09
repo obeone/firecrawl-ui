@@ -1,5 +1,5 @@
 <template>
-  <div class="page-container">
+  <div class="api-config-view">
     <h1>API Configuration</h1>
     <p>A valid API key is required to use Firecrawl.</p>
     <ApiKeyInput />
@@ -27,6 +27,9 @@ export default defineComponent({
   setup() {
     const router = useRouter();
 
+    /**
+     * Handles the continue action, navigating the user to the home page.
+     */
     const handleContinue = () => {
       router.push({ name: 'home' });
     };

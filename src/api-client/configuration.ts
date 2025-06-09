@@ -12,21 +12,45 @@
  */
 
 export interface ConfigurationParameters {
+  /**
+   * API key for authentication. Can be a string, a promise resolving to a string, or a function returning a string or a promise.
+   */
   apiKey?:
     | string
     | Promise<string>
     | ((name: string) => string)
     | ((name: string) => Promise<string>);
+  /**
+   * Username for basic authentication.
+   */
   username?: string;
+  /**
+   * Password for basic authentication.
+   */
   password?: string;
+  /**
+   * Access token for OAuth2 authentication. Can be a string, a promise resolving to a string, or a function returning a string or a promise.
+   */
   accessToken?:
     | string
     | Promise<string>
     | ((name?: string, scopes?: string[]) => string)
     | ((name?: string, scopes?: string[]) => Promise<string>);
+  /**
+   * Base path for the API. Overrides the default server URL.
+   */
   basePath?: string;
+  /**
+   * Index of the server to use from the OpenAPI document's server list.
+   */
   serverIndex?: number;
+  /**
+   * Base options for HTTP requests, typically for Axios.
+   */
   baseOptions?: any;
+  /**
+   * The FormData constructor to use for multipart form data requests.
+   */
   formDataCtor?: new () => any;
 }
 
@@ -102,6 +126,10 @@ export class Configuration {
    */
   formDataCtor?: new () => any;
 
+  /**
+   * Creates an instance of Configuration.
+   * @param param - Configuration parameters to initialize the client.
+   */
   constructor(param: ConfigurationParameters = {}) {
     this.apiKey = param.apiKey;
     this.username = param.username;

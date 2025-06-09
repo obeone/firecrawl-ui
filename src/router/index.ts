@@ -14,43 +14,42 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: HomeView,
+      component: HomeView, // Route for the application's home page.
     },
     {
       path: '/scrape',
       name: 'scrape',
-      component: ScrapeView,
+      component: ScrapeView, // Route for the web scraping functionality.
     },
     {
       path: '/crawl',
       name: 'crawl',
-      component: CrawlView,
+      component: CrawlView, // Route for the web crawling functionality.
     },
     {
       path: '/api-config',
-      name: 'ApiConfig',
+      name: 'api-config', // Route for API configuration settings.
       component: ApiConfigView,
     },
     {
-      // Add the route for ExtractView
       path: '/extract',
       name: 'extract',
-      component: ExtractView,
+      component: ExtractView, // Route for the data extraction view.
     },
     {
       path: '/map',
       name: 'map',
-      component: MapView,
+      component: MapView, // Route for displaying the map view.
     },
     {
       path: '/search',
       name: 'search',
-      component: SearchView,
+      component: SearchView, // Route for the search functionality view.
     },
     {
       path: '/about',
       name: 'about',
-      component: AboutView,
+      component: AboutView, // Route for the about page.
     },
   ],
 });

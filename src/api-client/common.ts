@@ -17,15 +17,17 @@ import type { AxiosInstance, AxiosResponse } from 'axios';
 import { RequiredError } from './base.js';
 
 /**
- *
- * @export
+ * @internal
  */
 export const DUMMY_BASE_URL = 'https://example.com';
 
 /**
+ * Asserts that a parameter exists and is not null or undefined.
  *
- * @throws {RequiredError}
- * @export
+ * @param functionName The name of the function being called.
+ * @param paramName The name of the parameter being checked.
+ * @param paramValue The value of the parameter.
+ * @throws {RequiredError} If the parameter value is null or undefined.
  */
 export const assertParamExists = function (
   functionName: string,
@@ -41,8 +43,11 @@ export const assertParamExists = function (
 };
 
 /**
+ * Sets an API key on the provided object.
  *
- * @export
+ * @param object The object to set the API key on.
+ * @param keyParamName The name of the key parameter.
+ * @param configuration An optional configuration object.
  */
 export const setApiKeyToObject = async function (
   object: any,
@@ -59,8 +64,10 @@ export const setApiKeyToObject = async function (
 };
 
 /**
+ * Sets basic authentication credentials on the provided object.
  *
- * @export
+ * @param object The object to set the basic auth on.
+ * @param configuration An optional configuration object.
  */
 export const setBasicAuthToObject = function (object: any, configuration?: Configuration) {
   if (configuration && (configuration.username || configuration.password)) {
@@ -72,8 +79,10 @@ export const setBasicAuthToObject = function (object: any, configuration?: Confi
 };
 
 /**
+ * Sets bearer token authentication on the provided object.
  *
- * @export
+ * @param object The object to set the bearer auth on.
+ * @param configuration An optional configuration object.
  */
 export const setBearerAuthToObject = async function (object: any, configuration?: Configuration) {
   if (configuration && configuration.accessToken) {
@@ -86,8 +95,12 @@ export const setBearerAuthToObject = async function (object: any, configuration?
 };
 
 /**
+ * Sets OAuth2 authentication on the provided object.
  *
- * @export
+ * @param object The object to set the OAuth on.
+ * @param name The name of the OAuth.
+ * @param scopes The scopes of the OAuth.
+ * @param configuration An optional configuration object.
  */
 export const setOAuthToObject = async function (
   object: any,
@@ -104,6 +117,15 @@ export const setOAuthToObject = async function (
   }
 };
 
+/**
+ * Recursively flattens an object into URL search parameters.
+ * This function is used internally to handle complex query parameters.
+ *
+ * @internal
+ * @param urlSearchParams The URLSearchParams object to append parameters to.
+ * @param parameter The parameter to flatten.
+ * @param key The current key prefix for nested parameters.
+ */
 function setFlattenedQueryParams(
   urlSearchParams: URLSearchParams,
   parameter: any,
@@ -132,8 +154,10 @@ function setFlattenedQueryParams(
 }
 
 /**
+ * Sets search parameters on a given URL.
  *
- * @export
+ * @param url The URL to set the search params on.
+ * @param objects The objects to serialize as search params.
  */
 export const setSearchParams = function (url: URL, ...objects: any[]) {
   const searchParams = new URLSearchParams(url.search);
@@ -142,8 +166,11 @@ export const setSearchParams = function (url: URL, ...objects: any[]) {
 };
 
 /**
+ * Serializes data if needed based on content type and configuration.
  *
- * @export
+ * @param value The value to serialize.
+ * @param requestOptions The request options.
+ * @param configuration An optional configuration object.
  */
 export const serializeDataIfNeeded = function (
   value: any,
@@ -159,16 +186,21 @@ export const serializeDataIfNeeded = function (
 };
 
 /**
+ * Converts a URL object to a path string (pathname + search + hash).
  *
- * @export
+ * @param url The URL to convert to a path string.
  */
 export const toPathString = function (url: URL) {
   return url.pathname + url.search + url.hash;
 };
 
 /**
+ * Creates a request function for Axios.
  *
- * @export
+ * @param axiosArgs The Axios arguments.
+ * @param globalAxios The global Axios instance.
+ * @param BASE_PATH The base path.
+ * @param configuration An optional configuration object.
  */
 export const createRequestFunction = function (
   axiosArgs: RequestArgs,

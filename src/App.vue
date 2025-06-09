@@ -5,7 +5,7 @@ import { RouterLink } from 'vue-router';
 const isMenuOpen = ref(false);
 
 /**
- * Toggle the sidebar visibility on small screens.
+ * Toggles the visibility of the sidebar menu on small screens.
  */
 function toggleMenu(): void {
   isMenuOpen.value = !isMenuOpen.value;
@@ -35,14 +35,11 @@ function toggleMenu(): void {
 </template>
 
 <style>
-/* Removes old unnecessary global styles */
+/* Global styles for the #app element */
 #app {
-  /* Keeps fonts and antialiasing if necessary, but the structure is managed by app-layout */
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* text-align and margin-top are removed because they are managed by the new layout */
-  /* color is inherited or set in base.css */
 }
 
 .app-layout {
@@ -51,68 +48,68 @@ function toggleMenu(): void {
 }
 
 .sidebar {
-  width: 220px; /* Fixed width for the sidebar */
-  background-color: var(--color-background-soft); /* Slightly different background color */
+  width: 220px; /* Fixed width */
+  background-color: var(--color-background-soft); /* Soft background color */
   padding: 1.5rem 1rem;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--color-border); /* Adds a thin border */
+  border-right: 1px solid var(--color-border); /* Right border */
 }
 
 .sidebar .logo {
   display: block;
-  margin: 0 auto 2rem; /* Centers the logo and adds spacing below */
-  width: 80px; /* Adjusted size */
+  margin: 0 auto 2rem; /* Center logo and add bottom margin */
+  width: 80px;
   height: 80px;
 }
 
 .sidebar nav {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem; /* Spacing between links */
+  gap: 0.5rem; /* Spacing between navigation links */
 }
 
 .sidebar nav a {
-  display: block; /* Ensures padding and background are applied correctly */
+  display: block;
   padding: 0.6rem 1rem;
-  border-radius: 6px; /* Rounded corners */
-  color: var(--color-text); /* Use the CSS variable for text color */
+  border-radius: 6px; /* Rounded corners for links */
+  color: var(--color-text); /* Text color from CSS variable */
   text-decoration: none;
-  font-weight: 500; /* Slightly less bold than 'bold' */
+  font-weight: 500;
   transition:
     background-color 0.2s ease-in-out,
     color 0.2s ease-in-out;
 }
 
 .sidebar nav a:hover {
-  background-color: var(--color-background-mute); /* Light background on hover */
+  background-color: var(--color-background-mute); /* Hover background color */
 }
 
 .sidebar nav a.router-link-exact-active {
-  background-color: hsla(160, 100%, 37%, 0.2); /* Uses the existing accent color as background */
-  color: hsla(160, 100%, 37%, 1); /* Accent color for the text */
-  font-weight: 600; /* Slightly more pronounced for the active link */
+  background-color: hsla(160, 100%, 37%, 0.2); /* Active link background */
+  color: hsla(160, 100%, 37%, 1); /* Active link text color */
+  font-weight: 600;
 }
 
 .menu-button {
-  display: none;
+  display: none; /* Hidden by default on larger screens */
   background: none;
   border: none;
   font-size: 1.5rem;
   padding: 0.5rem;
   cursor: pointer;
-  color: var(--color-heading); /* Visible in both light and dark modes */
+  color: var(--color-heading); /* Button color */
 }
 
 main {
-  flex-grow: 1; /* Takes up all remaining space */
-  padding: 2rem; /* Inner margin for content */
-  overflow-y: auto; /* Adds a scrollbar if content overflows */
-  background-color: var(--color-background); /* Main background */
+  flex-grow: 1; /* Occupy remaining space */
+  padding: 2rem; /* Inner padding for content */
+  overflow-y: auto; /* Enable vertical scrolling for overflow */
+  background-color: var(--color-background); /* Main content background */
 }
 
-/* Removes @media styles specific to the old header */
-/* @media (min-width: 1024px) { ... } */
+/* Media queries for responsive layout */
+/* @media (min-width: 1024px) { ... } - Removed old header specific styles */
 
 @media (max-width: 768px) {
   .app-layout {

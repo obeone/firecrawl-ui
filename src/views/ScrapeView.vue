@@ -9,13 +9,6 @@
       </div>
 
       <div class="form-group">
-        <label>
-          <input type="checkbox" v-model="formData.scrapeOptions.onlyMainContent" />
-          Only Main Content
-        </label>
-      </div>
-
-      <div class="form-group">
         <label for="formats">Output Formats:</label>
         <select id="formats" v-model="formData.scrapeOptions.formats" multiple>
           <option value="markdown">Markdown</option>
@@ -237,7 +230,19 @@ import {
 
 type ScrapeResult = ScrapeResponse;
 
-// Define interfaces for the reactive formData structure (can differ from API request structure for UI organization)
+/**
+ * @typedef {object} FormDataPageOptions
+ * @property {number} [waitFor] - Delay before fetching content in milliseconds.
+ * @property {boolean} [mobile] - Emulate mobile device.
+ * @property {boolean} [skipTlsVerification] - Skip TLS verification.
+ * @property {number} [timeout] - Page request timeout in milliseconds.
+ * @property {boolean} [blockAds] - Block ads and popups.
+ * @property {boolean} [removeBase64Images] - Remove Base64 encoded images.
+ * @property {'basic' | 'stealth' | ''} [proxy] - Proxy type for the request ('basic', 'stealth', or empty for auto).
+ * @property {Record<string, string>} [headers] - HTTP headers as a JSON object.
+ * @property {string} [action] - HTTP method for the request (e.g., 'GET', 'POST').
+ * @property {string} [location] - Request location (e.g., 'US', 'EU', 'ASIA').
+ */
 interface FormDataPageOptions {
   waitFor?: number;
   mobile?: boolean;
@@ -245,87 +250,149 @@ interface FormDataPageOptions {
   timeout?: number;
   blockAds?: boolean;
   removeBase64Images?: boolean;
-  proxy?: string | 'basic' | 'stealth';
+  proxy?: 'basic' | 'stealth' | '';
   headers?: Record<string, string>;
   action?: string;
   location?: string;
 }
 
+/**
+ * @typedef {object} FormDataScrapeOptions
+ * @property {string[]} formats - Array of output formats (e.g., "json", "markdown").
+ * @property {boolean} [onlyMainContent] - Scrape only the main content, excluding headers, footers, etc.
+ * @property {string} [includeTags] - Comma-separated list of HTML tags to include.
+ * @property {string} [excludeTags] - Comma-separated list of HTML tags to exclude.
+ */
 interface FormDataScrapeOptions {
-  formats: string[]; // Accept string values like "json", "markdown", etc.
+  formats: string[];
   onlyMainContent?: boolean;
   includeTags?: string;
   excludeTags?: string;
 }
 
-interface FormDataExtractorOptions extends Partial<ScrapeAndExtractFromUrlRequestExtract> {
-  // Add specific fields if needed for UI binding, otherwise Partial is fine
+/**
+ * @typedef {object} FormDataExtractorOptions
+ * @extends Partial<ScrapeAndExtractFromUrlRequestExtract>
+ * @description Extractor options for JSON format, extending the API request structure.
+ */
+interface FormDataExtractorOptions extends Partial<ScrapeAndExtractFromUrlRequestExtract> {}
+
+/**
+ * @typedef {object} FormDataChangeTrackingOptions
+ * @property {number} threshold - Minimum percentage change to trigger tracking.
+ * @property {number} frequency - Frequency in minutes to check for changes.
+ */
+interface FormDataChangeTrackingOptions {
+  threshold: number;
+  frequency: number;
 }
 
+/**
+ * @typedef {object} FormData
+ * @property {string} url - The URL to scrape.
+ * @property {FormDataPageOptions} pageOptions - Options related to page loading and network requests.
+ * @property {FormDataScrapeOptions} scrapeOptions - Options related to content scraping.
+ * @property {FormDataExtractorOptions} [extractorOptions] - Options for data extraction when 'json' format is selected.
+ * @property {FormDataChangeTrackingOptions} changeTrackingOptions - Options for change tracking.
+ */
 interface FormData {
   url: string;
   pageOptions: FormDataPageOptions;
   scrapeOptions: FormDataScrapeOptions;
-  extractorOptions?: FormDataExtractorOptions; // Added extractorOptions for JSON format
+  extractorOptions?: FormDataExtractorOptions;
   changeTrackingOptions: FormDataChangeTrackingOptions;
 }
 
-interface FormDataChangeTrackingOptions {
-  threshold: number; // percentage threshold for change detection
-  frequency: number; // frequency in minutes to check for changes
-}
-
 /**
- * Component for scraping a single URL with advanced options.
- *
- * @returns Component options for the scraping view.
+ * ScrapeView component for configuring and initiating web scraping requests.
+ * Allows users to specify a URL, output formats, and various advanced options
+ * for page loading, content filtering, data extraction, and change tracking.
  */
 export default defineComponent({
   name: 'ScrapeView',
+  /**
+   * Setup function for the ScrapeView component.
+   * Initializes reactive data, handles form submission, and manages API interactions.
+   * @returns {object} Reactive properties and methods for the component.
+   */
   setup() {
     const router = useRouter();
+    // Inject the API client for scraping operations.
     const api = inject('api') as { scraping: ScrapingApi };
 
-    // Initialize formData with nested structure and default values
+    /**
+     * Reactive form data for scrape configuration.
+     * @type {Ref<FormData>}
+     */
     const formData = ref<FormData>({
       url: '',
       pageOptions: {
-        waitFor: undefined, // Use undefined for optional numbers initially
+        waitFor: undefined,
         mobile: false,
         skipTlsVerification: false,
-        timeout: undefined, // Default is 30000ms in API, let API handle default if undefined
-        blockAds: true, // Default from docs
-        removeBase64Images: true, // Default from docs
-        proxy: '', // Default to Auto/empty string
+        timeout: undefined,
+        blockAds: true,
+        removeBase64Images: true,
+        proxy: '',
         headers: {},
-        action: 'GET',
+        action: 'GET', // Default HTTP action
         location: '',
       },
       scrapeOptions: {
-        onlyMainContent: true, // Default from docs
-        formats: [ScrapeAndExtractFromUrlRequestFormatsEnum.Markdown], // Default format
+        onlyMainContent: true,
+        formats: [ScrapeAndExtractFromUrlRequestFormatsEnum.Markdown],
         includeTags: '',
         excludeTags: '',
       },
-      extractorOptions: {}, // Added extractorOptions initial empty object
+      extractorOptions: {},
       changeTrackingOptions: {
-        threshold: 10, // default threshold percentage
-        frequency: 60, // default frequency in minutes
+        threshold: 10,
+        frequency: 60,
       },
     });
 
-    // State for collapsible sections
+    /**
+     * Reactive state for collapsing/expanding scrape options section.
+     * @type {Ref<boolean>}
+     */
     const isScrapeOptionsCollapsed = ref(true);
+    /**
+     * Reactive state for collapsing/expanding page options section.
+     * @type {Ref<boolean>}
+     */
     const isPageOptionsCollapsed = ref(true);
 
+    /**
+     * Reactive state indicating if a request is in progress.
+     * @type {Ref<boolean>}
+     */
     const loading = ref(false);
+    /**
+     * Reactive state for displaying error messages.
+     * @type {Ref<string>}
+     */
     const error = ref('');
+    /**
+     * Reactive state for storing the scrape result.
+     * @type {Ref<ScrapeResult | null>}
+     */
     const result = ref<ScrapeResult | null>(null);
+
+    /**
+     * Computed property to determine available download formats based on selected scrape formats.
+     * Ensures 'json' is always an option if results are present.
+     * @returns {string[]} Array of unique download formats.
+     */
     const downloadFormats = computed(() =>
       Array.from(new Set(['json', ...formData.value.scrapeOptions.formats])),
     );
 
-    const isValidUrl = (url: string) => {
+    /**
+     * Validates if a given string is a well-formed URL.
+     * @param {string} url - The URL string to validate.
+     * @returns {boolean} True if the URL is valid, false otherwise.
+     */
+    const isValidUrl = (url: string): boolean => {
       try {
         new URL(url);
         return true;
@@ -334,9 +401,15 @@ export default defineComponent({
       }
     };
 
-    const handleSubmit = async () => {
+    /**
+     * Handles the form submission for initiating a scrape request.
+     * Validates input, constructs the API payload, and handles API response or errors.
+     * @async
+     * @returns {Promise<void>}
+     */
+    const handleSubmit = async (): Promise<void> => {
       if (!isValidUrl(formData.value.url)) {
-        error.value = 'Please enter a valid URL (e.g. https://example.com)';
+        error.value = 'Please enter a valid URL (e.g., https://example.com)';
         return;
       }
 
@@ -344,32 +417,32 @@ export default defineComponent({
         !formData.value.scrapeOptions.formats ||
         formData.value.scrapeOptions.formats.length === 0
       ) {
-        error.value = 'Please select at least one output format';
+        error.value = 'Please select at least one output format.';
         return;
       }
 
-      // Construct the request payload matching the ScrapeAndExtractFromUrlRequest interface
+      // Construct the request payload matching the ScrapeAndExtractFromUrlRequest interface.
       const requestPayload: ScrapeAndExtractFromUrlRequest = {
         url: formData.value.url,
         ...(formData.value.pageOptions.waitFor !== undefined &&
           formData.value.pageOptions.waitFor > 0 && {
             waitFor: formData.value.pageOptions.waitFor,
           }),
-        ...(formData.value.pageOptions.mobile === true && { mobile: true }), // Default is false
+        ...(formData.value.pageOptions.mobile === true && { mobile: true }),
         ...(formData.value.pageOptions.skipTlsVerification === true && {
           skipTlsVerification: true,
-        }), // Default is false
+        }),
         ...(formData.value.pageOptions.timeout !== undefined &&
           formData.value.pageOptions.timeout > 0 &&
           formData.value.pageOptions.timeout !== 30000 && {
             timeout: formData.value.pageOptions.timeout,
-          }), // Default is 30000
+          }),
         ...(formData.value.pageOptions.blockAds === false && {
           blockAds: false,
-        }), // Default is true
+        }),
         ...(formData.value.pageOptions.removeBase64Images === false && {
           removeBase64Images: false,
-        }), // Default is true
+        }),
         ...(formData.value.pageOptions.proxy &&
           formData.value.pageOptions.proxy !== '' && {
             proxy: formData.value.pageOptions.proxy as 'basic' | 'stealth',
@@ -378,18 +451,17 @@ export default defineComponent({
           Object.keys(formData.value.pageOptions.headers).length > 0 && {
             headers: formData.value.pageOptions.headers,
           }),
-        // Removed incorrect mapping of HTTP action to API actions
         ...(formData.value.pageOptions.location &&
           formData.value.pageOptions.location !== '' && {
             location: { country: formData.value.pageOptions.location },
-          }), // Map location string to Location object with 'country' property
+          }),
 
-        // Include scrapeOptions properties directly
+        // Include scrapeOptions properties directly.
         formats: formData.value.scrapeOptions
           .formats as unknown as ScrapeAndExtractFromUrlRequestFormatsEnum[],
         ...(formData.value.scrapeOptions.onlyMainContent === false && {
           onlyMainContent: false,
-        }), // Default is true
+        }),
         ...(formData.value.scrapeOptions.includeTags &&
           formData.value.scrapeOptions.includeTags.trim() !== '' && {
             includeTags: formData.value.scrapeOptions.includeTags
@@ -405,7 +477,7 @@ export default defineComponent({
               .filter((tag) => tag !== ''),
           }),
 
-        // Include extractorOptions and changeTrackingOptions directly if they exist
+        // Include extractorOptions and changeTrackingOptions if applicable.
         ...(formData.value.scrapeOptions.formats.includes(
           ScrapeAndExtractFromUrlRequestFormatsEnum.Extract,
         ) &&
@@ -421,16 +493,10 @@ export default defineComponent({
         }),
       };
 
-      // Clean up potentially empty nested objects if they were structured differently before
-      // (Not strictly necessary with the direct property approach above, but good practice if objects were used)
-      // Example: if (requestPayload.pageOptions && Object.keys(requestPayload.pageOptions).length === 0) {
-      //   delete requestPayload.pageOptions;
-      // }
-
       try {
         loading.value = true;
         error.value = '';
-        console.log('Sending scrape request:', JSON.stringify(requestPayload, null, 2)); // Log payload for debugging
+        console.log('Sending scrape request:', JSON.stringify(requestPayload, null, 2));
         const response = await api.scraping.scrapeAndExtractFromUrl(requestPayload);
         result.value = response.data;
       } catch (err: unknown) {
@@ -445,16 +511,23 @@ export default defineComponent({
               ? 'Network connection failed'
               : err.message;
         } else {
-          error.value = 'An unexpected error occurred';
+          error.value = 'An unexpected error occurred.';
         }
       } finally {
         loading.value = false;
       }
     };
 
-    const downloadResult = (format: string) => {
+    /**
+     * Initiates the download of the scrape result in a specified format.
+     * Handles different content types (screenshot, markdown, HTML, JSON).
+     * @param {string} format - The desired format for download (e.g., 'json', 'markdown', 'screenshot').
+     * @returns {void}
+     */
+    const downloadResult = (format: string): void => {
       if (!result.value?.data) return;
 
+      // Map specific format names to their corresponding data keys in the result.
       const formatMap: Record<string, string> = {
         extract: 'llm_extraction',
         'screenshot@fullPage': 'screenshot',
@@ -466,6 +539,7 @@ export default defineComponent({
           ? result.value.data
           : result.value.data[key as keyof typeof result.value.data];
 
+      // Handle screenshot download separately as it's a data URL.
       if (format.startsWith('screenshot') && typeof data === 'string') {
         const link = document.createElement('a');
         link.href = data;
@@ -482,6 +556,7 @@ export default defineComponent({
       let extension = 'json';
       let contentStr = '';
 
+      // Determine MIME type and extension based on format.
       if (typeof data === 'string') {
         contentStr = data;
         if (format === 'markdown') {
@@ -495,9 +570,11 @@ export default defineComponent({
           extension = 'txt';
         }
       } else {
+        // Stringify JSON data for download.
         contentStr = JSON.stringify(data, null, 2);
       }
 
+      // Create a Blob and a download link for the content.
       const dataUri = `data:${mimeType};charset=utf-8,${encodeURIComponent(contentStr)}`;
       const link = document.createElement('a');
       link.setAttribute('href', dataUri);
@@ -507,30 +584,47 @@ export default defineComponent({
       document.body.removeChild(link);
     };
 
-    // JSON validation for extractorOptions textarea
+    /**
+     * Reactive variable for the JSON string of extractor options.
+     * @type {Ref<string>}
+     */
     const extractorOptionsJson = ref(
       JSON.stringify(formData.value.extractorOptions || {}, null, 2),
     );
+    /**
+     * Reactive variable for displaying extractor options JSON parsing errors.
+     * @type {Ref<string>}
+     */
     const extractorOptionsError = ref('');
 
+    /**
+     * Watcher for `extractorOptionsJson` to parse and update `formData.extractorOptions`.
+     * Provides real-time validation for JSON input.
+     */
     watch(extractorOptionsJson, (newVal) => {
       try {
         formData.value.extractorOptions = newVal ? JSON.parse(newVal) : {};
         extractorOptionsError.value = '';
       } catch (e) {
-        extractorOptionsError.value = 'Invalid JSON format';
+        extractorOptionsError.value = 'Invalid JSON format.';
       }
     });
 
-    // JSON string for headers textarea binding
+    /**
+     * Reactive variable for the JSON string of HTTP headers.
+     * @type {Ref<string>}
+     */
     const headersJson = ref(JSON.stringify(formData.value.pageOptions.headers || {}, null, 2));
 
-    // Watch headersJson and update formData.pageOptions.headers accordingly
+    /**
+     * Watcher for `headersJson` to parse and update `formData.pageOptions.headers`.
+     * Silently ignores parsing errors to prevent breaking user input while typing.
+     */
     watch(headersJson, (newVal) => {
       try {
         formData.value.pageOptions.headers = newVal ? JSON.parse(newVal) : {};
       } catch {
-        // Ignore JSON parse errors, keep previous headers
+        // Ignore JSON parse errors, keep previous headers to avoid disrupting user input.
       }
     });
 
@@ -545,7 +639,7 @@ export default defineComponent({
       downloadFormats,
       extractorOptionsJson,
       extractorOptionsError,
-      ScrapeAndExtractFromUrlRequestFormatsEnum, // Expose enum for template
+      ScrapeAndExtractFromUrlRequestFormatsEnum,
       isScrapeOptionsCollapsed,
       isPageOptionsCollapsed,
     };

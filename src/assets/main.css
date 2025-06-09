@@ -1,56 +1,63 @@
 @import './base.css';
 
-/* Styles for #app (lines 3-8) removed as they are managed by .app-layout in App.vue */
-
-/* General styles for commented-out links to avoid conflicts with the sidebar. */
-/* If a global link style is required for the main content, redefine it here with lower specificity. */
-/*
-a,
-.green {
-  text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
+/* CSS Custom Properties (Variables) */
+/* Defines reusable values for colors, gradients, and shadows across the stylesheet. */
+:root {
+  --color-background-dark: #232323;
+  --color-background-darker: #181818;
+  --color-text-light: #f3f3f3;
+  --color-text-medium: #e0e0e0;
+  --color-text-helper: #888;
+  --color-text-label: #b0b0b0;
+  --color-primary-green: #4fc08d;
+  --color-secondary-teal: #2c7a7b;
+  --color-white: #fff;
+  --border-color-default: #444;
+  --box-shadow-container: 0 4px 32px 0 rgba(0, 0, 0, 0.25);
+  --box-shadow-button: 0 2px 8px 0 rgba(79, 192, 141, 0.1);
+  --gradient-button: linear-gradient(
+    90deg,
+    var(--color-primary-green) 60%,
+    var(--color-secondary-teal) 100%
+  );
+  --gradient-button-hover: linear-gradient(
+    90deg,
+    var(--color-secondary-teal) 60%,
+    var(--color-primary-green) 100%
+  );
 }
 
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
-}
-*/
-
-/* @media (min-width: 1024px) styles (lines 24-35) removed as they are obsolete with the new structure */
-
-/* --- General Page Container Style --- */
-/* Used across views for consistent layout */
+/* General Page Container Style */
+/* Used across views for consistent layout and styling of main content areas. */
 .scrape-config-container,
 .page-container {
-  background: #232323;
+  background: var(--color-background-dark);
   border-radius: 18px;
-  box-shadow: 0 4px 32px 0 rgba(0, 0, 0, 0.25);
+  box-shadow: var(--box-shadow-container);
   padding: 2.5rem 3rem;
   max-width: 600px;
   margin: 2.5rem auto;
-  color: #f3f3f3;
+  color: var(--color-text-light);
   display: flex;
   flex-direction: column;
   gap: 2rem;
 }
 
+/* Heading styles within page containers */
 .scrape-config-container h1,
 .scrape-config-container h2,
 .page-container h1,
 .page-container h2 {
-  color: #e0e0e0;
+  color: var(--color-text-medium);
   font-weight: 600;
   margin-bottom: 1rem;
   letter-spacing: 0.5px;
 }
 
+/* Form specific styles within scrape-config-form */
 .scrape-config-form label {
   font-size: 1.1rem;
-  color: #b0b0b0;
+  color: var(--color-text-label);
   margin-bottom: 0.5rem;
   display: block;
 }
@@ -61,69 +68,75 @@ a,
   width: 100%;
   padding: 0.7rem 1rem;
   border-radius: 8px;
-  border: 1px solid #444;
-  background: #181818;
-  color: #f3f3f3;
+  border: 1px solid var(--border-color-default);
+  background: var(--color-background-darker);
+  color: var(--color-text-light);
   margin-bottom: 1.2rem;
   font-size: 1rem;
   transition: border 0.2s;
 }
 
+/* Focus states for form input elements */
 .scrape-config-form input[type='text']:focus,
 .scrape-config-form select:focus,
 .scrape-config-form textarea:focus {
-  border: 1.5px solid #4fc08d;
+  border: 1.5px solid var(--color-primary-green);
   outline: none;
 }
 
+/* Styles for checkboxes within forms */
 .scrape-config-form input[type='checkbox'] {
-  accent-color: #4fc08d;
+  accent-color: var(--color-primary-green);
   width: 1.1em;
   height: 1.1em;
   margin-right: 0.5em;
 }
 
+/* Section title styling within forms */
 .scrape-config-form .section-title {
   font-size: 1.15rem;
-  color: #4fc08d;
+  color: var(--color-primary-green);
   margin: 1.5rem 0 0.7rem 0;
   font-weight: 500;
   letter-spacing: 0.2px;
 }
 
+/* Helper text styling within forms */
 .scrape-config-form .helper-text {
-  color: #888;
+  color: var(--color-text-helper);
   font-size: 0.95rem;
   margin-bottom: 1.2rem;
 }
 
+/* Button styles for forms */
 .scrape-config-form button,
 .scrape-config-form input[type='submit'] {
-  background: linear-gradient(90deg, #4fc08d 60%, #2c7a7b 100%);
-  color: #fff;
+  background: var(--gradient-button);
+  color: var(--color-white);
   border: none;
   border-radius: 8px;
   padding: 0.8rem 2.2rem;
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 2px 8px 0 rgba(79, 192, 141, 0.1);
+  box-shadow: var(--box-shadow-button);
   transition:
     background 0.2s,
     transform 0.1s;
   margin-top: 1.5rem;
 }
 
+/* Primary button styles, often used for main actions */
 .primary-button {
-  background: linear-gradient(90deg, #4fc08d 60%, #2c7a7b 100%);
-  color: #fff;
+  background: var(--gradient-button);
+  color: var(--color-white);
   border: none;
   border-radius: 8px;
   padding: 0.8rem 2.2rem;
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 2px 8px 0 rgba(79, 192, 141, 0.1);
+  box-shadow: var(--box-shadow-button);
   transition:
     background 0.2s,
     transform 0.1s;
@@ -132,17 +145,20 @@ a,
   margin-top: 1.5rem;
 }
 
+/* Hover states for primary button */
 .primary-button:hover {
-  background: linear-gradient(90deg, #2c7a7b 60%, #4fc08d 100%);
+  background: var(--gradient-button-hover);
   transform: translateY(-2px) scale(1.03);
 }
 
+/* Hover states for form buttons */
 .scrape-config-form button:hover,
 .scrape-config-form input[type='submit']:hover {
-  background: linear-gradient(90deg, #2c7a7b 60%, #4fc08d 100%);
+  background: var(--gradient-button-hover);
   transform: translateY(-2px) scale(1.03);
 }
 
+/* Media queries for responsiveness */
 @media (max-width: 700px) {
   .scrape-config-container,
   .page-container {

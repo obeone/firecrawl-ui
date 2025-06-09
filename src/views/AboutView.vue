@@ -45,10 +45,12 @@
 import { defineComponent } from 'vue';
 
 /**
- * AboutView
- * Displays information about the project with a modern style.
+ * @file src/views/AboutView.vue
+ * @brief This component displays comprehensive information about the Firecrawl UI application.
  *
- * @returns Component options for the about view.
+ * It outlines the project's mission, highlights its core capabilities (such as scraping, crawling,
+ * AI extraction, URL mapping, and search), and provides guidance on how users can contribute.
+ * The view is designed with a modern aesthetic to enhance readability and user engagement.
  */
 export default defineComponent({
   name: 'AboutView',

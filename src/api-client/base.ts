@@ -17,6 +17,12 @@ import type { Configuration } from './configuration.js';
 import type { AxiosPromise, AxiosInstance, RawAxiosRequestConfig } from 'axios';
 import globalAxios from 'axios';
 
+/**
+ * The base path for the API.
+ *
+ * **Suggestion**: Consider making this configurable via an environment variable or configuration file.
+ * @export
+ */
 export const BASE_PATH = 'http://docker.internal.snapp.fr:8003/v1'.replace(/\/+$/, '');
 
 /**
@@ -31,7 +37,6 @@ export const COLLECTION_FORMATS = {
 };
 
 /**
- *
  * @export
  * @interface RequestArgs
  */
@@ -41,7 +46,6 @@ export interface RequestArgs {
 }
 
 /**
- *
  * @export
  * @class BaseAPI
  */
@@ -61,7 +65,6 @@ export class BaseAPI {
 }
 
 /**
- *
  * @export
  * @class RequiredError
  * @extends {Error}
@@ -76,6 +79,9 @@ export class RequiredError extends Error {
   }
 }
 
+/**
+ * Interface for server mapping
+ */
 interface ServerMap {
   [key: string]: {
     url: string;
@@ -84,7 +90,6 @@ interface ServerMap {
 }
 
 /**
- *
  * @export
  */
 export const operationServerMap: ServerMap = {};
