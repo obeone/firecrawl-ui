@@ -587,7 +587,8 @@ export default defineComponent({
     const webhookOptionsArrow = computed(() => (isWebhookOptionsCollapsed.value ? '▶' : '▼'));
 
     /**
-     * Parse the includes input string into an array for the API payload.
+     * Parses a comma-separated string of regex patterns from the includes input
+     * and updates the formData.crawlerOptions.includes array.
      */
     const parseIncludes = () => {
       formData.value.crawlerOptions.includes = includesInput.value
@@ -597,7 +598,8 @@ export default defineComponent({
     };
 
     /**
-     * Parse the excludes input string into an array for the API payload.
+     * Parses a comma-separated string of regex patterns from the excludes input
+     * and updates the formData.crawlerOptions.excludes array.
      */
     const parseExcludes = () => {
       formData.value.crawlerOptions.excludes = excludesInput.value
@@ -607,7 +609,8 @@ export default defineComponent({
     };
 
     /**
-     * Parse the includeTags input string into an array for the API payload.
+     * Parses a comma-separated string of CSS selectors from the includeTags input
+     * and updates the formData.scrapeOptions.includeTags array.
      */
     const parseIncludeTags = () => {
       formData.value.scrapeOptions.includeTags = includeTagsInput.value
@@ -617,7 +620,8 @@ export default defineComponent({
     };
 
     /**
-     * Parse the excludeTags input string into an array for the API payload.
+     * Parses a comma-separated string of CSS selectors from the excludeTags input
+     * and updates the formData.scrapeOptions.excludeTags array.
      */
     const parseExcludeTags = () => {
       formData.value.scrapeOptions.excludeTags = excludeTagsInput.value
@@ -626,26 +630,38 @@ export default defineComponent({
         .filter(Boolean);
     };
 
+    /**
+     * Parses the webhookHeadersInput string as JSON and updates
+     * formData.webhookOptions.headers. Sets an error message if parsing fails.
+     */
     const parseWebhookHeaders = () => {
       try {
         formData.value.webhookOptions.headers = webhookHeadersInput.value
           ? JSON.parse(webhookHeadersInput.value)
           : {};
-      } catch {
-        error.value = 'Invalid JSON for webhook headers';
+      } catch (e: any) {
+        error.value = `Invalid JSON for webhook headers: ${e.message}`;
       }
     };
 
+    /**
+     * Parses the webhookMetadataInput string as JSON and updates
+     * formData.webhookOptions.metadata. Sets an error message if parsing fails.
+     */
     const parseWebhookMetadata = () => {
       try {
         formData.value.webhookOptions.metadata = webhookMetadataInput.value
           ? JSON.parse(webhookMetadataInput.value)
           : {};
-      } catch {
-        error.value = 'Invalid JSON for webhook metadata';
+      } catch (e: any) {
+        error.value = `Invalid JSON for webhook metadata: ${e.message}`;
       }
     };
 
+    /**
+     * Parses a comma-separated string of languages from the locationLanguagesInput
+     * and updates the formData.scrapeOptions.location.languages array.
+     */
     const parseLocationLanguages = () => {
       formData.value.scrapeOptions.location = formData.value.scrapeOptions.location || {};
       formData.value.scrapeOptions.location.languages = locationLanguagesInput.value
@@ -654,17 +670,25 @@ export default defineComponent({
         .filter(Boolean);
     };
 
+    /**
+     * Parses the jsonOptionsSchemaInput string as JSON and updates
+     * formData.scrapeOptions.jsonOptions.schema. Sets an error message if parsing fails.
+     */
     const parseJsonOptionsSchema = () => {
       try {
         formData.value.scrapeOptions.jsonOptions = formData.value.scrapeOptions.jsonOptions || {};
         formData.value.scrapeOptions.jsonOptions.schema = jsonOptionsSchemaInput.value
           ? JSON.parse(jsonOptionsSchemaInput.value)
           : undefined;
-      } catch {
-        error.value = 'Invalid JSON for JSON schema';
+      } catch (e: any) {
+        error.value = `Invalid JSON for JSON schema: ${e.message}`;
       }
     };
 
+    /**
+     * Parses the changeTrackingSchemaInput string as JSON and updates
+     * formData.scrapeOptions.changeTrackingOptions.schema. Sets an error message if parsing fails.
+     */
     const parseChangeTrackingSchema = () => {
       try {
         formData.value.scrapeOptions.changeTrackingOptions =
@@ -672,11 +696,15 @@ export default defineComponent({
         formData.value.scrapeOptions.changeTrackingOptions.schema = changeTrackingSchemaInput.value
           ? JSON.parse(changeTrackingSchemaInput.value)
           : undefined;
-      } catch {
-        error.value = 'Invalid JSON for change tracking schema';
+      } catch (e: any) {
+        error.value = `Invalid JSON for change tracking schema: ${e.message}`;
       }
     };
 
+    /**
+     * Parses a comma-separated string of modes from the changeTrackingModesInput
+     * and updates the formData.scrapeOptions.changeTrackingOptions.modes array.
+     */
     const parseChangeTrackingModes = () => {
       formData.value.scrapeOptions.changeTrackingOptions =
         formData.value.scrapeOptions.changeTrackingOptions || {};
@@ -713,23 +741,25 @@ export default defineComponent({
     /**
      * Get the formats requested for the active crawl.
      * These are taken from the history entry for the current job ID.
+     * @returns {string[]} An array of active formats.
      */
-    const activeFormats = computed(() => {
+    const activeFormats = computed((): string[] => {
       if (result.value && result.value.id) {
         const historyItem = crawlHistory.value.find((c) => c.id === result.value.id);
         return historyItem?.scrapeOptions?.formats || [];
       }
-      return [] as string[];
+      return [];
     });
 
     /**
      * Get the formats requested for the selected crawl history item.
+     * @returns {string[]} An array of selected formats.
      */
-    const selectedFormats = computed(() => {
+    const selectedFormats = computed((): string[] => {
       if (selectedCrawl.value) {
         return selectedCrawl.value.scrapeOptions?.formats || [];
       }
-      return [] as string[];
+      return [];
     });
 
     /**
@@ -751,7 +781,7 @@ export default defineComponent({
     /**
      * Select a crawl from history and sync form fields.
      * Retrieves file names from the API instead of file content.
-     * @param id - The ID of the selected crawl.
+     * @param {string} id - The ID of the selected crawl.
      */
     const selectCrawl = async (id: string) => {
       selectedCrawlId.value = id;
@@ -762,7 +792,7 @@ export default defineComponent({
         // Fetch files for the selected crawl via the API
         const response = await api.crawling.getCrawlStatus(id);
         simulatedFiles.value =
-          response.data.data?.map((page, index) => {
+          response.data.data?.map((page: any, index: number) => {
             const base = sanitizeFilename(page.metadata?.sourceURL || page.url || index.toString());
             return `${index.toString().padStart(3, '0')}-${base}`;
           }) || [];
@@ -795,16 +825,16 @@ export default defineComponent({
 
     /**
      * Retrieve all pages for a crawl job, following pagination if necessary.
-     * @param jobId - The crawl job identifier.
-     * @returns Array of page data objects.
+     * @param {string} jobId - The crawl job identifier.
+     * @returns {Promise<any[]>} A promise that resolves to an array of page data objects.
      */
-    const fetchAllCrawlData = async (jobId: string) => {
+    const fetchAllCrawlData = async (jobId: string): Promise<any[]> => {
       const pages: any[] = [];
       let response = await api.crawling.getCrawlStatus(jobId);
       pages.push(...(response.data.data || []));
       let next = response.data.next;
       while (next) {
-        const nextResp = await api.crawling.axios.get(next);
+        const nextResp = await axios.get(next);
         pages.push(...(nextResp.data.data || []));
         next = nextResp.data.next;
       }
@@ -813,8 +843,9 @@ export default defineComponent({
 
     /**
      * Sanitize a URL so it can be safely used as part of a filename.
-     * @param url - The URL to sanitize.
-     * @returns A filename-safe string derived from the URL.
+     * Replaces protocol, query parameters, hash, and non-alphanumeric characters with underscores.
+     * @param {string} url - The URL to sanitize.
+     * @returns {string} A filename-safe string derived from the URL.
      */
     function sanitizeFilename(url: string): string {
       let name = url.replace(/^https?:\/\//, '');
@@ -824,14 +855,11 @@ export default defineComponent({
     }
 
     /**
-     * Handle download of crawl results.
-     * @param type - The type of download (e.g., 'Archive', 'Full JSON').
-     */
-    /**
-     * Handle download of crawl results.
+     * Handles the download of crawl results.
      * Calls the appropriate API endpoint based on the download type ('Archive' or 'Full JSON').
      * Creates a Blob from the response and triggers a file download.
-     * @param type - The type of download ('Archive' or 'Full JSON').
+     * @param {string} type - The type of download (e.g., 'markdown', 'html', 'Full JSON').
+     * @param {string} [jobIdParam] - Optional job ID to download specific crawl results from history.
      */
     const handleDownload = async (type: string, jobIdParam?: string) => {
       console.log(`Handling download of ${type}.`);
@@ -917,10 +945,10 @@ export default defineComponent({
 
     /**
      * Validate a URL string.
-     * @param url - The URL to validate.
-     * @returns True if valid, false otherwise.
+     * @param {string} url - The URL to validate.
+     * @returns {boolean} True if valid, false otherwise.
      */
-    const isValidUrl = (url: string) => {
+    const isValidUrl = (url: string): boolean => {
       try {
         new URL(url);
         return true;
@@ -930,9 +958,14 @@ export default defineComponent({
     };
 
     /**
-     * Handle form submission: validate, build payload, call API, handle result.
+     * Handles the form submission for a crawl job.
+     * Parses all input fields, validates the URL and formats,
+     * constructs the API payload, calls the crawling API,
+     * and manages the UI state (loading, progress, errors, history).
+     * @returns {Promise<void>} A promise that resolves when the submission process is complete.
      */
-    const handleSubmit = async () => {
+    const handleSubmit = async (): Promise<void> => {
+      // Parse all comma-separated inputs and JSON fields before submission
       parseIncludes();
       parseExcludes();
       parseIncludeTags();
@@ -944,6 +977,7 @@ export default defineComponent({
       parseWebhookHeaders();
       parseWebhookMetadata();
 
+      // Basic form validation
       if (!isValidUrl(formData.value.url)) {
         error.value = 'Please enter a valid URL (e.g. https://example.com)';
         return;
@@ -960,8 +994,8 @@ export default defineComponent({
       const payload: any = { url: formData.value.url };
 
       const crawler = formData.value.crawlerOptions;
-      if (crawler.excludes.length > 0) payload.excludePaths = crawler.excludes;
-      if (crawler.includes.length > 0) payload.includePaths = crawler.includes;
+      if (crawler.excludes && crawler.excludes.length > 0) payload.excludePaths = crawler.excludes;
+      if (crawler.includes && crawler.includes.length > 0) payload.includePaths = crawler.includes;
       if (crawler.maxDepth !== undefined) payload.maxDepth = crawler.maxDepth;
       if (crawler.maxDiscoveryDepth !== undefined)
         payload.maxDiscoveryDepth = crawler.maxDiscoveryDepth;
@@ -975,9 +1009,12 @@ export default defineComponent({
       const scrape = formData.value.scrapeOptions;
       const scrapePayload: any = {};
       if (scrape.formats && scrape.formats.length > 0) scrapePayload.formats = scrape.formats;
+      // Only include onlyMainContent if it's explicitly false, as default is true
       if (scrape.onlyMainContent === false) scrapePayload.onlyMainContent = false;
-      if (scrape.includeTags.length > 0) scrapePayload.includeTags = scrape.includeTags;
-      if (scrape.excludeTags.length > 0) scrapePayload.excludeTags = scrape.excludeTags;
+      if (scrape.includeTags && scrape.includeTags.length > 0)
+        scrapePayload.includeTags = scrape.includeTags;
+      if (scrape.excludeTags && scrape.excludeTags.length > 0)
+        scrapePayload.excludeTags = scrape.excludeTags;
       if (scrape.headers && Object.keys(scrape.headers).length > 0)
         scrapePayload.headers = scrape.headers;
       if (scrape.waitFor !== undefined) scrapePayload.waitFor = scrape.waitFor;
@@ -1001,6 +1038,7 @@ export default defineComponent({
           loc.languages = scrape.location.languages;
         if (Object.keys(loc).length > 0) scrapePayload.location = loc;
       }
+      // Only include blockAds if it's explicitly false, as default is true
       if (scrape.blockAds === false) scrapePayload.blockAds = false;
       if (scrape.proxy) scrapePayload.proxy = scrape.proxy;
       if (scrape.changeTrackingOptions) {
@@ -1052,7 +1090,6 @@ export default defineComponent({
         result.value = null;
 
         // Call the crawling API to submit the crawl job
-        // @ts-ignore
         const response = await api.crawling.crawlUrls(payload);
         result.value = response.data;
 
@@ -1092,11 +1129,14 @@ export default defineComponent({
     };
 
     // Interval ID for polling crawl status
-    let intervalId: any = null;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
     /**
      * Fetch crawl status and progress periodically from the API.
-     * @param jobId - The ID of the crawl job.
+     * Clears any existing interval before starting a new one.
+     * Updates reactive variables with the latest status, completed pages, and total pages.
+     * Stops polling when the crawl job is completed or failed.
+     * @param {string} jobId - The ID of the crawl job.
      */
     const fetchCrawlStatus = async (jobId: string) => {
       // Clear any existing interval before starting a new one
@@ -1107,7 +1147,6 @@ export default defineComponent({
       intervalId = setInterval(async () => {
         try {
           // Call the actual API endpoint to get the crawl status
-          // @ts-ignore
           const response = await api.crawling.getCrawlStatus(jobId);
           const data = response.data;
 

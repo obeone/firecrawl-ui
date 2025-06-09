@@ -39,7 +39,8 @@
 import { defineComponent, ref, onMounted } from 'vue';
 
 /**
- * Component allowing users to configure and store the Firecrawl API key.
+ * Component allowing users to configure and store the Firecrawl API key and base URL.
+ * This component handles the persistence of these settings in local storage.
  *
  * @returns Component options for the API key input view.
  */
@@ -57,8 +58,6 @@ export default defineComponent({
       if (!apiKey.value) {
         error.value = 'Please configure your API key to continue';
       }
-      // Retrieve the base URL on mount
-      baseUrl.value = localStorage.getItem('firecrawl_base_url') || '';
     });
 
     const saveApiConfig = () => {

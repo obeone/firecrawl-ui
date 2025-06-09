@@ -1,21 +1,21 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "strict": true,
-    "jsx": "preserve",
-    "sourceMap": true,
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
-    "lib": ["ESNext", "DOM"],
-    "skipLibCheck": true,
-    "types": ["vite/client"],
-    "baseUrl": ".",
+    "target": "ESNext", // Specifies the JavaScript language version for emitted JavaScript. "ESNext" targets the latest ECMAScript features.
+    "module": "NodeNext", // Specifies the module code generation. "NodeNext" is suitable for modern Node.js environments.
+    "moduleResolution": "NodeNext", // Determines how modules are resolved. "NodeNext" aligns with Node.js's module resolution strategy.
+    "strict": true, // Enables all strict type-checking options. Highly recommended for robust code.
+    "jsx": "preserve", // Specifies how JSX is emitted. "preserve" means JSX is left as is for Vue's compiler to handle.
+    "sourceMap": true, // Generates corresponding .map files for debugging.
+    "resolveJsonModule": true, // Allows importing modules with a .json extension.
+    "esModuleInterop": true, // Enables compatibility for importing CommonJS modules as ES modules.
+    "lib": ["ESNext", "DOM"], // Specifies a list of built-in library files to be included in the compilation.
+    "skipLibCheck": true, // Skips type checking of all declaration files (*.d.ts). Can speed up compilation.
+    "types": ["vite/client", "node"], // Specifies type definition files to be included. "vite/client" provides types for Vite's client-side environment, and "node" for Node.js globals.
+    "baseUrl": ".", // Base directory to resolve non-relative module names.
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"] // A series of entries which re-map imports to lookup locations relative to the 'baseUrl'.
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"], // Specifies an array of filenames or patterns to include in the program.
+  "exclude": ["node_modules"] // Specifies an array of filenames or patterns that should be skipped when resolving 'include'.
 }

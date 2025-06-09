@@ -1,4 +1,7 @@
-/* color palette from <https://github.com/vuejs/theme> */
+/*
+ * Color palette from https://github.com/vuejs/theme
+ * Defines a set of CSS custom properties for a consistent color scheme.
+ */
 :root {
   --vt-c-white: #ffffff;
   --vt-c-white-soft: #f8f8f8;
@@ -21,7 +24,11 @@
   --vt-c-text-dark-2: rgba(235, 235, 235, 0.8); /* Increased opacity for better contrast */
 }
 
-/* semantic color variables for this project */
+/*
+ * Semantic color variables for this project.
+ * These variables map the base color palette to semantic roles,
+ * making it easier to manage theme-related styles.
+ */
 :root {
   --color-background: var(--vt-c-white);
   --color-background-soft: var(--vt-c-white-soft);
@@ -37,6 +44,10 @@
 }
 
 @media (prefers-color-scheme: dark) {
+  /*
+   * Dark mode specific color overrides.
+   * Adjusts semantic colors for a dark theme based on user's system preference.
+   */
   :root {
     --color-background: var(--vt-c-black);
     --color-background-soft: var(--vt-c-black-soft);
@@ -77,6 +88,11 @@
   }
 }
 
+/*
+ * Global reset for all elements.
+ * Applies border-box sizing, removes default margins, and normalizes font weight
+ * to ensure consistent rendering across browsers.
+ */
 *,
 *::before,
 *::after {
@@ -85,6 +101,11 @@
   font-weight: normal;
 }
 
+/*
+ * Base styles for the body element.
+ * Sets minimum height, text and background colors, smooth transitions for theme changes,
+ * line height, font stack, font size, and text rendering optimizations.
+ */
 body {
   min-height: 100vh;
   color: var(--color-text);

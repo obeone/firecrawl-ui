@@ -10,14 +10,26 @@ import {
 import apiConfig from '../config/api.js';
 
 /**
- * Vue plugin that registers Firecrawl API clients.
+ * Vue plugin responsible for registering and providing various Firecrawl API clients
+ * to the Vue application instance.
  *
- * @param app - The Vue application instance.
- * @returns void
+ * This plugin makes API clients accessible globally via `app.config.globalProperties.$api`
+ * and through dependency injection via `app.provide('api', apis)`.
+ *
+ * @param app - The Vue application instance to which API clients will be registered.
  */
+interface FirecrawlApiClients {
+  billing: BillingApi;
+  crawling: CrawlingApi;
+  extraction: ExtractionApi;
+  mapping: MappingApi;
+  scraping: ScrapingApi;
+  search: SearchApi;
+}
+
 const apiPlugin = {
   install(app: App): void {
-    const apis = {
+    const apis: FirecrawlApiClients = {
       billing: new BillingApi(apiConfig),
       crawling: new CrawlingApi(apiConfig),
       extraction: new ExtractionApi(apiConfig),

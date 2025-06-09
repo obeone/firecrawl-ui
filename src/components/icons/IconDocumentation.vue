@@ -5,3 +5,12 @@
     />
   </svg>
 </template>
+
+<script setup lang="ts">
+/**
+ * IconDocumentation Component
+ *
+ * This component renders an SVG icon representing documentation.
+ * It is a purely presentational component and does not accept any props.
+ */
+</script>

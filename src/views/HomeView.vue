@@ -80,15 +80,13 @@ import IconCommunity from '@/components/icons/IconCommunity.vue';
 import IconSupport from '@/components/icons/IconSupport.vue';
 
 /**
- * HomeView
- * Main landing page for Firecrawl UI.
- * Presents features, navigation, and project information.
+ * @file HomeView.vue
+ * @description This component serves as the main landing page for the Firecrawl UI application.
+ * It provides an overview of the application's features, navigation links to different sections,
+ * and general information about the project.
  *
- * @component
- * @example
- * <HomeView />
- *
- * @returns Component options for the home page.
+ * @component HomeView
+ * @example <HomeView />
  */
 export default defineComponent({
   name: 'HomeView',
@@ -103,7 +101,10 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Modernized palette */
+/*
+ * Global CSS variables for consistent theming across the HomeView component.
+ * Defines colors, backgrounds, and shadow properties.
+ */
 :root {
   --primary-bg: #f7f8fa;
   --card-bg: #fff;
@@ -115,7 +116,11 @@ export default defineComponent({
   --card-shadow: 0 2px 16px rgba(30, 64, 175, 0.07);
 }
 
-.home {
+/*
+ * Styles for the main container of the HomeView.
+ * Centers content, sets padding, and defines background.
+ */
+.page-container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2.5rem 1.5rem 3rem 1.5rem;
@@ -126,6 +131,10 @@ export default defineComponent({
   min-height: 100vh;
 }
 
+/*
+ * Styles for the hero section, including logo, main title, and subtitle.
+ * Provides a prominent introduction to the application.
+ */
 .hero {
   text-align: center;
   margin-bottom: 2.5rem;
@@ -153,6 +162,10 @@ h1 {
   font-family: 'Inter', Arial, sans-serif;
 }
 
+/*
+ * Styles for the features section, displaying various application functionalities.
+ * Uses flexbox for responsive layout of feature cards.
+ */
 .features {
   display: flex;
   flex-wrap: wrap;
@@ -161,6 +174,10 @@ h1 {
   margin-bottom: 2.5rem;
 }
 
+/*
+ * Styles for individual feature cards.
+ * Includes background, shadow, padding, and hover effects for interactivity.
+ */
 .feature-card {
   background: var(--card-bg);
   border-radius: 12px;
@@ -204,6 +221,10 @@ h1 {
   min-height: 48px;
 }
 
+/*
+ * Styles for navigation links within feature cards.
+ * Defines button-like appearance and hover effects.
+ */
 .feature-link {
   color: #fff;
   background: var(--primary);
@@ -225,6 +246,10 @@ h1 {
   background: var(--primary-dark);
 }
 
+/*
+ * Styles for the "About Firecrawl UI" section.
+ * Features a gradient background, accent border, and clear text styling.
+ */
 .about {
   margin-top: 2.5rem;
   width: 100%;
@@ -265,7 +290,10 @@ h1 {
   font-size: 1rem;
 }
 
-/* Accent gradient for the call-to-action link */
+/*
+ * Styles for the "Documentation & Support" link in the about section.
+ * Applies a gradient background and hover effects.
+ */
 .about-link {
   color: #fff;
   background: linear-gradient(90deg, var(--accent) 0%, #eab308 100%);
