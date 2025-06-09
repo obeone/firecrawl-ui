@@ -127,6 +127,8 @@ a,
   transition:
     background 0.2s,
     transform 0.1s;
+  display: block;
+  margin-left: auto;
   margin-top: 1.5rem;
 }
 
