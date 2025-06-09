@@ -1091,7 +1091,7 @@ export default defineComponent({
       }
     };
 
-    // ID d'intervalle pour le polling du statut du crawl
+    // Interval ID for polling crawl status
     let intervalId: any = null;
 
     /**

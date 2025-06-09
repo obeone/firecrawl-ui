@@ -4,7 +4,7 @@
     <p>A valid API key is required to use Firecrawl.</p>
     <ApiKeyInput />
     <div class="actions">
-      <button @click="handleContinue" class="primary">Continuer vers l'application</button>
+      <button @click="handleContinue" class="primary">Continue to application</button>
     </div>
   </div>
 </template>
