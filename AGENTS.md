@@ -103,6 +103,15 @@ function addNumbers(a: number, b: number): number {
 }
 ```
 
+## Testing
+
+Always test the code with:
+
+- `npm ci`
+- `npx prettier --check .`
+- `npx eslint .`
+- `npm test --if-present`
+
 ## Branch naming
 
 Title in English
