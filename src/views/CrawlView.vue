@@ -334,6 +334,7 @@
         <div class="progress-bar" :style="{ width: progress + '%' }"></div>
       </div>
       <p>{{ progress }}% Completed</p>
+      <p>{{ pagesCompleted }} / {{ totalPages }} pages processed</p>
     </div>
 
     <!-- Section for download options after crawl completion -->
@@ -384,17 +385,18 @@
       <h2>Crawl History</h2>
       <button class="primary-button" type="button" @click="clearHistory">Clear History</button>
       <div v-if="crawlHistory.length > 0">
-        <ul>
+        <ul class="history-list">
           <li
             v-for="crawl in crawlHistory"
             :key="crawl.id"
-            :class="{ 'selected-crawl': selectedCrawlId === crawl.id }"
+            :class="['history-item', { 'selected-crawl': selectedCrawlId === crawl.id }]"
           >
-            <strong>{{ crawl.url }}</strong>
-            – {{ new Date(crawl.createdAt).toLocaleString() }} – Status:
-            {{ crawl.status }}
-            <button class="primary-button" type="button" @click.prevent="selectCrawl(crawl.id)">
-              View Details
+            <span class="history-info">
+              <strong>{{ crawl.url }}</strong>
+              – {{ new Date(crawl.createdAt).toLocaleString() }} – Status: {{ crawl.status }}
+            </span>
+            <button class="history-button" type="button" @click.prevent="selectCrawl(crawl.id)">
+              View
             </button>
           </li>
         </ul>
@@ -675,6 +677,10 @@ export default defineComponent({
     const loading = ref(false);
     const crawling = ref(false);
     const progress = ref(0);
+    // Number of pages processed so far
+    const pagesCompleted = ref(0);
+    // Total number of pages in the crawl job
+    const totalPages = ref(0);
     const crawlStatus = ref<string | undefined>('');
     const error = ref('');
     const result = ref<any>(null);
@@ -1028,6 +1034,8 @@ export default defineComponent({
         loading.value = true;
         crawling.value = true;
         progress.value = 0;
+        pagesCompleted.value = 0;
+        totalPages.value = 0;
         error.value = '';
         result.value = null;
 
@@ -1093,6 +1101,8 @@ export default defineComponent({
 
           // Update reactive variables with real data
           crawlStatus.value = data.status;
+          pagesCompleted.value = data.completed || 0;
+          totalPages.value = data.total || 0;
           // Calculate progress based on completed vs total pages
           if (
             data.total !== undefined &&
@@ -1175,6 +1185,8 @@ export default defineComponent({
       loading,
       crawling,
       progress,
+      pagesCompleted,
+      totalPages,
       crawlStatus,
       error,
       result,
@@ -1293,6 +1305,24 @@ export default defineComponent({
 .crawl-history-section li {
   cursor: pointer;
   margin-bottom: 8px;
+}
+
+.history-list {
+  list-style: none;
+  padding: 0;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.history-button {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+  margin-top: 0;
 }
 
 .selected-crawl {
