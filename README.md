@@ -91,6 +91,9 @@ Preview the built app locally:
 npm run preview
 ```
 
+The `public/404.html` file is copied into the build output and allows GitHub Pages
+to redirect unknown paths to `index.html` for proper client-side routing.
+
 ## Docker
 
 Build the Docker image:
@@ -104,6 +107,9 @@ Run the container and expose the Nginx server:
 ```sh
 docker run -p 8080:8080 firecrawl-ui
 ```
+
+The container includes a custom `nginx.conf` which uses `try_files $uri $uri/ /index.html;`
+to route unknown paths to the application entry point.
 
 A prebuilt image is also published and can be pulled from:
 
