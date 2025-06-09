@@ -368,11 +368,17 @@
       <div class="download-section">
         <h3>Download Results</h3>
         <div v-for="fmt in selectedFormats" :key="fmt" class="download-btn">
-          <button class="primary-button download-button" @click="handleDownload(fmt, selectedCrawl.id)">
+          <button
+            class="primary-button download-button"
+            @click="handleDownload(fmt, selectedCrawl.id)"
+          >
             Download {{ fmt }} Archive
           </button>
         </div>
-        <button class="primary-button download-button" @click="handleDownload('Full JSON', selectedCrawl.id)">
+        <button
+          class="primary-button download-button"
+          @click="handleDownload('Full JSON', selectedCrawl.id)"
+        >
           Download Full JSON
         </button>
       </div>
@@ -383,7 +389,6 @@
     <!-- Section for crawl history -->
     <div class="crawl-history-section">
       <h2>Crawl History</h2>
-      <button class="primary-button" type="button" @click="clearHistory">Clear History</button>
       <div v-if="crawlHistory.length > 0">
         <ul class="history-list">
           <li
@@ -403,6 +408,9 @@
       </div>
       <div v-else>
         <p>No crawl history available.</p>
+      </div>
+      <div class="clear-history-wrapper">
+        <button class="primary-button" type="button" @click="clearHistory">Clear History</button>
       </div>
     </div>
   </div>
@@ -1320,15 +1328,29 @@ export default defineComponent({
 }
 
 .history-button {
-  padding: 0.4rem 0.8rem;
-  font-size: 0.9rem;
-  margin-top: 0;
+  margin-left: 10px;
+  padding: 5px 10px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.history-button:hover {
+  background-color: #0056b3;
 }
 
 .download-button {
   padding: 0.4rem 0.8rem;
   font-size: 0.9rem;
   margin-top: 0;
+}
+
+.clear-history-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
 }
 
 .selected-crawl {
