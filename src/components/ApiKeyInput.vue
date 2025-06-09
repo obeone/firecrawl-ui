@@ -1,6 +1,6 @@
 <template>
   <div class="api-key-input">
-    <h2>Configuration de l'API</h2>
+    <h2>API Configuration</h2>
     <form @submit.prevent="saveApiConfig">
       <div class="form-group">
         <label for="apiKey">Firecrawl API Key:</label>
@@ -17,7 +17,7 @@
         </small>
       </div>
       <div class="form-group">
-        <label for="baseUrl">URL de base de l'API Firecrawl (optionnel):</label>
+        <label for="baseUrl">Firecrawl API base URL (optional):</label>
         <input
           id="baseUrl"
           v-model="baseUrl"
@@ -26,7 +26,7 @@
         />
         <small> Leave blank to use the default URL. </small>
       </div>
-      <button type="submit" class="primary-button">Enregistrer</button>
+      <button type="submit" class="primary-button">Save</button>
     </form>
     <div v-if="error" class="error-message">
       {{ error }}
@@ -78,7 +78,7 @@ export default defineComponent({
         // Optional: Reload the page or reconfigure the API instance for immediate effect
         window.location.reload();
       } catch (err) {
-        error.value = err instanceof Error ? err.message : 'Erreur inconnue';
+        error.value = err instanceof Error ? err.message : 'Unknown error';
         success.value = false;
       }
     };
