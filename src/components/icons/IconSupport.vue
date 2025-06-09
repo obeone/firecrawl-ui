@@ -13,4 +13,5 @@
  * This component renders an SVG icon representing support or a heart.
  * It is a purely presentational component with no internal logic or props.
  */
+export default {}; // Added default export
 </script>
