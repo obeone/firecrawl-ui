@@ -340,14 +340,19 @@
     <!-- Section for download options after crawl completion -->
     <div v-if="progress === 100 && crawlStatus === 'completed'" class="download-section">
       <h2>Download Results</h2>
-      <div v-for="fmt in activeFormats" :key="fmt" class="download-btn">
-        <button class="download-button" @click="handleDownload(fmt)">
+      <div class="download-buttons">
+        <button
+          v-for="fmt in activeFormats"
+          :key="fmt"
+          class="download-button"
+          @click="handleDownload(fmt)"
+        >
           Download {{ fmt }} Archive
         </button>
+        <button class="download-button" @click="handleDownload('Full JSON')">
+          Download Full JSON
+        </button>
       </div>
-      <button class="download-button" @click="handleDownload('Full JSON')">
-        Download Full JSON
-      </button>
     </div>
 
     <!-- Section for selected crawl details -->
@@ -367,14 +372,19 @@
 
       <div class="download-section">
         <h3>Download Results</h3>
-        <div v-for="fmt in selectedFormats" :key="fmt" class="download-btn">
-          <button class="download-button" @click="handleDownload(fmt, selectedCrawl.id)">
+        <div class="download-buttons">
+          <button
+            v-for="fmt in selectedFormats"
+            :key="fmt"
+            class="download-button"
+            @click="handleDownload(fmt, selectedCrawl.id)"
+          >
             Download {{ fmt }} Archive
           </button>
+          <button class="download-button" @click="handleDownload('Full JSON', selectedCrawl.id)">
+            Download Full JSON
+          </button>
         </div>
-        <button class="download-button" @click="handleDownload('Full JSON', selectedCrawl.id)">
-          Download Full JSON
-        </button>
       </div>
 
       <button class="primary-button" @click="selectedCrawlId = null">Hide Details</button>
@@ -1302,6 +1312,12 @@ export default defineComponent({
 
 .download-section {
   margin-top: 20px;
+}
+
+.download-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .crawl-history-section li {
