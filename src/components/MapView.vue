@@ -45,7 +45,7 @@
       <ul>
         <li v-for="(url, index) in urls" :key="index">{{ url }}</li>
       </ul>
-      <button class="primary-button download-button" @click="downloadJson">Download JSON</button>
+      <button class="download-button" @click="downloadJson">Download JSON</button>
     </div>
   </div>
 </template>
@@ -209,5 +209,14 @@ button:hover {
   padding: 0.4rem 0.8rem;
   font-size: 0.9rem;
   margin-top: 0;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.download-button:hover {
+  background-color: #0056b3;
 }
 </style>

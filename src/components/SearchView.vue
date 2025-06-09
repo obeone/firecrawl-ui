@@ -59,11 +59,11 @@
       <div class="download-section">
         <h3>Download Results</h3>
         <div v-for="fmt in activeFormats" :key="fmt" class="download-btn">
-          <button class="primary-button download-button" @click="handleDownload(fmt)">
+          <button class="download-button" @click="handleDownload(fmt)">
             Download {{ fmt }} Archive
           </button>
         </div>
-        <button class="primary-button download-button" @click="handleDownload('Full JSON')">
+        <button class="download-button" @click="handleDownload('Full JSON')">
           Download Full JSON
         </button>
       </div>
@@ -371,5 +371,14 @@ async function handleDownload(type: string): Promise<void> {
   padding: 0.4rem 0.8rem;
   font-size: 0.9rem;
   margin-top: 0;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.download-button:hover {
+  background-color: #0056b3;
 }
 </style>
