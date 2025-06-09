@@ -334,19 +334,25 @@
         <div class="progress-bar" :style="{ width: progress + '%' }"></div>
       </div>
       <p>{{ progress }}% Completed</p>
+      <p>{{ pagesCompleted }} / {{ totalPages }} pages processed</p>
     </div>
 
     <!-- Section for download options after crawl completion -->
     <div v-if="progress === 100 && crawlStatus === 'completed'" class="download-section">
       <h2>Download Results</h2>
-      <div v-for="fmt in activeFormats" :key="fmt" class="download-btn">
-        <button class="primary-button" @click="handleDownload(fmt)">
+      <div class="download-buttons">
+        <button
+          v-for="fmt in activeFormats"
+          :key="fmt"
+          class="download-button"
+          @click="handleDownload(fmt)"
+        >
           Download {{ fmt }} Archive
         </button>
+        <button class="download-button" @click="handleDownload('Full JSON')">
+          Download Full JSON
+        </button>
       </div>
-      <button class="primary-button" @click="handleDownload('Full JSON')">
-        Download Full JSON
-      </button>
     </div>
 
     <!-- Section for selected crawl details -->
@@ -366,14 +372,19 @@
 
       <div class="download-section">
         <h3>Download Results</h3>
-        <div v-for="fmt in selectedFormats" :key="fmt" class="download-btn">
-          <button class="primary-button" @click="handleDownload(fmt, selectedCrawl.id)">
+        <div class="download-buttons">
+          <button
+            v-for="fmt in selectedFormats"
+            :key="fmt"
+            class="download-button"
+            @click="handleDownload(fmt, selectedCrawl.id)"
+          >
             Download {{ fmt }} Archive
           </button>
+          <button class="download-button" @click="handleDownload('Full JSON', selectedCrawl.id)">
+            Download Full JSON
+          </button>
         </div>
-        <button class="primary-button" @click="handleDownload('Full JSON', selectedCrawl.id)">
-          Download Full JSON
-        </button>
       </div>
 
       <button class="primary-button" @click="selectedCrawlId = null">Hide Details</button>
@@ -382,25 +393,28 @@
     <!-- Section for crawl history -->
     <div class="crawl-history-section">
       <h2>Crawl History</h2>
-      <button class="primary-button" type="button" @click="clearHistory">Clear History</button>
       <div v-if="crawlHistory.length > 0">
-        <ul>
+        <ul class="history-list">
           <li
             v-for="crawl in crawlHistory"
             :key="crawl.id"
-            :class="{ 'selected-crawl': selectedCrawlId === crawl.id }"
+            :class="['history-item', { 'selected-crawl': selectedCrawlId === crawl.id }]"
           >
-            <strong>{{ crawl.url }}</strong>
-            – {{ new Date(crawl.createdAt).toLocaleString() }} – Status:
-            {{ crawl.status }}
-            <button class="primary-button" type="button" @click.prevent="selectCrawl(crawl.id)">
-              View Details
+            <span class="history-info">
+              <strong>{{ crawl.url }}</strong>
+              – {{ new Date(crawl.createdAt).toLocaleString() }} – Status: {{ crawl.status }}
+            </span>
+            <button class="history-button" type="button" @click.prevent="selectCrawl(crawl.id)">
+              View
             </button>
           </li>
         </ul>
       </div>
       <div v-else>
         <p>No crawl history available.</p>
+      </div>
+      <div class="clear-history-wrapper">
+        <button class="primary-button" type="button" @click="clearHistory">Clear History</button>
       </div>
     </div>
   </div>
@@ -675,6 +689,10 @@ export default defineComponent({
     const loading = ref(false);
     const crawling = ref(false);
     const progress = ref(0);
+    // Number of pages processed so far
+    const pagesCompleted = ref(0);
+    // Total number of pages in the crawl job
+    const totalPages = ref(0);
     const crawlStatus = ref<string | undefined>('');
     const error = ref('');
     const result = ref<any>(null);
@@ -1028,6 +1046,8 @@ export default defineComponent({
         loading.value = true;
         crawling.value = true;
         progress.value = 0;
+        pagesCompleted.value = 0;
+        totalPages.value = 0;
         error.value = '';
         result.value = null;
 
@@ -1093,6 +1113,8 @@ export default defineComponent({
 
           // Update reactive variables with real data
           crawlStatus.value = data.status;
+          pagesCompleted.value = data.completed || 0;
+          totalPages.value = data.total || 0;
           // Calculate progress based on completed vs total pages
           if (
             data.total !== undefined &&
@@ -1175,6 +1197,8 @@ export default defineComponent({
       loading,
       crawling,
       progress,
+      pagesCompleted,
+      totalPages,
       crawlStatus,
       error,
       result,
@@ -1290,13 +1314,66 @@ export default defineComponent({
   margin-top: 20px;
 }
 
+.download-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .crawl-history-section li {
   cursor: pointer;
   margin-bottom: 8px;
 }
 
+.history-list {
+  list-style: none;
+  padding: 0;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.history-button {
+  margin-left: 10px;
+  padding: 5px 10px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.history-button:hover {
+  background-color: #0056b3;
+}
+
+.download-button {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+  margin-top: 0;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.download-button:hover {
+  background-color: #0056b3;
+}
+
+.clear-history-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
 .selected-crawl {
-  background-color: #eef6ff;
+  background-color: #1f2d3d;
 }
 
 .collapsible-header {
