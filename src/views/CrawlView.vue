@@ -959,16 +959,36 @@ export default defineComponent({
         const zip = new JSZip();
         const fetches: Promise<void>[] = [];
 
+        // Build folder prefix counts to avoid creating single-file folders
+        const prefixCounts: Record<string, number> = {};
+        pages.forEach((p, i) => {
+          const name = p.metadata?.sourceURL || p.url || i.toString();
+          const info = getPathInfo(name, getExtension(type));
+          let prefix = '';
+          info.folders.forEach((seg) => {
+            prefix = prefix ? `${prefix}/${seg}` : seg;
+            prefixCounts[prefix] = (prefixCounts[prefix] || 0) + 1;
+          });
+        });
+
         pages.forEach((page, index) => {
           const urlForName = page.metadata?.sourceURL || page.url || index.toString();
           const base = sanitizeFilename(urlForName);
           const prefix = index.toString().padStart(3, '0');
           const ext = getExtension(type);
           const pathInfo = getPathInfo(urlForName, ext);
+          let folderSegments: string[] = [];
+          if (useSubfolders.value) {
+            let prefixPath = '';
+            folderSegments = pathInfo.folders.filter((seg) => {
+              prefixPath = prefixPath ? `${prefixPath}/${seg}` : seg;
+              return prefixCounts[prefixPath] > 1;
+            });
+          }
           const addFile = (data: string | Blob) => {
-            if (useSubfolders.value) {
+            if (useSubfolders.value && folderSegments.length > 0) {
               let folder = zip;
-              pathInfo.folders.forEach((seg) => {
+              folderSegments.forEach((seg) => {
                 folder = folder.folder(seg);
               });
               folder.file(pathInfo.filename, data);
