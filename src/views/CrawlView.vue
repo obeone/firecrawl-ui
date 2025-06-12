@@ -341,6 +341,10 @@
     <div v-if="progress === 100 && crawlStatus === 'completed'" class="download-section">
       <h2>Download Results</h2>
       <div class="download-buttons">
+        <label class="checkbox-label">
+          <input type="checkbox" v-model="useSubfolders" />
+          Use subfolders
+        </label>
         <button
           v-for="fmt in activeFormats"
           :key="fmt"
@@ -373,6 +377,10 @@
       <div class="download-section">
         <h3>Download Results</h3>
         <div class="download-buttons">
+          <label class="checkbox-label">
+            <input type="checkbox" v-model="useSubfolders" />
+            Use subfolders
+          </label>
           <button
             v-for="fmt in selectedFormats"
             :key="fmt"
@@ -581,6 +589,7 @@ export default defineComponent({
     const isCrawlerOptionsCollapsed = ref(true);
     const isScrapeOptionsCollapsed = ref(true);
     const isWebhookOptionsCollapsed = ref(true);
+    const useSubfolders = ref(false);
 
     const crawlerOptionsArrow = computed(() => (isCrawlerOptionsCollapsed.value ? '▶' : '▼'));
     const scrapeOptionsArrow = computed(() => (isScrapeOptionsCollapsed.value ? '▶' : '▼'));
@@ -855,6 +864,70 @@ export default defineComponent({
     }
 
     /**
+     * Sanitize a path segment for safe folder or file names.
+     *
+     * @param segment - The path segment to sanitize.
+     * @returns The sanitized segment.
+     */
+    function sanitizeSegment(segment: string): string {
+      return segment.replace(/[^a-zA-Z0-9]+/g, '_') || 'part';
+    }
+
+    /**
+     * Get folder structure and file name for a URL.
+     *
+     * @param url - The source URL.
+     * @param ext - The desired file extension.
+     * @returns Folder segments and final file name.
+     */
+    function getPathInfo(url: string, ext: string): { folders: string[]; filename: string } {
+      try {
+        const { pathname } = new URL(url);
+        const trimmed = pathname.replace(/\/+$/, '');
+        const segments = trimmed.split('/').filter(Boolean).map(sanitizeSegment);
+        if (segments.length === 0) {
+          return { folders: [], filename: `index.${ext}` };
+        }
+        let last = segments[segments.length - 1];
+        if (last.includes('.')) {
+          last = last.replace(/\.[^.]+$/, '');
+          segments.pop();
+        }
+        const base = last || 'index';
+        return { folders: segments, filename: `${base}.${ext}` };
+      } catch {
+        return { folders: [], filename: `index.${ext}` };
+      }
+    }
+
+    /**
+     * Map a format to its file extension.
+     *
+     * @param format - The export format.
+     * @returns The corresponding file extension.
+     */
+    function getExtension(format: string): string {
+      switch (format) {
+        case 'markdown':
+          return 'md';
+        case 'html':
+          return 'html';
+        case 'rawHtml':
+          return 'raw.html';
+        case 'links':
+          return 'txt';
+        case 'json':
+        case 'changeTracking':
+          return 'json';
+        case 'screenshot':
+        case 'screenshot@fullPage':
+          return 'png';
+        default:
+          return 'txt';
+      }
+    }
+
+    /**
      * Handles the download of crawl results.
      * Calls the appropriate API endpoint based on the download type ('Archive' or 'Full JSON').
      * Creates a Blob from the response and triggers a file download.
@@ -886,45 +959,79 @@ export default defineComponent({
         const zip = new JSZip();
         const fetches: Promise<void>[] = [];
 
+        // Build folder prefix counts to avoid creating single-file folders
+        const prefixCounts: Record<string, number> = {};
+        pages.forEach((p, i) => {
+          const name = p.metadata?.sourceURL || p.url || i.toString();
+          const info = getPathInfo(name, getExtension(type));
+          let prefix = '';
+          info.folders.forEach((seg) => {
+            prefix = prefix ? `${prefix}/${seg}` : seg;
+            prefixCounts[prefix] = (prefixCounts[prefix] || 0) + 1;
+          });
+        });
+
         pages.forEach((page, index) => {
-          const base = sanitizeFilename(page.metadata?.sourceURL || page.url || index.toString());
+          const urlForName = page.metadata?.sourceURL || page.url || index.toString();
+          const base = sanitizeFilename(urlForName);
           const prefix = index.toString().padStart(3, '0');
+          const ext = getExtension(type);
+          const pathInfo = getPathInfo(urlForName, ext);
+          let folderSegments: string[] = [];
+          if (useSubfolders.value) {
+            let prefixPath = '';
+            folderSegments = pathInfo.folders.filter((seg) => {
+              prefixPath = prefixPath ? `${prefixPath}/${seg}` : seg;
+              return prefixCounts[prefixPath] > 1;
+            });
+          }
+          const addFile = (data: string | Blob) => {
+            if (useSubfolders.value && folderSegments.length > 0) {
+              let folder = zip;
+              folderSegments.forEach((seg) => {
+                folder = folder.folder(seg);
+              });
+              folder.file(pathInfo.filename, data);
+            } else {
+              zip.file(`${prefix}-${base}.${ext}`, data);
+            }
+          };
           switch (type) {
             case 'markdown':
               if (page.markdown) {
-                zip.file(`${prefix}-${base}.md`, page.markdown);
+                addFile(page.markdown);
               }
               break;
             case 'html':
               if (page.html) {
-                zip.file(`${prefix}-${base}.html`, page.html);
+                addFile(page.html);
               }
               break;
             case 'rawHtml':
               if (page.rawHtml) {
-                zip.file(`${prefix}-${base}.raw.html`, page.rawHtml);
+                addFile(page.rawHtml);
               }
               break;
             case 'links':
               if (page.links) {
-                zip.file(`${prefix}-${base}.txt`, page.links.join('\n'));
+                addFile(page.links.join('\n'));
               }
               break;
             case 'json':
               if (page.llm_extraction) {
-                zip.file(`${prefix}-${base}.json`, JSON.stringify(page.llm_extraction, null, 2));
+                addFile(JSON.stringify(page.llm_extraction, null, 2));
               }
               break;
             case 'changeTracking':
               if (page.changeTracking) {
-                zip.file(`${prefix}-${base}.json`, JSON.stringify(page.changeTracking, null, 2));
+                addFile(JSON.stringify(page.changeTracking, null, 2));
               }
               break;
             case 'screenshot':
             case 'screenshot@fullPage':
               if (page.screenshot) {
                 const p = axios.get(page.screenshot, { responseType: 'blob' }).then((res) => {
-                  zip.file(`${prefix}-${base}.png`, res.data);
+                  addFile(res.data);
                 });
                 fetches.push(p);
               }
@@ -1256,6 +1363,7 @@ export default defineComponent({
       crawlerOptionsArrow,
       scrapeOptionsArrow,
       webhookOptionsArrow,
+      useSubfolders,
       clearHistory,
       // Expose saveHistory if needed elsewhere, though not strictly necessary for this task
       // saveHistory,
