@@ -345,19 +345,20 @@
           <input type="checkbox" v-model="useSubfolders" />
           Use subfolders
         </label>
-        <button
-          v-for="fmt in activeFormats"
-          :key="fmt"
-          class="download-button"
-          @click="handleDownload(fmt)"
-        >
-          Download {{ fmt }} Archive
-        </button>
+        <template v-for="fmt in activeFormats" :key="fmt">
+          <button class="download-button" @click="handleDownload(fmt)">
+            Download {{ fmt }} Archive
+          </button>
+          <button
+            v-if="fmt === 'markdown'"
+            class="download-button"
+            @click="handleDownloadCompiledMarkdown()"
+          >
+            Download compiled Markdown
+          </button>
+        </template>
         <button class="download-button" @click="handleDownload('Full JSON')">
           Download Full JSON
-        </button>
-        <button class="download-button" @click="handleDownloadCompiledMarkdown()">
-          Download compiled Markdown
         </button>
       </div>
     </div>
@@ -384,19 +385,20 @@
             <input type="checkbox" v-model="useSubfolders" />
             Use subfolders
           </label>
-          <button
-            v-for="fmt in selectedFormats"
-            :key="fmt"
-            class="download-button"
-            @click="handleDownload(fmt, selectedCrawl.id)"
-          >
-            Download {{ fmt }} Archive
-          </button>
+          <template v-for="fmt in selectedFormats" :key="fmt">
+            <button class="download-button" @click="handleDownload(fmt, selectedCrawl.id)">
+              Download {{ fmt }} Archive
+            </button>
+            <button
+              v-if="fmt === 'markdown'"
+              class="download-button"
+              @click="handleDownloadCompiledMarkdown(selectedCrawl.id)"
+            >
+              Download compiled Markdown
+            </button>
+          </template>
           <button class="download-button" @click="handleDownload('Full JSON', selectedCrawl.id)">
             Download Full JSON
-          </button>
-          <button class="download-button" @click="handleDownloadCompiledMarkdown(selectedCrawl.id)">
-            Download compiled Markdown
           </button>
         </div>
       </div>
