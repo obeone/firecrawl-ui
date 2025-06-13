@@ -356,6 +356,9 @@
         <button class="download-button" @click="handleDownload('Full JSON')">
           Download Full JSON
         </button>
+        <button class="download-button" @click="handleDownloadCompiledMarkdown()">
+          Download compiled Markdown
+        </button>
       </div>
     </div>
 
@@ -391,6 +394,9 @@
           </button>
           <button class="download-button" @click="handleDownload('Full JSON', selectedCrawl.id)">
             Download Full JSON
+          </button>
+          <button class="download-button" @click="handleDownloadCompiledMarkdown(selectedCrawl.id)">
+            Download compiled Markdown
           </button>
         </div>
       </div>
@@ -1051,6 +1057,63 @@ export default defineComponent({
     };
 
     /**
+     * Increase markdown heading levels.
+     *
+     * @param markdown - The markdown string to modify.
+     * @param increment - How many levels to increase.
+     * @returns The adjusted markdown string.
+     */
+    const incrementHeadings = (markdown: string, increment: number): string => {
+      return markdown.replace(/^(#{1,6})(?=\s)/gm, (match) => {
+        const newLevel = Math.min(6, match.length + increment);
+        return '#'.repeat(newLevel);
+      });
+    };
+
+    /**
+     * Compile all markdown pages into a single document.
+     *
+     * @param pages - Array of page objects containing markdown.
+     * @param title - Title for the compiled document.
+     * @returns The compiled markdown string.
+     */
+    const compileMarkdown = (pages: any[], title: string): string => {
+      const sections: string[] = [`# ${title}`];
+      pages.forEach((page, index) => {
+        const pageTitle =
+          page.metadata?.title || page.metadata?.sourceURL || page.url || `Page ${index + 1}`;
+        sections.push(`\n## ${pageTitle}\n`);
+        if (page.markdown) {
+          sections.push(incrementHeadings(page.markdown, 1));
+        }
+      });
+      return sections.join('\n');
+    };
+
+    /**
+     * Download all markdown files compiled into a single document.
+     *
+     * @param jobIdParam - Optional job ID for history downloads.
+     */
+    const handleDownloadCompiledMarkdown = async (jobIdParam?: string): Promise<void> => {
+      error.value = '';
+      const jobId = jobIdParam || result.value?.id;
+      if (!jobId) {
+        error.value = 'No crawl job found to download results.';
+        return;
+      }
+      try {
+        const pages = await fetchAllCrawlData(jobId);
+        const compiled = compileMarkdown(pages, 'Compiled Crawl Results');
+        const blob = new Blob([compiled], { type: 'text/markdown' });
+        saveAs(blob, `crawl-compiled-${jobId}.md`);
+      } catch (err: any) {
+        console.error(`Error compiling markdown for job ID ${jobId}:`, err);
+        error.value = `Failed to compile markdown. ${err.message || err}`;
+      }
+    };
+
+    /**
      * Validate a URL string.
      * @param {string} url - The URL to validate.
      * @returns {boolean} True if valid, false otherwise.
@@ -1353,6 +1416,7 @@ export default defineComponent({
       isScrapeOptionsCollapsed,
       isWebhookOptionsCollapsed,
       handleDownload,
+      handleDownloadCompiledMarkdown,
       crawlHistory,
       selectedCrawlId,
       selectedCrawl,
