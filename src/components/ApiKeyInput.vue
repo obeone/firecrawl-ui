@@ -37,6 +37,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted } from 'vue';
+import { refreshApiClients } from '@/plugins/api';
 
 /**
  * Component allowing users to configure and store the Firecrawl API key and base URL.
@@ -74,8 +75,8 @@ export default defineComponent({
         error.value = '';
         setTimeout(() => (success.value = false), 3000);
 
-        // Optional: Reload the page or reconfigure the API instance for immediate effect
-        window.location.reload();
+        // Update API clients dynamically without reloading the page
+        refreshApiClients(baseUrl.value, apiKey.value);
       } catch (err) {
         error.value = err instanceof Error ? err.message : 'Unknown error';
         success.value = false;
