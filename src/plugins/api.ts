@@ -7,7 +7,7 @@ import {
   ScrapingApi,
   SearchApi,
 } from '../api-client/index.js';
-import apiConfig from '../config/api.js';
+import apiConfig, { getApiConfig, updateApiConfig } from '../config/api.js';
 
 /**
  * Vue plugin responsible for registering and providing various Firecrawl API clients
@@ -27,19 +27,42 @@ interface FirecrawlApiClients {
   search: SearchApi;
 }
 
+let appInstance: App | null = null;
+const apiClients: FirecrawlApiClients = {
+  billing: new BillingApi(apiConfig),
+  crawling: new CrawlingApi(apiConfig),
+  extraction: new ExtractionApi(apiConfig),
+  mapping: new MappingApi(apiConfig),
+  scraping: new ScrapingApi(apiConfig),
+  search: new SearchApi(apiConfig),
+};
+
 const apiPlugin = {
   install(app: App): void {
-    const apis: FirecrawlApiClients = {
-      billing: new BillingApi(apiConfig),
-      crawling: new CrawlingApi(apiConfig),
-      extraction: new ExtractionApi(apiConfig),
-      mapping: new MappingApi(apiConfig),
-      scraping: new ScrapingApi(apiConfig),
-      search: new SearchApi(apiConfig),
-    };
-    app.provide('api', apis);
-    app.config.globalProperties.$api = apis;
+    appInstance = app;
+    app.provide('api', apiClients);
+    app.config.globalProperties.$api = apiClients;
   },
 };
+
+/**
+ * Reinitialize API clients with updated configuration.
+ *
+ * @param baseUrl - Optional new base URL.
+ * @param apiKey - Optional new API key.
+ */
+export function refreshApiClients(baseUrl?: string, apiKey?: string): void {
+  updateApiConfig(baseUrl, apiKey);
+  apiClients.billing = new BillingApi(getApiConfig());
+  apiClients.crawling = new CrawlingApi(getApiConfig());
+  apiClients.extraction = new ExtractionApi(getApiConfig());
+  apiClients.mapping = new MappingApi(getApiConfig());
+  apiClients.scraping = new ScrapingApi(getApiConfig());
+  apiClients.search = new SearchApi(getApiConfig());
+
+  if (appInstance) {
+    appInstance.config.globalProperties.$api = apiClients;
+  }
+}
 
 export default apiPlugin;
