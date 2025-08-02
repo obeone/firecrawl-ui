@@ -106,8 +106,8 @@
               Allow External Links
             </label>
             <label class="checkbox-label">
-              <input type="checkbox" v-model="formData.crawlerOptions.navigateBacklinks" />
-              Navigate Backlinks
+              <input type="checkbox" v-model="formData.crawlerOptions.allowBackwardLinks" />
+              Allow Backward Links
             </label>
           </div>
         </div>
@@ -174,6 +174,15 @@
               min="0"
             />
           </div>
+          <div class="form-group">
+            <label for="maxAge">Cache Max Age (ms):</label>
+            <input
+              id="maxAge"
+              v-model.number="formData.scrapeOptions.maxAge"
+              type="number"
+              min="0"
+            />
+          </div>
           <label class="checkbox-label">
             <input type="checkbox" v-model="formData.scrapeOptions.skipTlsVerification" />
             Skip TLS Verification
@@ -181,6 +190,14 @@
           <label class="checkbox-label">
             <input type="checkbox" v-model="formData.scrapeOptions.blockAds" />
             Block Ads
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" v-model="formData.scrapeOptions.parsePDF" />
+            Parse PDF
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" v-model="formData.scrapeOptions.storeInCache" />
+            Store in Cache
           </label>
           <div class="form-group">
             <label for="proxy">Proxy:</label>
@@ -229,6 +246,15 @@
             <textarea
               id="jsonPrompt"
               v-model="formData.scrapeOptions.jsonOptions.prompt"
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label for="actions">Actions (JSON):</label>
+            <textarea
+              id="actions"
+              v-model="actionsInput"
+              @blur="parseActions"
+              placeholder='[{"type":"wait","milliseconds":1000}]'
             ></textarea>
           </div>
           <div class="form-group">
@@ -455,8 +481,8 @@ import {
  * Interface for Crawler Options section of the form.
  */
 interface CrawlerOptions {
-  includes?: string[];
-  excludes?: string[];
+  includePaths?: string[];
+  excludePaths?: string[];
   maxDepth?: number;
   maxDiscoveryDepth?: number;
   ignoreSitemap?: boolean;
@@ -464,7 +490,7 @@ interface CrawlerOptions {
   limit?: number;
   delay?: number;
   allowExternalLinks?: boolean;
-  navigateBacklinks?: boolean;
+  allowBackwardLinks?: boolean;
 }
 
 /**
@@ -481,8 +507,10 @@ interface ScrapeOptions {
   mobile?: boolean;
   removeBase64Images?: boolean;
   actions?: any[]; // Based on OpenAPI, actions is an array of Action objects
+  maxAge?: number;
   skipTlsVerification?: boolean;
   timeout?: number;
+  parsePDF?: boolean;
   jsonOptions?: {
     schema?: object;
     systemPrompt?: string;
@@ -492,6 +520,7 @@ interface ScrapeOptions {
     country?: string;
     languages?: string[];
   };
+  storeInCache?: boolean;
   blockAds?: boolean;
   proxy?: string;
   changeTrackingOptions?: {
@@ -544,8 +573,8 @@ export default defineComponent({
     const formData = ref<FormData>({
       url: '',
       crawlerOptions: {
-        includes: [],
-        excludes: [],
+        includePaths: [],
+        excludePaths: [],
         maxDepth: undefined,
         maxDiscoveryDepth: undefined,
         ignoreSitemap: false,
@@ -553,7 +582,7 @@ export default defineComponent({
         limit: undefined,
         delay: undefined,
         allowExternalLinks: false,
-        navigateBacklinks: false,
+        allowBackwardLinks: false,
       },
       scrapeOptions: {
         formats: ['markdown'],
@@ -561,14 +590,17 @@ export default defineComponent({
         includeTags: [],
         excludeTags: [],
         headers: {},
+        maxAge: 0,
         waitFor: undefined,
         mobile: false,
         removeBase64Images: false,
         actions: [],
+        parsePDF: true,
         skipTlsVerification: false,
         timeout: undefined,
         jsonOptions: {},
         location: { country: undefined, languages: [] },
+        storeInCache: true,
         blockAds: true,
         proxy: undefined,
         changeTrackingOptions: {},
@@ -592,6 +624,7 @@ export default defineComponent({
     const jsonOptionsSchemaInput = ref('');
     const changeTrackingSchemaInput = ref('');
     const changeTrackingModesInput = ref('');
+    const actionsInput = ref('');
 
     // State for collapsible sections
     const isCrawlerOptionsCollapsed = ref(true);
@@ -605,10 +638,10 @@ export default defineComponent({
 
     /**
      * Parses a comma-separated string of regex patterns from the includes input
-     * and updates the formData.crawlerOptions.includes array.
+     * and updates the formData.crawlerOptions.includePaths array.
      */
     const parseIncludes = () => {
-      formData.value.crawlerOptions.includes = includesInput.value
+      formData.value.crawlerOptions.includePaths = includesInput.value
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);
@@ -616,10 +649,10 @@ export default defineComponent({
 
     /**
      * Parses a comma-separated string of regex patterns from the excludes input
-     * and updates the formData.crawlerOptions.excludes array.
+     * and updates the formData.crawlerOptions.excludePaths array.
      */
     const parseExcludes = () => {
-      formData.value.crawlerOptions.excludes = excludesInput.value
+      formData.value.crawlerOptions.excludePaths = excludesInput.value
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);
@@ -731,6 +764,20 @@ export default defineComponent({
         .filter(Boolean);
     };
 
+    /**
+     * Parses the actionsInput string as JSON and updates
+     * formData.scrapeOptions.actions. Sets an error message if parsing fails.
+     */
+    const parseActions = () => {
+      try {
+        formData.value.scrapeOptions.actions = actionsInput.value
+          ? JSON.parse(actionsInput.value)
+          : [];
+      } catch (e: any) {
+        error.value = `Invalid JSON for actions: ${e.message}`;
+      }
+    };
+
     const loading = ref(false);
     const crawling = ref(false);
     const progress = ref(0);
@@ -818,8 +865,8 @@ export default defineComponent({
         // Sync text inputs with values from the selected crawl if available
         const crawl = crawlHistory.value.find((c) => c.id === id);
         if (crawl && crawl.crawlerOptions) {
-          includesInput.value = (crawl.crawlerOptions.includes || []).join(', ');
-          excludesInput.value = (crawl.crawlerOptions.excludes || []).join(', ');
+          includesInput.value = (crawl.crawlerOptions.includePaths || []).join(', ');
+          excludesInput.value = (crawl.crawlerOptions.excludePaths || []).join(', ');
         }
         if (crawl && crawl.scrapeOptions) {
           includeTagsInput.value = (crawl.scrapeOptions.includeTags || []).join(', ');
@@ -833,6 +880,9 @@ export default defineComponent({
             : '';
           changeTrackingModesInput.value =
             crawl.scrapeOptions.changeTrackingOptions?.modes?.join(', ') || '';
+          actionsInput.value = crawl.scrapeOptions.actions
+            ? JSON.stringify(crawl.scrapeOptions.actions)
+            : '';
         }
       } catch (err: any) {
         console.error(`Error fetching crawl files for ID ${id}:`, err);
@@ -1146,6 +1196,7 @@ export default defineComponent({
       parseJsonOptionsSchema();
       parseChangeTrackingSchema();
       parseChangeTrackingModes();
+      parseActions();
       parseWebhookHeaders();
       parseWebhookMetadata();
 
@@ -1166,8 +1217,10 @@ export default defineComponent({
       const payload: any = { url: formData.value.url };
 
       const crawler = formData.value.crawlerOptions;
-      if (crawler.excludes && crawler.excludes.length > 0) payload.excludePaths = crawler.excludes;
-      if (crawler.includes && crawler.includes.length > 0) payload.includePaths = crawler.includes;
+      if (crawler.excludePaths && crawler.excludePaths.length > 0)
+        payload.excludePaths = crawler.excludePaths;
+      if (crawler.includePaths && crawler.includePaths.length > 0)
+        payload.includePaths = crawler.includePaths;
       if (crawler.maxDepth !== undefined) payload.maxDepth = crawler.maxDepth;
       if (crawler.maxDiscoveryDepth !== undefined)
         payload.maxDiscoveryDepth = crawler.maxDiscoveryDepth;
@@ -1175,11 +1228,12 @@ export default defineComponent({
       if (crawler.ignoreQueryParameters) payload.ignoreQueryParameters = true;
       if (crawler.limit !== undefined) payload.limit = crawler.limit;
       if (crawler.delay !== undefined) payload.delay = crawler.delay;
-      if (crawler.navigateBacklinks) payload.allowBackwardLinks = true;
+      if (crawler.allowBackwardLinks) payload.allowBackwardLinks = true;
       if (crawler.allowExternalLinks) payload.allowExternalLinks = true;
 
       const scrape = formData.value.scrapeOptions;
       const scrapePayload: any = {};
+      if (scrape.maxAge !== undefined && scrape.maxAge > 0) scrapePayload.maxAge = scrape.maxAge;
       if (scrape.formats && scrape.formats.length > 0) scrapePayload.formats = scrape.formats;
       // Only include onlyMainContent if it's explicitly false, as default is true
       if (scrape.onlyMainContent === false) scrapePayload.onlyMainContent = false;
@@ -1193,6 +1247,7 @@ export default defineComponent({
       if (scrape.mobile) scrapePayload.mobile = true;
       if (scrape.removeBase64Images) scrapePayload.removeBase64Images = true;
       if (scrape.actions && scrape.actions.length > 0) scrapePayload.actions = scrape.actions;
+      if (scrape.parsePDF === false) scrapePayload.parsePDF = false;
       if (scrape.skipTlsVerification) scrapePayload.skipTlsVerification = true;
       if (scrape.timeout !== undefined) scrapePayload.timeout = scrape.timeout;
       if (scrape.jsonOptions) {
@@ -1210,6 +1265,7 @@ export default defineComponent({
           loc.languages = scrape.location.languages;
         if (Object.keys(loc).length > 0) scrapePayload.location = loc;
       }
+      if (scrape.storeInCache === false) scrapePayload.storeInCache = false;
       // Only include blockAds if it's explicitly false, as default is true
       if (scrape.blockAds === false) scrapePayload.blockAds = false;
       if (scrape.proxy) scrapePayload.proxy = scrape.proxy;
@@ -1395,6 +1451,7 @@ export default defineComponent({
       jsonOptionsSchemaInput,
       changeTrackingSchemaInput,
       changeTrackingModesInput,
+      actionsInput,
       parseIncludes,
       parseExcludes,
       parseIncludeTags,
@@ -1403,6 +1460,7 @@ export default defineComponent({
       parseJsonOptionsSchema,
       parseChangeTrackingSchema,
       parseChangeTrackingModes,
+      parseActions,
       parseWebhookHeaders,
       parseWebhookMetadata,
       loading,
