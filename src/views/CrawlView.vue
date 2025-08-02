@@ -361,6 +361,7 @@
       </div>
       <p>{{ progress }}% Completed</p>
       <p>{{ pagesCompleted }} / {{ totalPages }} pages processed</p>
+      <button class="primary-button" type="button" @click="cancelActiveCrawl">Cancel Crawl</button>
     </div>
 
     <!-- Section for download options after crawl completion -->
@@ -1417,6 +1418,33 @@ export default defineComponent({
       }, 1000); // Poll every 1 second
     };
 
+    /**
+     * Cancel the active crawl job.
+     *
+     * @returns {Promise<void>} A promise that resolves when the cancellation request finishes.
+     */
+    const cancelActiveCrawl = async (): Promise<void> => {
+      if (!result.value?.id) {
+        return;
+      }
+      try {
+        await api.crawling.cancelCrawl(result.value.id);
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+        crawling.value = false;
+        crawlStatus.value = 'cancelled';
+        const historyItem = crawlHistory.value.find((c) => c.id === result.value.id);
+        if (historyItem) {
+          historyItem.status = 'cancelled';
+          saveHistory();
+        }
+      } catch (err: any) {
+        error.value = `Failed to cancel crawl: ${err.message || err}`;
+      }
+    };
+
     onMounted(() => {
       // Load history from LocalStorage on component mount
       const savedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
@@ -1465,6 +1493,7 @@ export default defineComponent({
       parseWebhookMetadata,
       loading,
       crawling,
+      cancelActiveCrawl,
       progress,
       pagesCompleted,
       totalPages,
