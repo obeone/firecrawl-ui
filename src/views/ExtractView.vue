@@ -13,16 +13,6 @@
       </div>
 
       <div class="form-group">
-        <label for="input-content">Inputs (one per line)</label>
-        <textarea
-          id="input-content"
-          v-model="inputText"
-          rows="4"
-          placeholder="Raw text to extract"
-        ></textarea>
-      </div>
-
-      <div class="form-group">
         <label for="prompt-input">Prompt</label>
         <textarea
           id="prompt-input"
@@ -41,16 +31,6 @@
           placeholder='{"title": "string"}'
         ></textarea>
         <small v-if="schemaError" class="schema-error">{{ schemaError }}</small>
-      </div>
-
-      <div class="form-group">
-        <label for="provider-input">Model Provider</label>
-        <input id="provider-input" type="text" v-model="modelProvider" placeholder="openai" />
-      </div>
-
-      <div class="form-group">
-        <label for="model-input">Model Name</label>
-        <input id="model-input" type="text" v-model="modelName" placeholder="gpt-4o-mini" />
       </div>
 
       <div class="options">
@@ -94,11 +74,8 @@ if (!api?.extraction) {
 }
 
 const urlInput = ref(''); // Stores the URLs entered by the user.
-const inputText = ref(''); // Stores raw text inputs for extraction.
 const promptInput = ref(''); // Stores the prompt for data extraction.
 const schemaString = ref(''); // Stores the JSON schema string provided by the user.
-const modelProvider = ref('openai'); // Stores the model provider for extraction.
-const modelName = ref('gpt-4o-mini'); // Stores the model name for extraction.
 const options = ref({ enableWebSearch: false, showSources: false }); // Stores extraction options.
 const loading = ref(false); // Indicates if an extraction request is in progress.
 const error = ref(''); // Stores any error messages from the extraction process.
@@ -136,26 +113,17 @@ const runExtraction = async (): Promise<void> => {
     .split('\n')
     .map((u) => u.trim())
     .filter((u) => u);
-  const inputs = inputText.value
-    .split('\n')
-    .map((i) => i.trim())
-    .filter((i) => i);
-  if (!urls.length && !inputs.length) {
-    error.value = 'Please provide at least one URL or input.';
+  if (!urls.length && !promptInput.value.trim()) {
+    error.value = 'Please provide at least one URL or a prompt.';
     return;
   }
 
   const payload: ExtractDataRequest = {
     ...(urls.length && { urls }),
-    ...(inputs.length && { inputs }),
     ...(promptInput.value && { prompt: promptInput.value }),
     ...(parsedSchema.value && { schema: parsedSchema.value }),
     ...(options.value.enableWebSearch && { enableWebSearch: true }),
     ...(options.value.showSources && { showSources: true }),
-    model: {
-      provider: modelProvider.value,
-      name: modelName.value,
-    },
   } as ExtractDataRequest;
 
   try {

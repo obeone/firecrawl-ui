@@ -547,12 +547,6 @@ export interface ExtractDataRequest {
    */
   urls?: Array<string>;
   /**
-   * Raw text inputs to extract data from
-   * @type {Array<string>}
-   * @memberof ExtractDataRequest
-   */
-  inputs?: Array<string>;
-  /**
    * Prompt to guide the extraction process
    * @type {string}
    * @memberof ExtractDataRequest
@@ -576,12 +570,6 @@ export interface ExtractDataRequest {
    * @memberof ExtractDataRequest
    */
   showSources?: boolean;
-  /**
-   * Model configuration to use during extraction
-   * @type {ExtractDataRequestModel}
-   * @memberof ExtractDataRequest
-   */
-  model?: ExtractDataRequestModel;
 }
 /**
  * Schema to define the structure of the extracted data
@@ -601,26 +589,6 @@ export interface ExtractDataRequestSchema {
    * @memberof ExtractDataRequestSchema
    */
   property2: number;
-}
-
-/**
- * Model configuration for extraction
- * @export
- * @interface ExtractDataRequestModel
- */
-export interface ExtractDataRequestModel {
-  /**
-   * Provider of the model (e.g., 'openai')
-   * @type {string}
-   * @memberof ExtractDataRequestModel
-   */
-  provider: string;
-  /**
-   * Name of the model to use
-   * @type {string}
-   * @memberof ExtractDataRequestModel
-   */
-  name: string;
 }
 /**
  *
