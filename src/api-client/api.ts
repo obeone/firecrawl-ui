@@ -558,6 +558,24 @@ export interface ExtractDataRequest {
    * @memberof ExtractDataRequest
    */
   schema?: ExtractDataRequestSchema;
+  /**
+   * When true, the extraction will use web search to find additional data
+   * @type {boolean}
+   * @memberof ExtractDataRequest
+   */
+  enableWebSearch?: boolean;
+  /**
+   * When true, sources used for extraction will be included in the response
+   * @type {boolean}
+   * @memberof ExtractDataRequest
+   */
+  showSources?: boolean;
+  /**
+   * Model configuration to use during extraction
+   * @type {ExtractDataRequestModel}
+   * @memberof ExtractDataRequest
+   */
+  model?: ExtractDataRequestModel;
 }
 /**
  * Schema to define the structure of the extracted data
@@ -577,6 +595,26 @@ export interface ExtractDataRequestSchema {
    * @memberof ExtractDataRequestSchema
    */
   property2: number;
+}
+
+/**
+ * Model configuration for extraction
+ * @export
+ * @interface ExtractDataRequestModel
+ */
+export interface ExtractDataRequestModel {
+  /**
+   * Provider of the model (e.g., 'openai')
+   * @type {string}
+   * @memberof ExtractDataRequestModel
+   */
+  provider: string;
+  /**
+   * Name of the model to use
+   * @type {string}
+   * @memberof ExtractDataRequestModel
+   */
+  name: string;
 }
 /**
  *
