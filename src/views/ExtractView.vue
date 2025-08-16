@@ -9,7 +9,16 @@
           v-model="urlInput"
           rows="4"
           placeholder="https://example.com/blog/*"
-          required
+        ></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="input-content">Inputs (one per line)</label>
+        <textarea
+          id="input-content"
+          v-model="inputText"
+          rows="4"
+          placeholder="Raw text to extract"
         ></textarea>
       </div>
 
@@ -85,6 +94,7 @@ if (!api?.extraction) {
 }
 
 const urlInput = ref(''); // Stores the URLs entered by the user.
+const inputText = ref(''); // Stores raw text inputs for extraction.
 const promptInput = ref(''); // Stores the prompt for data extraction.
 const schemaString = ref(''); // Stores the JSON schema string provided by the user.
 const modelProvider = ref('openai'); // Stores the model provider for extraction.
@@ -126,13 +136,18 @@ const runExtraction = async (): Promise<void> => {
     .split('\n')
     .map((u) => u.trim())
     .filter((u) => u);
-  if (!urls.length) {
-    error.value = 'Please provide at least one URL.';
+  const inputs = inputText.value
+    .split('\n')
+    .map((i) => i.trim())
+    .filter((i) => i);
+  if (!urls.length && !inputs.length) {
+    error.value = 'Please provide at least one URL or input.';
     return;
   }
 
   const payload: ExtractDataRequest = {
-    urls,
+    ...(urls.length && { urls }),
+    ...(inputs.length && { inputs }),
     ...(promptInput.value && { prompt: promptInput.value }),
     ...(parsedSchema.value && { schema: parsedSchema.value }),
     ...(options.value.enableWebSearch && { enableWebSearch: true }),

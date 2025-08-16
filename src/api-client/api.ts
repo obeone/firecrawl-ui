@@ -545,13 +545,19 @@ export interface ExtractDataRequest {
    * @type {Array<string>}
    * @memberof ExtractDataRequest
    */
-  urls: Array<string>;
+  urls?: Array<string>;
+  /**
+   * Raw text inputs to extract data from
+   * @type {Array<string>}
+   * @memberof ExtractDataRequest
+   */
+  inputs?: Array<string>;
   /**
    * Prompt to guide the extraction process
    * @type {string}
    * @memberof ExtractDataRequest
    */
-  prompt: string;
+  prompt?: string;
   /**
    *
    * @type {ExtractDataRequestSchema}
