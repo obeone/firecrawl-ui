@@ -3,7 +3,8 @@
     <h1>Extract Data</h1>
     <form @submit.prevent="runExtraction" class="extract-form">
       <div class="form-group">
-        <label for="url-input">URLs (one per line)</label>
+        <label for="url-input">URLs (optional, one per line)</label>
+        <small class="hint">Leave blank when providing only a prompt.</small>
         <textarea
           id="url-input"
           v-model="urlInput"
@@ -233,5 +234,11 @@ pre {
 
 .schema-error {
   color: #d9534f;
+}
+
+.hint {
+  display: block;
+  margin-top: 4px;
+  color: #666;
 }
 </style>
