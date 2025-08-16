@@ -3,13 +3,13 @@
     <h1>Extract Data</h1>
     <form @submit.prevent="runExtraction" class="extract-form">
       <div class="form-group">
-        <label for="url-input">URLs (one per line)</label>
+        <label for="url-input">URLs (optional, one per line)</label>
+        <small class="hint">Leave blank when providing only a prompt.</small>
         <textarea
           id="url-input"
           v-model="urlInput"
           rows="4"
           placeholder="https://example.com/blog/*"
-          required
         ></textarea>
       </div>
 
@@ -114,13 +114,13 @@ const runExtraction = async (): Promise<void> => {
     .split('\n')
     .map((u) => u.trim())
     .filter((u) => u);
-  if (!urls.length) {
-    error.value = 'Please provide at least one URL.';
+  if (!urls.length && !promptInput.value.trim()) {
+    error.value = 'Please provide at least one URL or a prompt.';
     return;
   }
 
   const payload: ExtractDataRequest = {
-    urls,
+    ...(urls.length && { urls }),
     ...(promptInput.value && { prompt: promptInput.value }),
     ...(parsedSchema.value && { schema: parsedSchema.value }),
     ...(options.value.enableWebSearch && { enableWebSearch: true }),
@@ -234,5 +234,11 @@ pre {
 
 .schema-error {
   color: #d9534f;
+}
+
+.hint {
+  display: block;
+  margin-top: 4px;
+  color: #666;
 }
 </style>

@@ -545,19 +545,31 @@ export interface ExtractDataRequest {
    * @type {Array<string>}
    * @memberof ExtractDataRequest
    */
-  urls: Array<string>;
+  urls?: Array<string>;
   /**
    * Prompt to guide the extraction process
    * @type {string}
    * @memberof ExtractDataRequest
    */
-  prompt: string;
+  prompt?: string;
   /**
    *
    * @type {ExtractDataRequestSchema}
    * @memberof ExtractDataRequest
    */
   schema?: ExtractDataRequestSchema;
+  /**
+   * When true, the extraction will use web search to find additional data
+   * @type {boolean}
+   * @memberof ExtractDataRequest
+   */
+  enableWebSearch?: boolean;
+  /**
+   * When true, sources used for extraction will be included in the response
+   * @type {boolean}
+   * @memberof ExtractDataRequest
+   */
+  showSources?: boolean;
 }
 /**
  * Schema to define the structure of the extracted data
