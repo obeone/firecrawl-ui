@@ -40,9 +40,15 @@
         </label>
       </fieldset>
 
-      <button type="submit" class="primary-button">Search</button>
-      <span v-if="loading" class="status">Loading...</span>
+      <button type="submit" class="primary-button" :disabled="loading">Search</button>
+      <LoadingSpinner v-if="loading" class="status" />
       <span v-if="error" class="status error">{{ error }}</span>
+      <Toast
+        v-if="toastMessage"
+        :message="toastMessage"
+        :type="toastType"
+        @dismiss="toastMessage = ''"
+      />
     </form>
 
     <section v-if="results.length" class="results">
@@ -78,6 +84,8 @@
 
 <script setup lang="ts">
 import { ref, inject, computed } from 'vue';
+import LoadingSpinner from './LoadingSpinner.vue';
+import Toast from './Toast.vue';
 import type { SearchApi, SearchRequest } from '@/api-client/search.js';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
@@ -154,6 +162,20 @@ const loading = ref(false);
  * Reactive string to store any error messages from the search.
  */
 const error = ref('');
+const toastMessage = ref('');
+const toastType = ref<'success' | 'error'>('success');
+
+/**
+ * Display a toast notification.
+ *
+ * @param message - Message to display.
+ * @param type - Type of notification.
+ * @returns void
+ */
+function showToast(message: string, type: 'success' | 'error'): void {
+  toastMessage.value = message;
+  toastType.value = type;
+}
 /**
  * Reactive array to store the search results.
  */
@@ -195,8 +217,10 @@ async function onSearch(): Promise<void> {
     const response = await api.search.search(payload);
     requestedFormats.value = payload.scrapeOptions?.formats ?? [];
     results.value = (response.data.data || []).map(normalizeResult);
+    showToast('Search completed successfully', 'success');
   } catch (err: any) {
     error.value = err?.message || 'Search request failed';
+    showToast(error.value, 'error');
   } finally {
     loading.value = false;
   }

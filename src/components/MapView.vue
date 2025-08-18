@@ -34,11 +34,17 @@
         <input id="timeout" v-model.number="timeout" type="number" min="0" />
       </div>
 
-      <button type="submit" class="primary-button">Find URLs</button>
+      <button type="submit" class="primary-button" :disabled="loading">Find URLs</button>
     </form>
 
     <div v-if="error" class="error">{{ error }}</div>
-    <div v-if="loading" class="status">Loading...</div>
+    <LoadingSpinner v-if="loading" class="status" />
+    <Toast
+      v-if="toastMessage"
+      :message="toastMessage"
+      :type="toastType"
+      @dismiss="toastMessage = ''"
+    />
 
     <div v-if="urls.length" class="results">
       <h3>Found URLs</h3>
@@ -52,6 +58,8 @@
 
 <script setup lang="ts">
 import { ref, inject } from 'vue';
+import LoadingSpinner from './LoadingSpinner.vue';
+import Toast from './Toast.vue';
 import type { MappingApi, MapUrlsRequest } from '@/api-client';
 
 /**
@@ -138,6 +146,20 @@ const loading = ref(false);
  * @type {Ref<string>}
  */
 const error = ref('');
+const toastMessage = ref('');
+const toastType = ref<'success' | 'error'>('success');
+
+/**
+ * Display a toast notification.
+ *
+ * @param message - Message to display.
+ * @param type - Type of notification.
+ * @returns void
+ */
+function showToast(message: string, type: 'success' | 'error'): void {
+  toastMessage.value = message;
+  toastType.value = type;
+}
 
 /**
  * Handles the form submission event.
@@ -161,9 +183,11 @@ async function handleSubmit(): Promise<void> {
   try {
     const response = await api.mapping.mapUrls(payload);
     urls.value = response.data.links ?? [];
+    showToast('URLs retrieved successfully', 'success');
   } catch (err: any) {
     // Cast err to any to access message property safely
     error.value = err?.message || 'Failed to map URLs. Please check the URL and try again.';
+    showToast(error.value, 'error');
     urls.value = [];
   } finally {
     loading.value = false;
