@@ -1,14 +1,31 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 
 const isMenuOpen = ref(false);
+
+const storedTheme = localStorage.getItem('theme');
+const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+const theme = ref(storedTheme ?? (prefersDark ? 'dark' : 'light'));
+document.documentElement.setAttribute('data-theme', theme.value);
+
+watch(theme, (newTheme) => {
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+});
 
 /**
  * Toggles the visibility of the sidebar menu on small screens.
  */
 function toggleMenu(): void {
   isMenuOpen.value = !isMenuOpen.value;
+}
+
+/**
+ * Switches between light and dark themes and persists the choice.
+ */
+function toggleTheme(): void {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark';
 }
 </script>
 
@@ -27,6 +44,9 @@ function toggleMenu(): void {
         <RouterLink to="/api-config">API Config</RouterLink>
         <RouterLink to="/about">About</RouterLink>
       </nav>
+      <button class="theme-toggle" @click="toggleTheme" aria-label="Toggle theme">
+        {{ theme === 'dark' ? 'Light' : 'Dark' }} Mode
+      </button>
     </aside>
     <main @click="isMenuOpen = false">
       <router-view />
@@ -89,6 +109,21 @@ function toggleMenu(): void {
   background-color: hsla(160, 100%, 37%, 0.2); /* Active link background */
   color: hsla(160, 100%, 37%, 1); /* Active link text color */
   font-weight: 600;
+}
+
+.theme-toggle {
+  margin-top: 1rem;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-background-soft);
+  color: var(--color-text);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  background-color: var(--color-background-mute);
 }
 
 .menu-button {
