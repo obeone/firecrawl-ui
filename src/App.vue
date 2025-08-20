@@ -32,6 +32,9 @@ function toggleTheme(): void {
 <template>
   <div class="app-layout" :class="{ 'menu-open': isMenuOpen }">
     <button class="menu-button" @click="toggleMenu" aria-label="Toggle navigation">☰</button>
+    <button class="theme-toggle" @click="toggleTheme" aria-label="Toggle theme">
+      {{ theme === 'dark' ? '🌞' : '🌙' }}
+    </button>
     <aside class="sidebar" :class="{ open: isMenuOpen }">
       <img alt="Firecrawl UI logo" class="logo" src="@/assets/logo.png" width="80" height="80" />
       <nav @click="isMenuOpen = false">
@@ -44,9 +47,6 @@ function toggleTheme(): void {
         <RouterLink to="/api-config">API Config</RouterLink>
         <RouterLink to="/about">About</RouterLink>
       </nav>
-      <button class="theme-toggle" @click="toggleTheme" aria-label="Toggle theme">
-        {{ theme === 'dark' ? 'Light' : 'Dark' }} Mode
-      </button>
     </aside>
     <main @click="isMenuOpen = false">
       <router-view />
@@ -112,18 +112,19 @@ function toggleTheme(): void {
 }
 
 .theme-toggle {
-  margin-top: 1rem;
-  padding: 0.6rem 1rem;
-  border-radius: 6px;
-  border: 1px solid var(--color-border);
-  background-color: var(--color-background-soft);
-  color: var(--color-text);
-  font-weight: 500;
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
   cursor: pointer;
+  color: var(--color-heading);
+  z-index: 1100;
 }
 
 .theme-toggle:hover {
-  background-color: var(--color-background-mute);
+  opacity: 0.8;
 }
 
 .menu-button {
