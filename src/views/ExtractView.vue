@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, ref } from 'vue';
+import { computed, inject, ref, watch } from 'vue';
 import { ExtractionApi, type ExtractDataRequest, type ExtractResponse } from '@/api-client';
 
 /**
@@ -82,24 +82,30 @@ const loading = ref(false); // Indicates if an extraction request is in progress
 const error = ref(''); // Stores any error messages from the extraction process.
 const result = ref<ExtractResponse['data'] | null>(null); // Stores the successful extraction result.
 const schemaError = ref<string | null>(null); // Stores error messages related to JSON schema parsing.
+const parsedSchema = ref<any>(undefined); // Holds the parsed schema object.
 
 /**
- * Parse the schema string. If invalid, schemaError will contain the message.
+ * Watcher to parse the schema string and update the parsed schema.
+ * Sets an error message if parsing fails.
  */
-const parsedSchema = computed(() => {
-  if (!schemaString.value.trim()) {
-    schemaError.value = null;
-    return undefined;
-  }
-  try {
-    const parsed = JSON.parse(schemaString.value);
-    schemaError.value = null;
-    return parsed;
-  } catch (e: any) {
-    schemaError.value = e.message;
-    return null;
-  }
-});
+watch(
+  schemaString,
+  (newVal) => {
+    if (!newVal.trim()) {
+      schemaError.value = null;
+      parsedSchema.value = undefined;
+      return;
+    }
+    try {
+      parsedSchema.value = JSON.parse(newVal);
+      schemaError.value = null;
+    } catch (e: any) {
+      schemaError.value = e.message;
+      parsedSchema.value = null;
+    }
+  },
+  { immediate: true },
+);
 
 /** Format result as pretty JSON. */
 const formattedResult = computed(() => (result.value ? JSON.stringify(result.value, null, 2) : ''));

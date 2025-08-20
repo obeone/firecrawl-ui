@@ -31,8 +31,8 @@
                 v-model="includesInput"
                 type="text"
                 placeholder="/blog/.*, /products/.*"
-                @blur="parseIncludes"
               />
+              <div v-if="includesError" class="error-message">{{ includesError }}</div>
               <small>Comma-separated regex patterns. Only matching URLs will be included.</small>
             </div>
             <div class="form-group">
@@ -42,8 +42,8 @@
                 v-model="excludesInput"
                 type="text"
                 placeholder="/login, /private/.*"
-                @blur="parseExcludes"
               />
+              <div v-if="excludesError" class="error-message">{{ excludesError }}</div>
               <small>Comma-separated regex patterns to exclude URLs.</small>
             </div>
             <div class="form-group">
@@ -211,11 +211,10 @@
           </div>
           <div class="form-group">
             <label for="jsonSchema">JSON Options Schema (JSON):</label>
-            <textarea
-              id="jsonSchema"
-              v-model="jsonOptionsSchemaInput"
-              @blur="parseJsonOptionsSchema"
-            ></textarea>
+            <textarea id="jsonSchema" v-model="jsonOptionsSchemaInput"></textarea>
+            <div v-if="jsonOptionsSchemaError" class="error-message">
+              {{ jsonOptionsSchemaError }}
+            </div>
           </div>
           <div class="form-group">
             <label for="jsonSystemPrompt">JSON System Prompt:</label>
@@ -243,11 +242,10 @@
           </div>
           <div class="form-group">
             <label for="changeSchema">Change Tracking Schema (JSON):</label>
-            <textarea
-              id="changeSchema"
-              v-model="changeTrackingSchemaInput"
-              @blur="parseChangeTrackingSchema"
-            ></textarea>
+            <textarea id="changeSchema" v-model="changeTrackingSchemaInput"></textarea>
+            <div v-if="changeTrackingSchemaError" class="error-message">
+              {{ changeTrackingSchemaError }}
+            </div>
           </div>
           <div class="form-group">
             <label for="changePrompt">Change Tracking Prompt:</label>
@@ -284,8 +282,10 @@
                 id="webhookHeaders"
                 v-model="webhookHeadersInput"
                 placeholder='{"Authorization": "token"}'
-                @blur="parseWebhookHeaders"
               ></textarea>
+              <div v-if="webhookHeadersError" class="error-message">
+                {{ webhookHeadersError }}
+              </div>
             </div>
             <div class="form-group">
               <label for="webhookMetadata">Webhook Metadata (JSON):</label>
@@ -293,8 +293,10 @@
                 id="webhookMetadata"
                 v-model="webhookMetadataInput"
                 placeholder='{"source": "ui"}'
-                @blur="parseWebhookMetadata"
               ></textarea>
+              <div v-if="webhookMetadataError" class="error-message">
+                {{ webhookMetadataError }}
+              </div>
             </div>
             <div class="form-group">
               <label for="webhookEvents">Webhook Events:</label>
@@ -437,7 +439,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, inject, onMounted, onUnmounted, computed } from 'vue';
+import { defineComponent, ref, inject, onMounted, onUnmounted, computed, watch } from 'vue';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import axios from 'axios';
@@ -593,6 +595,13 @@ export default defineComponent({
     const changeTrackingSchemaInput = ref('');
     const changeTrackingModesInput = ref('');
 
+    const includesError = ref('');
+    const excludesError = ref('');
+    const webhookHeadersError = ref('');
+    const webhookMetadataError = ref('');
+    const jsonOptionsSchemaError = ref('');
+    const changeTrackingSchemaError = ref('');
+
     // State for collapsible sections
     const isCrawlerOptionsCollapsed = ref(true);
     const isScrapeOptionsCollapsed = ref(true);
@@ -604,25 +613,45 @@ export default defineComponent({
     const webhookOptionsArrow = computed(() => (isWebhookOptionsCollapsed.value ? '▶' : '▼'));
 
     /**
-     * Parses a comma-separated string of regex patterns from the includes input
-     * and updates the formData.crawlerOptions.includes array.
+     * Parses and validates regex patterns from the includes input.
+     * Updates formData.crawlerOptions.includes when all patterns are valid.
      */
-    const parseIncludes = () => {
-      formData.value.crawlerOptions.includes = includesInput.value
+    const parseIncludes = (): void => {
+      const patterns = includesInput.value
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);
+      for (const pattern of patterns) {
+        try {
+          new RegExp(pattern);
+        } catch (e: any) {
+          includesError.value = `Invalid regex pattern: ${pattern}`;
+          return;
+        }
+      }
+      includesError.value = '';
+      formData.value.crawlerOptions.includes = patterns;
     };
 
     /**
-     * Parses a comma-separated string of regex patterns from the excludes input
-     * and updates the formData.crawlerOptions.excludes array.
+     * Parses and validates regex patterns from the excludes input.
+     * Updates formData.crawlerOptions.excludes when all patterns are valid.
      */
-    const parseExcludes = () => {
-      formData.value.crawlerOptions.excludes = excludesInput.value
+    const parseExcludes = (): void => {
+      const patterns = excludesInput.value
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);
+      for (const pattern of patterns) {
+        try {
+          new RegExp(pattern);
+        } catch (e: any) {
+          excludesError.value = `Invalid regex pattern: ${pattern}`;
+          return;
+        }
+      }
+      excludesError.value = '';
+      formData.value.crawlerOptions.excludes = patterns;
     };
 
     /**
@@ -651,13 +680,14 @@ export default defineComponent({
      * Parses the webhookHeadersInput string as JSON and updates
      * formData.webhookOptions.headers. Sets an error message if parsing fails.
      */
-    const parseWebhookHeaders = () => {
+    const parseWebhookHeaders = (): void => {
       try {
         formData.value.webhookOptions.headers = webhookHeadersInput.value
           ? JSON.parse(webhookHeadersInput.value)
           : {};
+        webhookHeadersError.value = '';
       } catch (e: any) {
-        error.value = `Invalid JSON for webhook headers: ${e.message}`;
+        webhookHeadersError.value = `Invalid JSON: ${e.message}`;
       }
     };
 
@@ -665,13 +695,14 @@ export default defineComponent({
      * Parses the webhookMetadataInput string as JSON and updates
      * formData.webhookOptions.metadata. Sets an error message if parsing fails.
      */
-    const parseWebhookMetadata = () => {
+    const parseWebhookMetadata = (): void => {
       try {
         formData.value.webhookOptions.metadata = webhookMetadataInput.value
           ? JSON.parse(webhookMetadataInput.value)
           : {};
+        webhookMetadataError.value = '';
       } catch (e: any) {
-        error.value = `Invalid JSON for webhook metadata: ${e.message}`;
+        webhookMetadataError.value = `Invalid JSON: ${e.message}`;
       }
     };
 
@@ -691,14 +722,15 @@ export default defineComponent({
      * Parses the jsonOptionsSchemaInput string as JSON and updates
      * formData.scrapeOptions.jsonOptions.schema. Sets an error message if parsing fails.
      */
-    const parseJsonOptionsSchema = () => {
+    const parseJsonOptionsSchema = (): void => {
       try {
         formData.value.scrapeOptions.jsonOptions = formData.value.scrapeOptions.jsonOptions || {};
         formData.value.scrapeOptions.jsonOptions.schema = jsonOptionsSchemaInput.value
           ? JSON.parse(jsonOptionsSchemaInput.value)
           : undefined;
+        jsonOptionsSchemaError.value = '';
       } catch (e: any) {
-        error.value = `Invalid JSON for JSON schema: ${e.message}`;
+        jsonOptionsSchemaError.value = `Invalid JSON: ${e.message}`;
       }
     };
 
@@ -706,15 +738,16 @@ export default defineComponent({
      * Parses the changeTrackingSchemaInput string as JSON and updates
      * formData.scrapeOptions.changeTrackingOptions.schema. Sets an error message if parsing fails.
      */
-    const parseChangeTrackingSchema = () => {
+    const parseChangeTrackingSchema = (): void => {
       try {
         formData.value.scrapeOptions.changeTrackingOptions =
           formData.value.scrapeOptions.changeTrackingOptions || {};
         formData.value.scrapeOptions.changeTrackingOptions.schema = changeTrackingSchemaInput.value
           ? JSON.parse(changeTrackingSchemaInput.value)
           : undefined;
+        changeTrackingSchemaError.value = '';
       } catch (e: any) {
-        error.value = `Invalid JSON for change tracking schema: ${e.message}`;
+        changeTrackingSchemaError.value = `Invalid JSON: ${e.message}`;
       }
     };
 
@@ -730,6 +763,14 @@ export default defineComponent({
         .map((s) => s.trim())
         .filter(Boolean);
     };
+
+    // Watchers to validate inputs in real time
+    watch(includesInput, parseIncludes, { immediate: true });
+    watch(excludesInput, parseExcludes, { immediate: true });
+    watch(webhookHeadersInput, parseWebhookHeaders, { immediate: true });
+    watch(webhookMetadataInput, parseWebhookMetadata, { immediate: true });
+    watch(jsonOptionsSchemaInput, parseJsonOptionsSchema, { immediate: true });
+    watch(changeTrackingSchemaInput, parseChangeTrackingSchema, { immediate: true });
 
     const loading = ref(false);
     const crawling = ref(false);
@@ -1149,6 +1190,18 @@ export default defineComponent({
       parseWebhookHeaders();
       parseWebhookMetadata();
 
+      if (
+        includesError.value ||
+        excludesError.value ||
+        webhookHeadersError.value ||
+        webhookMetadataError.value ||
+        jsonOptionsSchemaError.value ||
+        changeTrackingSchemaError.value
+      ) {
+        error.value = 'Please fix the errors above before submitting';
+        return;
+      }
+
       // Basic form validation
       if (!isValidUrl(formData.value.url)) {
         error.value = 'Please enter a valid URL (e.g. https://example.com)';
@@ -1395,16 +1448,16 @@ export default defineComponent({
       jsonOptionsSchemaInput,
       changeTrackingSchemaInput,
       changeTrackingModesInput,
-      parseIncludes,
-      parseExcludes,
+      includesError,
+      excludesError,
+      webhookHeadersError,
+      webhookMetadataError,
+      jsonOptionsSchemaError,
+      changeTrackingSchemaError,
       parseIncludeTags,
       parseExcludeTags,
       parseLocationLanguages,
-      parseJsonOptionsSchema,
-      parseChangeTrackingSchema,
       parseChangeTrackingModes,
-      parseWebhookHeaders,
-      parseWebhookMetadata,
       loading,
       crawling,
       progress,
@@ -1472,6 +1525,11 @@ export default defineComponent({
   font-size: 0.8em;
   color: #666;
   margin-top: 3px;
+}
+.error-message {
+  color: red;
+  font-size: 0.9em;
+  margin-top: 5px;
 }
 .status {
   display: flex;

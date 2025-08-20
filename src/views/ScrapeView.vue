@@ -141,6 +141,7 @@
               rows="4"
               placeholder='{"Authorization": "Bearer token", "Accept": "application/json"}'
             ></textarea>
+            <div v-if="headersError" class="error-message">{{ headersError }}</div>
             <small>Enter HTTP headers as JSON object.</small>
           </div>
           <div class="form-group">
@@ -599,39 +600,54 @@ export default defineComponent({
 
     /**
      * Watcher for `extractorOptionsJson` to parse and update `formData.extractorOptions`.
-     * Provides real-time validation for JSON input.
+     * Sets an error message if parsing fails.
      */
-    watch(extractorOptionsJson, (newVal) => {
-      try {
-        formData.value.extractorOptions = newVal ? JSON.parse(newVal) : {};
-        extractorOptionsError.value = '';
-      } catch (e) {
-        extractorOptionsError.value = 'Invalid JSON format.';
-      }
-    });
+    watch(
+      extractorOptionsJson,
+      (newVal) => {
+        try {
+          formData.value.extractorOptions = newVal ? JSON.parse(newVal) : {};
+          extractorOptionsError.value = '';
+        } catch (e: any) {
+          extractorOptionsError.value = `Invalid JSON: ${e.message}`;
+        }
+      },
+      { immediate: true },
+    );
 
     /**
      * Reactive variable for the JSON string of HTTP headers.
      * @type {Ref<string>}
      */
     const headersJson = ref(JSON.stringify(formData.value.pageOptions.headers || {}, null, 2));
+    /**
+     * Reactive variable for displaying HTTP headers JSON parsing errors.
+     * @type {Ref<string>}
+     */
+    const headersError = ref('');
 
     /**
      * Watcher for `headersJson` to parse and update `formData.pageOptions.headers`.
-     * Silently ignores parsing errors to prevent breaking user input while typing.
+     * Sets an error message when the JSON is invalid.
      */
-    watch(headersJson, (newVal) => {
-      try {
-        formData.value.pageOptions.headers = newVal ? JSON.parse(newVal) : {};
-      } catch {
-        // Ignore JSON parse errors, keep previous headers to avoid disrupting user input.
-      }
-    });
+    watch(
+      headersJson,
+      (newVal) => {
+        try {
+          formData.value.pageOptions.headers = newVal ? JSON.parse(newVal) : {};
+          headersError.value = '';
+        } catch (e: any) {
+          headersError.value = `Invalid JSON: ${e.message}`;
+        }
+      },
+      { immediate: true },
+    );
 
     return {
       formData,
       loading,
       headersJson,
+      headersError,
       error,
       result,
       handleSubmit,
