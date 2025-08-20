@@ -312,6 +312,7 @@
       </fieldset>
 
       <button type="submit" class="primary-button">Submit Crawl</button>
+      <button type="button" class="secondary-button" @click="resetConfig">Reset to defaults</button>
     </form>
 
     <div v-if="loading" class="status loading">
@@ -543,7 +544,7 @@ export default defineComponent({
 
     // Reactive form data with explicit defaults to avoid undefined values.
     // Use undefined where appropriate to satisfy TypeScript types.
-    const formData = ref<FormData>({
+    const defaultFormData: FormData = {
       url: '',
       crawlerOptions: {
         includes: [],
@@ -581,7 +582,9 @@ export default defineComponent({
         metadata: {},
         events: [],
       },
-    });
+    };
+
+    const formData = ref<FormData>(JSON.parse(JSON.stringify(defaultFormData)));
 
     // Inputs for includes/excludes as comma-separated strings for user convenience
     const includesInput = ref('');
@@ -772,6 +775,39 @@ export default defineComponent({
     watch(jsonOptionsSchemaInput, parseJsonOptionsSchema, { immediate: true });
     watch(changeTrackingSchemaInput, parseChangeTrackingSchema, { immediate: true });
 
+    watch(
+      [
+        formData,
+        includesInput,
+        excludesInput,
+        includeTagsInput,
+        excludeTagsInput,
+        webhookHeadersInput,
+        webhookMetadataInput,
+        locationLanguagesInput,
+        jsonOptionsSchemaInput,
+        changeTrackingSchemaInput,
+        changeTrackingModesInput,
+      ],
+      () => {
+        const data = {
+          formData: formData.value,
+          includesInput: includesInput.value,
+          excludesInput: excludesInput.value,
+          includeTagsInput: includeTagsInput.value,
+          excludeTagsInput: excludeTagsInput.value,
+          webhookHeadersInput: webhookHeadersInput.value,
+          webhookMetadataInput: webhookMetadataInput.value,
+          locationLanguagesInput: locationLanguagesInput.value,
+          jsonOptionsSchemaInput: jsonOptionsSchemaInput.value,
+          changeTrackingSchemaInput: changeTrackingSchemaInput.value,
+          changeTrackingModesInput: changeTrackingModesInput.value,
+        };
+        localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(data));
+      },
+      { deep: true },
+    );
+
     const loading = ref(false);
     const crawling = ref(false);
     const progress = ref(0);
@@ -788,8 +824,9 @@ export default defineComponent({
     const selectedCrawlId = ref<string | null>(null);
     const simulatedFiles = ref<string[]>([]);
 
-    // LocalStorage key for crawl history
+    // LocalStorage keys
     const HISTORY_STORAGE_KEY = 'crawlHistory';
+    const CONFIG_STORAGE_KEY = 'crawlViewConfig';
 
     // Computed property to get the selected crawl details
     const selectedCrawl = computed(() => {
@@ -834,6 +871,26 @@ export default defineComponent({
       crawlHistory.value = [];
       selectedCrawlId.value = null;
       localStorage.removeItem(HISTORY_STORAGE_KEY);
+    };
+
+    /**
+     * Reset the form to default values and remove the stored configuration.
+     *
+     * @returns void
+     */
+    const resetConfig = (): void => {
+      localStorage.removeItem(CONFIG_STORAGE_KEY);
+      formData.value = JSON.parse(JSON.stringify(defaultFormData));
+      includesInput.value = '';
+      excludesInput.value = '';
+      includeTagsInput.value = '';
+      excludeTagsInput.value = '';
+      webhookHeadersInput.value = '';
+      webhookMetadataInput.value = '';
+      locationLanguagesInput.value = '';
+      jsonOptionsSchemaInput.value = '';
+      changeTrackingSchemaInput.value = '';
+      changeTrackingModesInput.value = '';
     };
 
     /**
@@ -1415,15 +1472,32 @@ export default defineComponent({
     };
 
     onMounted(() => {
-      // Load history from LocalStorage on component mount
+      const savedConfig = localStorage.getItem(CONFIG_STORAGE_KEY);
+      if (savedConfig) {
+        try {
+          const parsed = JSON.parse(savedConfig);
+          Object.assign(formData.value, parsed.formData ?? {});
+          includesInput.value = parsed.includesInput ?? '';
+          excludesInput.value = parsed.excludesInput ?? '';
+          includeTagsInput.value = parsed.includeTagsInput ?? '';
+          excludeTagsInput.value = parsed.excludeTagsInput ?? '';
+          webhookHeadersInput.value = parsed.webhookHeadersInput ?? '';
+          webhookMetadataInput.value = parsed.webhookMetadataInput ?? '';
+          locationLanguagesInput.value = parsed.locationLanguagesInput ?? '';
+          jsonOptionsSchemaInput.value = parsed.jsonOptionsSchemaInput ?? '';
+          changeTrackingSchemaInput.value = parsed.changeTrackingSchemaInput ?? '';
+          changeTrackingModesInput.value = parsed.changeTrackingModesInput ?? '';
+        } catch (e) {
+          console.error('Failed to parse crawl config from LocalStorage:', e);
+        }
+      }
+
       const savedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
       if (savedHistory) {
         try {
           crawlHistory.value = JSON.parse(savedHistory);
         } catch (e) {
           console.error('Failed to parse crawl history from LocalStorage:', e);
-          // Optionally clear invalid data
-          // localStorage.removeItem(HISTORY_STORAGE_KEY);
         }
       }
     });
@@ -1484,6 +1558,7 @@ export default defineComponent({
       webhookOptionsArrow,
       useSubfolders,
       clearHistory,
+      resetConfig,
       // Expose saveHistory if needed elsewhere, though not strictly necessary for this task
       // saveHistory,
     };

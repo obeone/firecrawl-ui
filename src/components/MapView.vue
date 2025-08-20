@@ -35,6 +35,7 @@
       </div>
 
       <button type="submit" class="primary-button">Find URLs</button>
+      <button type="button" class="secondary-button" @click="resetConfig">Reset to defaults</button>
     </form>
 
     <div v-if="error" class="error">{{ error }}</div>
@@ -51,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, inject } from 'vue';
+import { ref, inject, watch, onMounted } from 'vue';
 import type { MappingApi, MapUrlsRequest } from '@/api-client';
 
 /**
@@ -138,6 +139,61 @@ const loading = ref(false);
  * @type {Ref<string>}
  */
 const error = ref('');
+
+const STORAGE_KEY = 'mapViewConfig';
+
+onMounted(() => {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      baseUrl.value = parsed.baseUrl ?? '';
+      search.value = parsed.search ?? '';
+      ignoreSitemap.value = parsed.ignoreSitemap ?? true;
+      sitemapOnly.value = parsed.sitemapOnly ?? false;
+      includeSubdomains.value = parsed.includeSubdomains ?? false;
+      limit.value = parsed.limit ?? 5000;
+      timeout.value = parsed.timeout ?? null;
+    } catch (e) {
+      console.warn('Failed to parse saved mapping config:', e);
+    }
+  }
+});
+
+watch(
+  [baseUrl, search, ignoreSitemap, sitemapOnly, includeSubdomains, limit, timeout],
+  () => {
+    const data = {
+      baseUrl: baseUrl.value,
+      search: search.value,
+      ignoreSitemap: ignoreSitemap.value,
+      sitemapOnly: sitemapOnly.value,
+      includeSubdomains: includeSubdomains.value,
+      limit: limit.value,
+      timeout: timeout.value,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  },
+  { deep: true },
+);
+
+/**
+ * Reset the form to default values and remove the stored configuration.
+ *
+ * @returns void
+ */
+function resetConfig(): void {
+  localStorage.removeItem(STORAGE_KEY);
+  baseUrl.value = '';
+  search.value = '';
+  ignoreSitemap.value = true;
+  sitemapOnly.value = false;
+  includeSubdomains.value = false;
+  limit.value = 5000;
+  timeout.value = null;
+  urls.value = [];
+  error.value = '';
+}
 
 /**
  * Handles the form submission event.

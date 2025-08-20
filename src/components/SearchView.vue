@@ -41,6 +41,7 @@
       </fieldset>
 
       <button type="submit" class="primary-button">Search</button>
+      <button type="button" class="secondary-button" @click="resetConfig">Reset to defaults</button>
       <span v-if="loading" class="status">Loading...</span>
       <span v-if="error" class="status error">{{ error }}</span>
     </form>
@@ -77,7 +78,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, inject, computed } from 'vue';
+import { ref, inject, computed, watch, onMounted } from 'vue';
 import type { SearchApi, SearchRequest } from '@/api-client/search.js';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
@@ -145,6 +146,50 @@ const options = ref<SearchOptions>({
   tbs: '',
   timeout: undefined,
 });
+
+const STORAGE_KEY = 'searchViewConfig';
+
+onMounted(() => {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      query.value = parsed.query ?? '';
+      Object.assign(options.value, parsed.options ?? {});
+    } catch (e) {
+      console.warn('Failed to parse saved search config:', e);
+    }
+  }
+});
+
+watch(
+  [query, options],
+  () => {
+    const data = { query: query.value, options: options.value };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  },
+  { deep: true },
+);
+
+/**
+ * Reset the form to default values and remove the stored configuration.
+ *
+ * @returns void
+ */
+function resetConfig(): void {
+  localStorage.removeItem(STORAGE_KEY);
+  query.value = '';
+  options.value = {
+    includeMetadata: true,
+    extractContent: false,
+    maxResults: 5,
+    lang: 'en',
+    country: 'us',
+    location: '',
+    tbs: '',
+    timeout: undefined,
+  };
+}
 
 /**
  * Reactive flag indicating if a search request is in progress.
