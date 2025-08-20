@@ -115,16 +115,22 @@ function toggleTheme(): void {
   position: fixed;
   top: 1rem;
   right: 1rem;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  background-color: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
   cursor: pointer;
   color: var(--color-heading);
   z-index: 1100;
 }
 
 .theme-toggle:hover {
-  opacity: 0.8;
+  background-color: var(--color-background-mute);
 }
 
 .menu-button {

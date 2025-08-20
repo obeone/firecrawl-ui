@@ -102,16 +102,6 @@ export default defineComponent({
 
 <style scoped>
 /*
- * Theme-independent design variables.
- */
-:root {
-  --primary: #2563eb;
-  --primary-dark: #1e40af;
-  --accent: #f59e42;
-  --card-shadow: 0 2px 16px rgba(30, 64, 175, 0.07);
-}
-
-/*
  * Styles for the main container of the HomeView.
  * Centers content, sets padding, and defines background.
  */
@@ -147,7 +137,7 @@ h1 {
   font-size: 2.8rem;
   font-weight: 800;
   margin-bottom: 0.5rem;
-  color: var(--primary);
+  color: #2563eb;
   letter-spacing: -1px;
 }
 
@@ -178,7 +168,7 @@ h1 {
 .feature-card {
   background: var(--color-background-soft);
   border-radius: 12px;
-  box-shadow: var(--card-shadow);
+  box-shadow: 0 2px 16px rgba(30, 64, 175, 0.07);
   padding: 2rem 1.5rem 1.5rem 1.5rem;
   width: 240px;
   display: flex;
@@ -200,7 +190,7 @@ h1 {
   width: 38px;
   height: 38px;
   margin-bottom: 0.7rem;
-  color: var(--primary);
+  color: #2563eb;
 }
 
 .feature-card h2 {
@@ -226,7 +216,7 @@ h1 {
  */
 .feature-link {
   color: #fff;
-  background: var(--primary);
+  background: #2563eb;
   padding: 0.5rem 1.2rem;
   border-radius: 5px;
   text-decoration: none;
@@ -242,7 +232,7 @@ h1 {
 }
 
 .feature-link:hover {
-  background: var(--primary-dark);
+  background: #1e40af;
 }
 
 /*
@@ -253,9 +243,9 @@ h1 {
   margin-top: 2.5rem;
   width: 100%;
   background: var(--color-background-soft);
-  border-left: 4px solid var(--accent);
+  border-left: 4px solid #f59e42;
   border-radius: 10px;
-  box-shadow: var(--card-shadow);
+  box-shadow: 0 2px 16px rgba(30, 64, 175, 0.07);
   padding: 2rem 2.5rem;
   color: var(--color-text);
   font-family: 'Inter', Arial, sans-serif;
@@ -264,7 +254,7 @@ h1 {
 
 .about h2 {
   font-size: 1.5rem;
-  color: var(--primary);
+  color: #2563eb;
   margin-bottom: 0.7rem;
   font-family: 'Montserrat', Arial, sans-serif;
   font-weight: 700;
@@ -295,7 +285,7 @@ h1 {
  */
 .about-link {
   color: var(--color-background);
-  background: linear-gradient(90deg, var(--accent) 0%, #eab308 100%);
+  background: linear-gradient(90deg, #f59e42 0%, #eab308 100%);
   padding: 0.5rem 1.2rem;
   border-radius: 5px;
   text-decoration: none;
