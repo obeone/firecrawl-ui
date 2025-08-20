@@ -618,7 +618,7 @@ export default defineComponent({
     const isScrapeOptionsCollapsed = ref(true);
     const isWebhookOptionsCollapsed = ref(true);
     const useSubfolders = ref(false);
-    const statusCheckInterval = ref(1);
+    const statusCheckInterval = ref(3);
 
     const crawlerOptionsArrow = computed(() => (isCrawlerOptionsCollapsed.value ? '▶' : '▼'));
     const scrapeOptionsArrow = computed(() => (isScrapeOptionsCollapsed.value ? '▶' : '▼'));
