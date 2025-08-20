@@ -98,6 +98,16 @@
               <small>Delay before fetching content.</small>
             </div>
             <div class="form-group">
+              <label for="maxAge">Max Age (ms):</label>
+              <input
+                id="maxAge"
+                v-model.number="formData.pageOptions.maxAge"
+                type="number"
+                min="0"
+              />
+              <small>Use cached page if younger than this age.</small>
+            </div>
+            <div class="form-group">
               <label for="timeout">Timeout (ms):</label>
               <input
                 id="timeout"
@@ -132,6 +142,14 @@
               <input type="checkbox" v-model="formData.pageOptions.removeBase64Images" />
               Remove Base64 Images
             </label>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="formData.pageOptions.parsePDF" />
+              Parse PDF Files
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="formData.pageOptions.storeInCache" />
+              Store In Cache
+            </label>
           </div>
           <div class="form-group">
             <label for="headers">HTTP Headers (JSON format):</label>
@@ -164,6 +182,56 @@
               <option value="ASIA">ASIA</option>
             </select>
             <small>Select request location.</small>
+          </div>
+          <div class="form-group">
+            <label>Actions:</label>
+            <div
+              v-for="(action, idx) in formData.pageOptions.actions"
+              :key="idx"
+              class="action-item"
+            >
+              <select v-model="action.type">
+                <option v-for="t in actionTypes" :key="t" :value="t">{{ t }}</option>
+              </select>
+              <template v-if="action.type === 'wait'">
+                <input
+                  type="number"
+                  v-model.number="action.milliseconds"
+                  placeholder="ms"
+                  min="1"
+                />
+                <input type="text" v-model="action.selector" placeholder="selector" />
+              </template>
+              <template v-else-if="action.type === 'screenshot'">
+                <label class="checkbox-label">
+                  <input type="checkbox" v-model="action.fullPage" /> Full Page
+                </label>
+              </template>
+              <template v-else-if="action.type === 'click'">
+                <input type="text" v-model="action.selector" placeholder="selector" />
+                <label class="checkbox-label">
+                  <input type="checkbox" v-model="action.all" /> All
+                </label>
+              </template>
+              <template v-else-if="action.type === 'write'">
+                <input type="text" v-model="action.text" placeholder="text" />
+              </template>
+              <template v-else-if="action.type === 'press'">
+                <input type="text" v-model="action.key" placeholder="key" />
+              </template>
+              <template v-else-if="action.type === 'scroll'">
+                <select v-model="action.direction">
+                  <option value="down">down</option>
+                  <option value="up">up</option>
+                </select>
+                <input type="text" v-model="action.selector" placeholder="selector" />
+              </template>
+              <template v-else-if="action.type === 'executeJavascript'">
+                <textarea v-model="action.script" rows="2" placeholder="script"></textarea>
+              </template>
+              <button type="button" @click="removeAction(idx)">Remove</button>
+            </div>
+            <button type="button" @click="addAction">Add Action</button>
           </div>
         </div>
       </fieldset>
@@ -239,10 +307,14 @@ type ScrapeResult = ScrapeResponse;
  * @property {number} [timeout] - Page request timeout in milliseconds.
  * @property {boolean} [blockAds] - Block ads and popups.
  * @property {boolean} [removeBase64Images] - Remove Base64 encoded images.
+ * @property {number} [maxAge] - Use cached page if younger than this age in milliseconds.
+ * @property {boolean} [parsePDF] - Parse PDF files instead of returning base64.
+ * @property {boolean} [storeInCache] - Store the page in Firecrawl cache.
  * @property {'basic' | 'stealth' | ''} [proxy] - Proxy type for the request ('basic', 'stealth', or empty for auto).
  * @property {Record<string, string>} [headers] - HTTP headers as a JSON object.
  * @property {string} [action] - HTTP method for the request (e.g., 'GET', 'POST').
  * @property {string} [location] - Request location (e.g., 'US', 'EU', 'ASIA').
+ * @property {any[]} [actions] - Actions to perform on the page prior to scraping.
  */
 interface FormDataPageOptions {
   waitFor?: number;
@@ -251,10 +323,14 @@ interface FormDataPageOptions {
   timeout?: number;
   blockAds?: boolean;
   removeBase64Images?: boolean;
+  maxAge?: number;
+  parsePDF?: boolean;
+  storeInCache?: boolean;
   proxy?: 'basic' | 'stealth' | '';
   headers?: Record<string, string>;
   action?: string;
   location?: string;
+  actions?: any[];
 }
 
 /**
@@ -332,12 +408,16 @@ export default defineComponent({
         mobile: false,
         skipTlsVerification: false,
         timeout: undefined,
+        maxAge: undefined,
         blockAds: true,
         removeBase64Images: true,
+        parsePDF: true,
+        storeInCache: true,
         proxy: '',
         headers: {},
         action: 'GET', // Default HTTP action
         location: '',
+        actions: [],
       },
       scrapeOptions: {
         onlyMainContent: true,
@@ -429,6 +509,10 @@ export default defineComponent({
           formData.value.pageOptions.waitFor > 0 && {
             waitFor: formData.value.pageOptions.waitFor,
           }),
+        ...(formData.value.pageOptions.maxAge !== undefined &&
+          formData.value.pageOptions.maxAge > 0 && {
+            maxAge: formData.value.pageOptions.maxAge,
+          }),
         ...(formData.value.pageOptions.mobile === true && { mobile: true }),
         ...(formData.value.pageOptions.skipTlsVerification === true && {
           skipTlsVerification: true,
@@ -444,6 +528,10 @@ export default defineComponent({
         ...(formData.value.pageOptions.removeBase64Images === false && {
           removeBase64Images: false,
         }),
+        ...(formData.value.pageOptions.parsePDF === false && { parsePDF: false }),
+        ...(formData.value.pageOptions.storeInCache === false && {
+          storeInCache: false,
+        }),
         ...(formData.value.pageOptions.proxy &&
           formData.value.pageOptions.proxy !== '' && {
             proxy: formData.value.pageOptions.proxy as 'basic' | 'stealth',
@@ -455,6 +543,10 @@ export default defineComponent({
         ...(formData.value.pageOptions.location &&
           formData.value.pageOptions.location !== '' && {
             location: { country: formData.value.pageOptions.location },
+          }),
+        ...(formData.value.pageOptions.actions &&
+          formData.value.pageOptions.actions.length > 0 && {
+            actions: formData.value.pageOptions.actions,
           }),
 
         // Include scrapeOptions properties directly.
@@ -643,6 +735,35 @@ export default defineComponent({
       { immediate: true },
     );
 
+    /**
+     * Available action types for dynamic actions list.
+     */
+    const actionTypes = [
+      'wait',
+      'screenshot',
+      'click',
+      'write',
+      'press',
+      'scroll',
+      'scrape',
+      'executeJavascript',
+    ];
+
+    /**
+     * Add a new action with default values.
+     */
+    const addAction = (): void => {
+      formData.value.pageOptions.actions.push({ type: actionTypes[0] });
+    };
+
+    /**
+     * Remove an action at a specified index.
+     * @param {number} idx - Index of the action to remove.
+     */
+    const removeAction = (idx: number): void => {
+      formData.value.pageOptions.actions.splice(idx, 1);
+    };
+
     return {
       formData,
       loading,
@@ -655,6 +776,9 @@ export default defineComponent({
       downloadFormats,
       extractorOptionsJson,
       extractorOptionsError,
+      actionTypes,
+      addAction,
+      removeAction,
       ScrapeAndExtractFromUrlRequestFormatsEnum,
       isScrapeOptionsCollapsed,
       isPageOptionsCollapsed,
@@ -780,6 +904,13 @@ export default defineComponent({
   width: 20px;
   height: 20px;
   animation: spin 1s linear infinite;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 10px;
 }
 
 @keyframes spin {
