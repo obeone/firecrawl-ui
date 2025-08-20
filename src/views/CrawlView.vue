@@ -91,6 +91,17 @@
               />
               <small>Delay between pages to respect rate limits.</small>
             </div>
+            <div class="form-group">
+              <label for="statusInterval">Status Check Interval (seconds):</label>
+              <input
+                id="statusInterval"
+                v-model.number="statusCheckInterval"
+                type="number"
+                min="1"
+                placeholder="e.g. 5"
+              />
+              <small>Time between status checks.</small>
+            </div>
           </div>
           <div class="grid-layout">
             <label class="checkbox-label">
@@ -607,6 +618,7 @@ export default defineComponent({
     const isScrapeOptionsCollapsed = ref(true);
     const isWebhookOptionsCollapsed = ref(true);
     const useSubfolders = ref(false);
+    const statusCheckInterval = ref(3);
 
     const crawlerOptionsArrow = computed(() => (isCrawlerOptionsCollapsed.value ? '▶' : '▼'));
     const scrapeOptionsArrow = computed(() => (isScrapeOptionsCollapsed.value ? '▶' : '▼'));
@@ -831,6 +843,10 @@ export default defineComponent({
      * Clear the crawl history and remove the stored data.
      */
     const clearHistory = () => {
+      for (const id in historyIntervalIds) {
+        clearInterval(historyIntervalIds[id]);
+        delete historyIntervalIds[id];
+      }
       crawlHistory.value = [];
       selectedCrawlId.value = null;
       localStorage.removeItem(HISTORY_STORAGE_KEY);
@@ -1355,6 +1371,7 @@ export default defineComponent({
 
     // Interval ID for polling crawl status
     let intervalId: ReturnType<typeof setInterval> | null = null;
+    const historyIntervalIds: Record<string, ReturnType<typeof setInterval>> = {};
 
     /**
      * Fetch crawl status and progress periodically from the API.
@@ -1395,6 +1412,12 @@ export default defineComponent({
             `Crawl status for ${jobId}: ${data.status}, Completed: ${data.completed}/${data.total}`,
           );
 
+          const historyItem = crawlHistory.value.find((c) => c.id === jobId);
+          if (historyItem) {
+            historyItem.status = data.status;
+            saveHistory();
+          }
+
           // Stop polling when completed or failed
           if (data.status === 'completed' || data.status === 'failed') {
             clearInterval(intervalId);
@@ -1410,11 +1433,76 @@ export default defineComponent({
           crawling.value = false;
           crawlStatus.value = 'failed'; // Indicate failure in UI
           error.value = `Failed to fetch crawl status: ${err.message || 'Unknown error'}`;
+          const historyItem = crawlHistory.value.find((c) => c.id === jobId);
+          if (historyItem) {
+            historyItem.status = 'failed';
+            saveHistory();
+          }
         }
-      }, 1000); // Poll every 1 second
+      }, statusCheckInterval.value * 1000);
     };
 
-    onMounted(() => {
+    /**
+     * Check the status of a crawl from history and update its record.
+     * Starts polling if the crawl is still running.
+     * @param crawl - History entry to check.
+     */
+    const checkHistoryStatus = async (crawl: any) => {
+      try {
+        const response = await api.crawling.getCrawlStatus(crawl.id);
+        crawl.status = response.data.status;
+        saveHistory();
+        if (crawl.status !== 'completed' && crawl.status !== 'failed') {
+          startHistoryPolling(crawl.id);
+        }
+      } catch (err) {
+        console.error(`Failed to fetch status for crawl ${crawl.id}:`, err);
+        crawl.status = 'unavailable';
+        saveHistory();
+      }
+    };
+
+    /**
+     * Start polling status for a specific history entry.
+     * @param id - Crawl job identifier.
+     */
+    const startHistoryPolling = (id: string) => {
+      stopHistoryPolling(id);
+      historyIntervalIds[id] = setInterval(async () => {
+        const crawl = crawlHistory.value.find((c) => c.id === id);
+        if (!crawl) {
+          stopHistoryPolling(id);
+          return;
+        }
+        try {
+          const response = await api.crawling.getCrawlStatus(id);
+          crawl.status = response.data.status;
+          saveHistory();
+          if (crawl.status === 'completed' || crawl.status === 'failed') {
+            stopHistoryPolling(id);
+          }
+        } catch (err) {
+          console.error(`Polling failed for crawl ${id}:`, err);
+          crawl.status = 'unavailable';
+          saveHistory();
+          stopHistoryPolling(id);
+        }
+      }, statusCheckInterval.value * 1000);
+    };
+
+    /**
+     * Stop polling status for a specific history entry.
+     * @param id - Crawl job identifier.
+     */
+    const stopHistoryPolling = (id: string) => {
+      const intId = historyIntervalIds[id];
+      if (intId) {
+        clearInterval(intId);
+        delete historyIntervalIds[id];
+      }
+    };
+
+    onMounted(async () => {
       // Load history from LocalStorage on component mount
       const savedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
       if (savedHistory) {
@@ -1422,10 +1510,9 @@ export default defineComponent({
           crawlHistory.value = JSON.parse(savedHistory);
         } catch (e) {
           console.error('Failed to parse crawl history from LocalStorage:', e);
-          // Optionally clear invalid data
-          // localStorage.removeItem(HISTORY_STORAGE_KEY);
         }
       }
+      await Promise.all(crawlHistory.value.map((c) => checkHistoryStatus(c)));
     });
 
     // Cleanup polling interval when the component unmounts
@@ -1433,6 +1520,10 @@ export default defineComponent({
       if (intervalId) {
         clearInterval(intervalId);
         intervalId = null;
+      }
+      for (const id in historyIntervalIds) {
+        clearInterval(historyIntervalIds[id]);
+        delete historyIntervalIds[id];
       }
     });
 
@@ -1483,6 +1574,7 @@ export default defineComponent({
       scrapeOptionsArrow,
       webhookOptionsArrow,
       useSubfolders,
+      statusCheckInterval,
       clearHistory,
       // Expose saveHistory if needed elsewhere, though not strictly necessary for this task
       // saveHistory,
