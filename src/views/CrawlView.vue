@@ -348,6 +348,7 @@
       </div>
       <p>{{ progress }}% Completed</p>
       <p>{{ pagesCompleted }} / {{ totalPages }} pages processed</p>
+      <button class="primary-button" type="button" @click="cancelCurrentCrawl">Cancel Crawl</button>
     </div>
 
     <!-- Section for download options after crawl completion -->
@@ -794,6 +795,7 @@ export default defineComponent({
     const crawlStatus = ref<string | undefined>('');
     const error = ref('');
     const result = ref<any>(null);
+    const currentCrawlId = ref<string | null>(null);
     const crawlHistory = ref<any[]>([]); // Initialize with empty array
 
     // State for selected crawl history item
@@ -1329,6 +1331,7 @@ export default defineComponent({
         totalPages.value = 0;
         error.value = '';
         result.value = null;
+        currentCrawlId.value = null;
 
         // Call the crawling API to submit the crawl job
         const response = await api.crawling.crawlUrls(payload);
@@ -1336,6 +1339,7 @@ export default defineComponent({
 
         // Add the submitted job to history
         if (response.data && response.data.id) {
+          currentCrawlId.value = response.data.id;
           crawlHistory.value.unshift({
             // Add to the beginning of the array
             id: response.data.id,
@@ -1366,6 +1370,34 @@ export default defineComponent({
         }
         loading.value = false; // Stop loading on error
         crawling.value = false; // Stop crawling animation on error
+        currentCrawlId.value = null;
+      }
+    };
+
+    /**
+     * Cancel the currently running crawl job.
+     * Stops status polling and updates the UI state accordingly.
+     */
+    const cancelCurrentCrawl = async (): Promise<void> => {
+      if (!currentCrawlId.value) {
+        return;
+      }
+      try {
+        await api.crawling.cancelCrawl(currentCrawlId.value);
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+        crawlStatus.value = 'cancelled';
+        crawling.value = false;
+        const historyItem = crawlHistory.value.find((c) => c.id === currentCrawlId.value);
+        if (historyItem) {
+          historyItem.status = 'cancelled';
+          saveHistory();
+        }
+        currentCrawlId.value = null;
+      } catch (err: any) {
+        error.value = `Failed to cancel crawl: ${err.message || 'Unknown error'}`;
       }
     };
 
@@ -1423,6 +1455,7 @@ export default defineComponent({
             clearInterval(intervalId);
             intervalId = null; // Clear intervalId after clearing interval
             crawling.value = false; // Update crawling state
+            currentCrawlId.value = null;
             saveHistory(); // Save history when status changes to completed or failed
           }
         } catch (err: any) {
@@ -1432,6 +1465,7 @@ export default defineComponent({
           intervalId = null;
           crawling.value = false;
           crawlStatus.value = 'failed'; // Indicate failure in UI
+          currentCrawlId.value = null;
           error.value = `Failed to fetch crawl status: ${err.message || 'Unknown error'}`;
           const historyItem = crawlHistory.value.find((c) => c.id === jobId);
           if (historyItem) {
@@ -1558,6 +1592,7 @@ export default defineComponent({
       error,
       result,
       handleSubmit,
+      cancelCurrentCrawl,
       isCrawlerOptionsCollapsed,
       isScrapeOptionsCollapsed,
       isWebhookOptionsCollapsed,
