@@ -1,0 +1,906 @@
+openapi: 3.0.0
+info:
+  title: Firecrawl API
+  version: v2
+  description: API for web scraping, crawling, and structured data extraction from web pages.
+  contact:
+    name: Grégoire Compagnon
+    email: obeone@obeone.org
+    url: https://github.com/obeone
+servers:
+  - url: https://api.firecrawl.dev/v2
+    description: Production server
+security:
+  - bearerAuth: []
+paths:
+  /scrape:
+    post:
+      summary: Scrape a single URL
+      description: Scrapes a single URL and returns its content in specified formats (Markdown, HTML, etc.), with options to extract specific data using an LLM.
+      operationId: scrape
+      tags:
+        - Scrape
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScrapeRequest"
+      responses:
+        "200":
+          description: Successful response containing the scraped data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScrapeResponse"
+        "402":
+          description: Payment required. Your account does not have enough credits.
+        "429":
+          description: Rate limit exceeded.
+        "500":
+          description: Internal server error.
+  /batch/scrape:
+    post:
+      summary: Batch Scrape
+      description: Initiates an asynchronous job to scrape multiple URLs. The status can be monitored via a job ID.
+      operationId: batchScrape
+      tags:
+        - Scrape
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchScrapeRequest"
+      responses:
+        "200":
+          description: Successfully submitted the batch scrape job.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobSubmissionResponse"
+  /batch/scrape/{id}:
+    get:
+      summary: Get Batch Scrape Status
+      description: Retrieves the current status and results of a specific batch scrape job.
+      operationId: getBatchScrapeStatus
+      tags:
+        - Scrape
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier (ID) of the batch scrape job.
+      responses:
+        "200":
+          description: Successful response with the job status and data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobStatusResponse"
+    delete:
+      summary: Cancel Batch Scrape
+      description: Cancels a running batch scrape job.
+      operationId: cancelBatchScrape
+      tags:
+        - Scrape
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier (ID) of the batch scrape job to cancel.
+      responses:
+        "200":
+          description: The batch scrape job was successfully cancelled.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the cancellation was successful.
+                  message:
+                    type: string
+                    description: A confirmation message.
+  /batch/scrape/{id}/errors:
+    get:
+      summary: Get Batch Scrape Errors
+      description: Retrieves a list of errors that occurred during a specific batch scrape job.
+      operationId: getBatchScrapeErrors
+      tags:
+        - Scrape
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier (ID) of the batch scrape job.
+      responses:
+        "200":
+          description: Successful response containing a list of errors.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobErrorsResponse"
+  /crawl:
+    post:
+      summary: Start a Crawl Job
+      description: Initiates an asynchronous job to crawl a website based on the provided URL and crawling options.
+      operationId: crawl
+      tags:
+        - Crawl
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrawlRequest"
+      responses:
+        "200":
+          description: Successfully submitted the crawl job.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobSubmissionResponse"
+  /crawl/{id}:
+    get:
+      summary: Get Crawl Status
+      description: Retrieves the current status and results of a specific crawl job.
+      operationId: getCrawlStatus
+      tags:
+        - Crawl
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier (ID) of the crawl job.
+      responses:
+        "200":
+          description: Successful response with the job status and crawled data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobStatusResponse"
+    delete:
+      summary: Cancel Crawl
+      description: Cancels a running crawl job.
+      operationId: cancelCrawl
+      tags:
+        - Crawl
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier (ID) of the crawl job to cancel.
+      responses:
+        "200":
+          description: The crawl job was successfully cancelled.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    description: The final status of the job, should be 'cancelled'.
+                    example: cancelled
+  /crawl/{id}/errors:
+    get:
+      summary: Get Crawl Errors
+      description: Retrieves a list of errors that occurred during a specific crawl job.
+      operationId: getCrawlErrors
+      tags:
+        - Crawl
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier (ID) of the crawl job.
+      responses:
+        "200":
+          description: Successful response containing a list of errors.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobErrorsResponse"
+  /crawl/active:
+    get:
+      summary: Get Active Crawls
+      description: Retrieves a list of all currently active crawl jobs for the authenticated team.
+      operationId: getActiveCrawls
+      tags:
+        - Crawl
+      responses:
+        "200":
+          description: Successful response with a list of active crawls.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  crawls:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        teamId:
+                          type: string
+                        url:
+                          type: string
+                        options:
+                          $ref: "#/components/schemas/ScrapeOptions"
+  /crawl/params-preview:
+    post:
+      summary: Crawl Params Preview
+      description: Takes a natural language prompt and a URL to generate and preview the crawl parameters that would be used.
+      operationId: crawlParamsPreview
+      tags:
+        - Crawl
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  description: The target URL to base the crawl preview on.
+                prompt:
+                  type: string
+                  description: A natural language description of what to crawl.
+      responses:
+        "200":
+          description: Successful response with the generated crawl parameters.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: "#/components/schemas/CrawlRequest"
+  /search:
+    post:
+      summary: Search
+      description: Performs a web search and can optionally scrape the content of the search results, returning structured data.
+      operationId: search
+      tags:
+        - Search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchRequest"
+      responses:
+        "200":
+          description: Successful response containing the search results.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResponse"
+  /extract:
+    post:
+      summary: Extract Structured Data
+      description: Extracts structured data from one or more URLs based on a provided schema or natural language prompt using LLMs.
+      operationId: extract
+      tags:
+        - Extract
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExtractRequest"
+      responses:
+        "200":
+          description: Successfully submitted the extraction job.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobSubmissionResponse"
+  /extract/{id}:
+    get:
+      summary: Get Extract Status
+      description: Retrieves the status and results of a specific data extraction job.
+      operationId: getExtractStatus
+      tags:
+        - Extract
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier (ID) of the extract job.
+      responses:
+        "200":
+          description: Successful response with the job status and extracted data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    description: The extracted structured data.
+                  status:
+                    type: string
+                    description: The current status of the job.
+                  expiresAt:
+                    type: string
+                    format: date-time
+                    description: The timestamp when the job results will expire.
+                  tokensUsed:
+                    type: integer
+                    description: The number of tokens used for the extraction.
+  /team/credit-usage:
+    get:
+      summary: Credit Usage
+      description: Gets the remaining credits and current billing period details for the authenticated team.
+      operationId: getCreditUsage
+      tags:
+        - Account
+      responses:
+        "200":
+          description: Successful response with credit usage details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreditUsageResponse"
+  /team/credit-usage/historical:
+    get:
+      summary: Historical Credit Usage
+      description: Retrieves the historical credit usage for the authenticated team, broken down by month.
+      operationId: getHistoricalCreditUsage
+      tags:
+        - Account
+      parameters:
+        - name: byApiKey
+          in: query
+          description: If true, breaks down the usage by API key.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Successful response with historical credit usage data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HistoricalCreditUsageResponse"
+  /team/token-usage:
+    get:
+      summary: Token Usage
+      description: Gets the remaining extraction tokens and current billing period details for the authenticated team.
+      operationId: getTokenUsage
+      tags:
+        - Account
+      responses:
+        "200":
+          description: Successful response with token usage details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenUsageResponse"
+  /team/token-usage/historical:
+    get:
+      summary: Historical Token Usage
+      description: Retrieves the historical token usage for the authenticated team, specifically for extraction tasks.
+      operationId: getHistoricalTokenUsage
+      tags:
+        - Account
+      parameters:
+        - name: byApiKey
+          in: query
+          description: If true, breaks down the usage by API key.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Successful response with historical token usage data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HistoricalTokenUsageResponse"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: "fc-..."
+      description: API key for authentication.
+  schemas:
+    Location:
+      type: object
+      description: Specifies the geographical location for the request.
+      properties:
+        country:
+          type: string
+          description: The country code (e.g., 'US', 'FR').
+        languages:
+          type: array
+          items:
+            type: string
+          description: A list of language codes (e.g., 'en-US').
+    ScrapeOptions:
+      type: object
+      description: A comprehensive set of options to control the scraping process.
+      properties:
+        formats:
+          type: array
+          items:
+            type: string
+          default: ["markdown"]
+          description: The desired output formats for the scraped content.
+        onlyMainContent:
+          type: boolean
+          default: true
+          description: If true, scrapes only the main content of the page, excluding headers, footers, and sidebars.
+        includeTags:
+          type: array
+          items:
+            type: string
+          description: A list of HTML tags to specifically include in the scrape.
+        excludeTags:
+          type: array
+          items:
+            type: string
+          description: A list of HTML tags to exclude from the scrape.
+        maxAge:
+          type: integer
+          description: The maximum age of a cached version to use, in milliseconds.
+        headers:
+          type: object
+          description: Custom HTTP headers to be sent with the scrape request.
+        waitFor:
+          type: integer
+          description: The number of milliseconds to wait for the page to load before scraping.
+        mobile:
+          type: boolean
+          description: If true, uses a mobile user-agent.
+        skipTlsVerification:
+          type: boolean
+          default: true
+          description: If true, skips TLS certificate verification.
+        timeout:
+          type: integer
+          description: The timeout for the request in milliseconds.
+        parsers:
+          type: array
+          items:
+            type: string
+          description: A list of parsers to use, e.g., for handling PDFs.
+        actions:
+          type: array
+          items:
+            type: object
+          description: A sequence of browser actions to perform on the page before scraping.
+        location:
+          $ref: "#/components/schemas/Location"
+        removeBase64Images:
+          type: boolean
+          default: true
+          description: If true, removes base64 encoded images from the output.
+        blockAds:
+          type: boolean
+          default: true
+          description: If true, attempts to block ads on the page.
+        proxy:
+          type: string
+          description: Proxy configuration to use for the request.
+        storeInCache:
+          type: boolean
+          description: If true, stores the result in the cache.
+        zeroDataRetention:
+          type: boolean
+          description: If true, ensures zero data retention for the request.
+    ScrapeRequest:
+      type: object
+      description: The request body for a single URL scrape.
+      properties:
+        url:
+          type: string
+          description: The URL to be scraped.
+      allOf:
+        - $ref: "#/components/schemas/ScrapeOptions"
+    ScrapeResponse:
+      type: object
+      description: The response containing the scraped data from a single URL.
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            markdown:
+              type: string
+            html:
+              type: string
+            rawHtml:
+              type: string
+            screenshot:
+              type: string
+              format: byte
+            links:
+              type: array
+              items:
+                type: string
+            metadata:
+              type: object
+              additionalProperties: true
+    Webhook:
+      type: object
+      description: Configuration for sending a webhook upon job completion.
+      properties:
+        url:
+          type: string
+          description: The URL to which the webhook will be sent.
+        headers:
+          type: object
+          description: Custom headers to include in the webhook request.
+        metadata:
+          type: object
+          description: Custom metadata to include in the webhook payload.
+        events:
+          type: array
+          items:
+            type: string
+          description: A list of events that trigger the webhook (e.g., 'completed').
+    BatchScrapeRequest:
+      type: object
+      description: The request body for a batch scrape job.
+      properties:
+        urls:
+          type: array
+          items:
+            type: string
+          description: A list of URLs to scrape.
+        webhook:
+          $ref: "#/components/schemas/Webhook"
+        maxConcurrency:
+          type: integer
+          description: The maximum number of concurrent requests.
+        ignoreInvalidURLs:
+          type: boolean
+          description: If true, invalid URLs in the list will be ignored.
+      allOf:
+        - $ref: "#/components/schemas/ScrapeOptions"
+    JobSubmissionResponse:
+      type: object
+      description: The response received after successfully submitting an asynchronous job.
+      properties:
+        success:
+          type: boolean
+        id:
+          type: string
+          format: uuid
+          description: The unique identifier for the submitted job.
+        url:
+          type: string
+          description: The URL to check the status of the job.
+        invalidURLs:
+          type: array
+          items:
+            type: string
+          description: A list of any URLs that were deemed invalid from the request.
+    JobStatusResponse:
+      type: object
+      description: The response containing the status and results of an asynchronous job.
+      properties:
+        status:
+          type: string
+          description: The current status of the job (e.g., 'active', 'completed').
+        total:
+          type: integer
+          description: The total number of items to be processed.
+        completed:
+          type: integer
+          description: The number of items that have been completed.
+        creditsUsed:
+          type: integer
+          description: The number of credits used by the job.
+        expiresAt:
+          type: string
+          format: date-time
+          description: The timestamp when the job data will expire and be deleted.
+        next:
+          type: string
+          nullable: true
+          description: A URL to retrieve the next page of results, if applicable.
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              markdown:
+                type: string
+              html:
+                type: string
+              rawHtml:
+                type: string
+              links:
+                type: array
+                items:
+                  type: string
+              screenshot:
+                type: string
+                format: byte
+              metadata:
+                type: object
+                additionalProperties: true
+    JobErrorDetail:
+      type: object
+      description: Detailed information about an error that occurred during a job.
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        url:
+          type: string
+        error:
+          type: string
+    JobErrorsResponse:
+      type: object
+      description: A response containing a list of all errors for a specific job.
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/JobErrorDetail"
+        robotsBlocked:
+          type: array
+          items:
+            type: string
+          description: A list of URLs that were blocked by robots.txt.
+    CrawlRequest:
+      type: object
+      description: The request body for a crawl job.
+      properties:
+        url:
+          type: string
+          description: The starting URL for the crawl.
+        prompt:
+          type: string
+          description: A natural language prompt to guide the crawler.
+        excludePaths:
+          type: array
+          items:
+            type: string
+          description: A list of URL path patterns to exclude from the crawl.
+        includePaths:
+          type: array
+          items:
+            type: string
+          description: A list of URL path patterns to include in the crawl.
+        maxDiscoveryDepth:
+          type: integer
+          description: The maximum depth for discovering new links.
+        sitemap:
+          type: string
+          enum: ["include", "skip", "only"]
+          description: How to use the website's sitemap.
+        ignoreQueryParameters:
+          type: boolean
+          description: If true, URL query parameters will be ignored.
+        limit:
+          type: integer
+          description: The maximum number of pages to crawl.
+        crawlEntireDomain:
+          type: boolean
+          description: If true, the crawler will not be restricted to child pages of the starting URL.
+        allowExternalLinks:
+          type: boolean
+          description: If true, allows the crawler to follow external links.
+        allowSubdomains:
+          type: boolean
+          description: If true, allows the crawler to visit subdomains.
+        delay:
+          type: integer
+          description: A delay in milliseconds between requests.
+        maxConcurrency:
+          type: integer
+          description: The maximum number of concurrent crawl requests.
+        webhook:
+          $ref: "#/components/schemas/Webhook"
+        scrapeOptions:
+          $ref: "#/components/schemas/ScrapeOptions"
+        zeroDataRetention:
+          type: boolean
+    SearchRequest:
+      type: object
+      description: The request body for a search operation.
+      properties:
+        query:
+          type: string
+          description: The search query.
+        limit:
+          type: integer
+          description: The maximum number of search results to return.
+        sources:
+          type: array
+          items:
+            type: string
+          description: The sources to search from (e.g., 'web', 'images', 'news').
+        categories:
+          type: array
+          items:
+            type: object
+          description: Categories to filter the search by (e.g., 'github', 'research').
+        tbs:
+          type: string
+          description: Time-based search filter.
+        location:
+          type: string
+          description: The geographical location for the search.
+        timeout:
+          type: integer
+          description: Request timeout in milliseconds.
+        ignoreInvalidURLs:
+          type: boolean
+          description: If true, ignore invalid URLs found in search results.
+        scrapeOptions:
+          $ref: "#/components/schemas/ScrapeOptions"
+    SearchResponse:
+      type: object
+      description: The response containing search results.
+      properties:
+        success:
+          type: boolean
+        warning:
+          type: string
+        data:
+          type: object
+          properties:
+            web:
+              type: array
+              items:
+                type: object
+            images:
+              type: array
+              items:
+                type: object
+            news:
+              type: array
+              items:
+                type: object
+    ExtractRequest:
+      type: object
+      description: The request body for a data extraction job.
+      properties:
+        urls:
+          type: array
+          items:
+            type: string
+          description: A list of URLs to extract data from.
+        prompt:
+          type: string
+          description: A natural language prompt describing the data to extract.
+        schema:
+          type: object
+          description: A JSON schema defining the structure of the data to be extracted.
+        enableWebSearch:
+          type: boolean
+          description: If true, allows the extractor to perform a web search to gather more context.
+        ignoreSitemap:
+          type: boolean
+        includeSubdomains:
+          type: boolean
+        showSources:
+          type: boolean
+          description: If true, includes the source URLs in the response.
+        scrapeOptions:
+          $ref: "#/components/schemas/ScrapeOptions"
+        ignoreInvalidURLs:
+          type: boolean
+    CreditUsageResponse:
+      type: object
+      description: The response containing credit usage details.
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            remainingCredits:
+              type: integer
+            planCredits:
+              type: integer
+            billingPeriodStart:
+              type: string
+              format: date-time
+            billingPeriodEnd:
+              type: string
+              format: date-time
+    HistoricalCreditUsageResponse:
+      type: object
+      description: The response containing historical credit usage.
+      properties:
+        success:
+          type: boolean
+        periods:
+          type: array
+          items:
+            type: object
+            properties:
+              startDate:
+                type: string
+                format: date-time
+              endDate:
+                type: string
+                format: date-time
+              apiKey:
+                type: string
+              totalCredits:
+                type: integer
+    TokenUsageResponse:
+      type: object
+      description: The response containing token usage details.
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            remainingTokens:
+              type: integer
+            planTokens:
+              type: integer
+            billingPeriodStart:
+              type: string
+              format: date-time
+            billingPeriodEnd:
+              type: string
+              format: date-time
+    HistoricalTokenUsageResponse:
+      type: object
+      description: The response containing historical token usage.
+      properties:
+        success:
+          type: boolean
+        periods:
+          type: array
+          items:
+            type: object
+            properties:
+              startDate:
+                type: string
+                format: date-time
+              endDate:
+                type: string
+                format: date-time
+              apiKey:
+                type: string
+              totalTokens:
+                type: integer
