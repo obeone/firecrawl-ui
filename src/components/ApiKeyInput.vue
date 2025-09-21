@@ -3,6 +3,14 @@
     <h2>API Configuration</h2>
     <form @submit.prevent="saveApiConfig">
       <div class="form-group">
+        <label for="apiVersion">Firecrawl API version:</label>
+        <select id="apiVersion" v-model="selectedVersion">
+          <option value="v1">v1</option>
+          <option value="v2">v2</option>
+        </select>
+        <small>Select the API version exposed by your Firecrawl deployment.</small>
+      </div>
+      <div class="form-group">
         <label for="apiKey">Firecrawl API Key:</label>
         <input
           id="apiKey"
@@ -18,26 +26,24 @@
       </div>
       <div class="form-group">
         <label for="baseUrl">Firecrawl API base URL (optional):</label>
-        <input
-          id="baseUrl"
-          v-model="baseUrl"
-          type="text"
-          placeholder="https://api.firecrawl.dev/v1"
-        />
-        <small> Leave blank to use the default URL. </small>
+        <input id="baseUrl" v-model="baseUrl" type="text" :placeholder="baseUrlPlaceholder" />
+        <small> Leave blank to use the default URL for the selected version. </small>
       </div>
       <button type="submit" class="primary-button">Save</button>
     </form>
     <div v-if="error" class="error-message">
       {{ error }}
     </div>
-    <div v-if="success" class="success-message">API Key saved successfully!</div>
+    <div v-if="success" class="success-message">API configuration saved successfully!</div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, onMounted, computed, watch } from 'vue';
 import { refreshApiClients } from '@/plugins/api';
+import { getCurrentBaseUrl, getDefaultBaseUrl } from '@/config/api.js';
+import type { ApiVersion } from '@/types/api.js';
+import { useApiVersion } from '@/stores/apiVersion.js';
 
 /**
  * Component allowing users to configure and store the Firecrawl API key and base URL.
@@ -49,13 +55,45 @@ import { refreshApiClients } from '@/plugins/api';
 export default defineComponent({
   name: 'ApiKeyInput',
   setup() {
+    const { apiVersion, setApiVersion } = useApiVersion();
+    const selectedVersion = ref<ApiVersion>(apiVersion.value);
     const apiKey = ref(localStorage.getItem('firecrawl_api_key') || '');
-    const baseUrl = ref(localStorage.getItem('firecrawl_base_url') || '');
+    const storedBaseUrl = localStorage.getItem('firecrawl_base_url');
+    const baseUrl = ref(
+      storedBaseUrl && storedBaseUrl.trim().length > 0 ? storedBaseUrl : getCurrentBaseUrl(),
+    );
     const error = ref('');
     const success = ref(false);
 
+    const baseUrlPlaceholder = computed(() => getDefaultBaseUrl(selectedVersion.value));
+
+    watch(
+      apiVersion,
+      (newVersion) => {
+        if (selectedVersion.value !== newVersion) {
+          selectedVersion.value = newVersion;
+        }
+      },
+      { immediate: false },
+    );
+
+    watch(
+      selectedVersion,
+      (newVersion, oldVersion) => {
+        setApiVersion(newVersion);
+        const previousDefault = oldVersion ? getDefaultBaseUrl(oldVersion) : null;
+        if (!baseUrl.value || (previousDefault && baseUrl.value === previousDefault)) {
+          baseUrl.value = getDefaultBaseUrl(newVersion);
+        }
+      },
+      { immediate: false },
+    );
+
     // Automatically display if no key is configured
     onMounted(() => {
+      if (!baseUrl.value) {
+        baseUrl.value = getDefaultBaseUrl(selectedVersion.value);
+      }
       if (!apiKey.value) {
         error.value = 'Please configure your API key to continue';
       }
@@ -76,7 +114,7 @@ export default defineComponent({
         setTimeout(() => (success.value = false), 3000);
 
         // Update API clients dynamically without reloading the page
-        refreshApiClients(baseUrl.value, apiKey.value);
+        refreshApiClients(baseUrl.value, apiKey.value, selectedVersion.value);
       } catch (err) {
         error.value = err instanceof Error ? err.message : 'Unknown error';
         success.value = false;
@@ -86,8 +124,10 @@ export default defineComponent({
     return {
       apiKey,
       baseUrl,
+      baseUrlPlaceholder,
       error,
       success,
+      selectedVersion,
       saveApiConfig,
     };
   },
