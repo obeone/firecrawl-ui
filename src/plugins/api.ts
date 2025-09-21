@@ -8,6 +8,7 @@ import {
   SearchApi,
 } from '../api-client/index.js';
 import apiConfig, { getApiConfig, updateApiConfig } from '../config/api.js';
+import type { ApiVersion } from '../config/apiVersion.js';
 
 /**
  * Vue plugin responsible for registering and providing various Firecrawl API clients
@@ -50,9 +51,10 @@ const apiPlugin = {
  *
  * @param baseUrl - Optional new base URL.
  * @param apiKey - Optional new API key.
+ * @param version - Optional API version selector.
  */
-export function refreshApiClients(baseUrl?: string, apiKey?: string): void {
-  updateApiConfig(baseUrl, apiKey);
+export function refreshApiClients(baseUrl?: string, apiKey?: string, version?: ApiVersion): void {
+  updateApiConfig(baseUrl, apiKey, version);
   apiClients.billing = new BillingApi(getApiConfig());
   apiClients.crawling = new CrawlingApi(getApiConfig());
   apiClients.extraction = new ExtractionApi(getApiConfig());
