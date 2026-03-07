@@ -17,13 +17,16 @@
         </small>
       </div>
       <div class="form-group">
+        <label for="apiVersion">Firecrawl API version:</label>
+        <select id="apiVersion" v-model="selectedVersion">
+          <option value="v1">v1</option>
+          <option value="v2">v2</option>
+        </select>
+        <small>Select the API version that matches your backend deployment.</small>
+      </div>
+      <div class="form-group">
         <label for="baseUrl">Firecrawl API base URL (optional):</label>
-        <input
-          id="baseUrl"
-          v-model="baseUrl"
-          type="text"
-          placeholder="https://api.firecrawl.dev/v1"
-        />
+        <input id="baseUrl" v-model="baseUrl" type="text" :placeholder="placeholder" />
         <small> Leave blank to use the default URL. </small>
       </div>
       <button type="submit" class="primary-button">Save</button>
@@ -36,8 +39,10 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, onMounted, watch, computed } from 'vue';
 import { refreshApiClients } from '@/plugins/api';
+import { getBaseUrlForVersion, getDefaultBaseUrl } from '@/config/api';
+import { useApiVersion, type ApiVersion } from '@/config/apiVersion';
 
 /**
  * Component allowing users to configure and store the Firecrawl API key and base URL.
@@ -49,10 +54,14 @@ import { refreshApiClients } from '@/plugins/api';
 export default defineComponent({
   name: 'ApiKeyInput',
   setup() {
-    const apiKey = ref(localStorage.getItem('firecrawl_api_key') || '');
-    const baseUrl = ref(localStorage.getItem('firecrawl_base_url') || '');
+    const { apiVersion, setApiVersion } = useApiVersion();
+    const apiKey = ref(readStoredApiKey());
+    const selectedVersion = ref<ApiVersion>(apiVersion.value);
+    const baseUrl = ref(getBaseUrlForVersion(selectedVersion.value));
     const error = ref('');
     const success = ref(false);
+
+    const placeholder = computed(() => getDefaultBaseUrl(selectedVersion.value));
 
     // Automatically display if no key is configured
     onMounted(() => {
@@ -61,22 +70,28 @@ export default defineComponent({
       }
     });
 
+    watch(
+      selectedVersion,
+      (newVersion) => {
+        baseUrl.value = getBaseUrlForVersion(newVersion);
+      },
+      { immediate: true },
+    );
+
     const saveApiConfig = () => {
       try {
         if (!apiKey.value) {
           throw new Error('Please enter a valid API key');
         }
-        // Save the API key
-        localStorage.setItem('firecrawl_api_key', apiKey.value);
-        // Save the base URL (even if empty to override any previous value if needed)
-        localStorage.setItem('firecrawl_base_url', baseUrl.value);
+
+        setApiVersion(selectedVersion.value);
 
         success.value = true;
         error.value = '';
         setTimeout(() => (success.value = false), 3000);
 
         // Update API clients dynamically without reloading the page
-        refreshApiClients(baseUrl.value, apiKey.value);
+        refreshApiClients(baseUrl.value, apiKey.value, selectedVersion.value);
       } catch (err) {
         error.value = err instanceof Error ? err.message : 'Unknown error';
         success.value = false;
@@ -86,12 +101,30 @@ export default defineComponent({
     return {
       apiKey,
       baseUrl,
+      placeholder,
       error,
       success,
+      selectedVersion,
       saveApiConfig,
     };
   },
 });
+
+/**
+ * Reads the API key from local storage or environment variables.
+ *
+ * @returns {string} The stored API key or an empty string when unavailable.
+ */
+function readStoredApiKey(): string {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    const storedKey = window.localStorage.getItem('firecrawl_api_key');
+    if (storedKey !== null) {
+      return storedKey;
+    }
+  }
+  const env = import.meta.env as Record<string, string | undefined>;
+  return env.VITE_FIRECRAWL_API_KEY || '';
+}
 </script>
 
 <style scoped>
