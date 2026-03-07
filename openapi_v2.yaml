@@ -8,11 +8,11 @@ info:
     **Authentication:**
     All API requests must be authenticated with a Bearer Token.
     Provide your API key in the `Authorization` header: `Authorization: Bearer YOUR_API_KEY`.
-  version: "2.3.0"
+  version: '2.3.0'
   contact:
     name: Firecrawl Team
     email: team@firecrawl.dev
-    url: "https://firecrawl.dev"
+    url: 'https://firecrawl.dev'
 servers:
   - url: https://api.firecrawl.dev/v2
     description: Production Server
@@ -42,43 +42,42 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ScrapeRequestV2"
+              $ref: '#/components/schemas/ScrapeRequestV2'
             examples:
               llm_extraction_example:
                 summary: LLM Extraction
                 value:
-                  url: "https://mendable.ai"
+                  url: 'https://mendable.ai'
                   pageOptions:
                     onlyMainContent: true
                   extractorOptions:
-                    mode: "llm-extraction"
-                    extractionPrompt: "Extract the pricing information and features for each plan."
+                    mode: 'llm-extraction'
+                    extractionPrompt: 'Extract the pricing information and features for each plan.'
                     extractionSchema:
-                      type: "object"
+                      type: 'object'
                       properties:
                         plans:
-                          type: "array"
+                          type: 'array'
                           items:
-                            type: "object"
+                            type: 'object'
                             properties:
-                              name: { type: "string" }
-                              price: { type: "string" }
-                              features:
-                                { type: "array", items: { type: "string" } }
+                              name: { type: 'string' }
+                              price: { type: 'string' }
+                              features: { type: 'array', items: { type: 'string' } }
               markdown_example:
                 summary: Markdown Content
                 value:
-                  url: "https://firecrawl.dev/blog/how-to-scrape-amazon"
+                  url: 'https://firecrawl.dev/blog/how-to-scrape-amazon'
                   pageOptions:
                     onlyMainContent: true
       responses:
-        "200":
+        '200':
           description: Successfully scraped the URL.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ScrapeResponse"
-        "202":
+                $ref: '#/components/schemas/ScrapeResponse'
+        '202':
           description: Scrape job accepted for asynchronous processing (when a webhook is provided).
           content:
             application/json:
@@ -88,17 +87,17 @@ paths:
                   jobId:
                     type: string
                     description: The ID of the accepted job.
-                    example: "c6a2c5a0-4a6a-4f9a-9b8a-3e2b1f1c7a6d"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "422":
-          $ref: "#/components/responses/UnprocessableEntity"
-        "429":
-          $ref: "#/components/responses/TooManyRequests"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
+                    example: 'c6a2c5a0-4a6a-4f9a-9b8a-3e2b1f1c7a6d'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /crawl:
     post:
@@ -114,17 +113,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CrawlRequestV2"
+              $ref: '#/components/schemas/CrawlRequestV2'
             examples:
               basic_crawl:
                 summary: Basic Crawl
                 value:
-                  url: "https://firecrawl.dev"
+                  url: 'https://firecrawl.dev'
                   crawlerOptions:
                     maxDepth: 2
                     maxPages: 10
       responses:
-        "200":
+        '200':
           description: Crawl job started successfully.
           content:
             application/json:
@@ -134,17 +133,17 @@ paths:
                   jobId:
                     type: string
                     description: The ID for the initiated crawl job.
-                    example: "e8a3b5c0-4b6a-4f9a-9b8a-3e2b1f1c7a6d"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "422":
-          $ref: "#/components/responses/UnprocessableEntity"
-        "429":
-          $ref: "#/components/responses/TooManyRequests"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
+                    example: 'e8a3b5c0-4b6a-4f9a-9b8a-3e2b1f1c7a6d'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /crawl/status/{jobId}:
     get:
@@ -163,22 +162,22 @@ paths:
           schema:
             type: string
             format: uuid
-            example: "e8a3b5c0-4b6a-4f9a-9b8a-3e2b1f1c7a6d"
+            example: 'e8a3b5c0-4b6a-4f9a-9b8a-3e2b1f1c7a6d'
       responses:
-        "200":
+        '200':
           description: The current status of the crawl job.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CrawlStatusResponse"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "429":
-          $ref: "#/components/responses/TooManyRequests"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
+                $ref: '#/components/schemas/CrawlStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /crawl/cancel:
     post:
@@ -201,9 +200,9 @@ paths:
                 jobId:
                   type: string
                   description: The ID of the crawl job to cancel.
-                  example: "e8a3b5c0-4b6a-4f9a-9b8a-3e2b1f1c7a6d"
+                  example: 'e8a3b5c0-4b6a-4f9a-9b8a-3e2b1f1c7a6d'
       responses:
-        "200":
+        '200':
           description: The job was successfully cancelled.
           content:
             application/json:
@@ -212,15 +211,15 @@ paths:
                 properties:
                   status:
                     type: string
-                    example: "cancelled"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "429":
-          $ref: "#/components/responses/TooManyRequests"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
+                    example: 'cancelled'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /search:
     post:
@@ -236,26 +235,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SearchRequest"
+              $ref: '#/components/schemas/SearchRequest'
       responses:
-        "200":
+        '200':
           description: Search completed successfully.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/SearchResult"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "422":
-          $ref: "#/components/responses/UnprocessableEntity"
-        "429":
-          $ref: "#/components/responses/TooManyRequests"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
+                  $ref: '#/components/schemas/SearchResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /map:
     post:
@@ -279,9 +278,9 @@ paths:
                   type: string
                   format: uri
                   description: The URL to fetch the sitemap for.
-                  example: "https://firecrawl.dev"
+                  example: 'https://firecrawl.dev'
       responses:
-        "200":
+        '200':
           description: Sitemap data retrieved successfully.
           content:
             application/json:
@@ -290,16 +289,16 @@ paths:
                 items:
                   type: string
                   format: uri
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "422":
-          $ref: "#/components/responses/UnprocessableEntity"
-        "429":
-          $ref: "#/components/responses/TooManyRequests"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /batch-scrape:
     post:
@@ -323,26 +322,26 @@ paths:
                     type: string
                     format: uri
                 scrapeOptions:
-                  $ref: "#/components/schemas/ScrapeRequestV2"
+                  $ref: '#/components/schemas/ScrapeRequestV2'
       responses:
-        "200":
+        '200':
           description: Successfully scraped all URLs.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/ScrapeResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "422":
-          $ref: "#/components/responses/UnprocessableEntity"
-        "429":
-          $ref: "#/components/responses/TooManyRequests"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
+                  $ref: '#/components/schemas/ScrapeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /extract:
     post:
@@ -358,24 +357,24 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ExtractRequest"
+              $ref: '#/components/schemas/ExtractRequest'
       responses:
-        "200":
+        '200':
           description: Successfully extracted data.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ExtractResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "422":
-          $ref: "#/components/responses/UnprocessableEntity"
-        "429":
-          $ref: "#/components/responses/TooManyRequests"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
+                $ref: '#/components/schemas/ExtractResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
 components:
   securitySchemes:
@@ -383,44 +382,44 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: "API Key for authentication. Get yours from [firecrawl.dev](https://firecrawl.dev)."
+      description: 'API Key for authentication. Get yours from [firecrawl.dev](https://firecrawl.dev).'
   responses:
     BadRequest:
       description: The request was malformed or contained invalid parameters.
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/GenericError"
+            $ref: '#/components/schemas/GenericError'
     Unauthorized:
       description: Authentication failed. The API key is missing, invalid, or expired.
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/GenericError"
+            $ref: '#/components/schemas/GenericError'
     NotFound:
       description: The requested resource could not be found.
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/GenericError"
+            $ref: '#/components/schemas/GenericError'
     UnprocessableEntity:
       description: The request was well-formed but could not be processed due to validation errors.
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/ValidationError"
+            $ref: '#/components/schemas/ValidationError'
     TooManyRequests:
       description: The rate limit for your plan has been exceeded.
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/GenericError"
+            $ref: '#/components/schemas/GenericError'
     InternalServerError:
       description: An unexpected error occurred on the server.
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/GenericError"
+            $ref: '#/components/schemas/GenericError'
   schemas:
     GenericError:
       type: object
@@ -428,14 +427,14 @@ components:
         error:
           type: string
           description: A message describing the error.
-          example: "Invalid API Key"
+          example: 'Invalid API Key'
 
     ValidationError:
       type: object
       properties:
         error:
           type: string
-          example: "Validation failed"
+          example: 'Validation failed'
         details:
           type: array
           items:
@@ -445,10 +444,10 @@ components:
                 type: array
                 items:
                   type: string
-                example: ["crawlerOptions", "maxDepth"]
+                example: ['crawlerOptions', 'maxDepth']
               message:
                 type: string
-                example: "Number must be less than or equal to 10"
+                example: 'Number must be less than or equal to 10'
 
     ScrapeRequestV2:
       type: object
@@ -459,7 +458,7 @@ components:
           type: string
           format: uri
           description: The URL to scrape.
-          example: "https://firecrawl.dev"
+          example: 'https://firecrawl.dev'
         pageOptions:
           type: object
           properties:
@@ -485,7 +484,7 @@ components:
                 type: string
               description: Custom headers to use for the request.
               example:
-                User-Agent: "My-Custom-Scraper/1.0"
+                User-Agent: 'My-Custom-Scraper/1.0'
         extractorOptions:
           type: object
           properties:
@@ -494,19 +493,19 @@ components:
               enum:
                 - llm-extraction
               description: The extraction mode.
-              example: "llm-extraction"
+              example: 'llm-extraction'
             extractionPrompt:
               type: string
               description: A specific prompt to guide the LLM for data extraction.
-              example: "Extract the main title and the first paragraph of the article."
+              example: 'Extract the main title and the first paragraph of the article.'
             extractionSchema:
               type: object
               description: The JSON schema for the data to be extracted.
               example:
-                type: "object"
+                type: 'object'
                 properties:
-                  title: { type: "string" }
-                  first_paragraph: { type: "string" }
+                  title: { type: 'string' }
+                  first_paragraph: { type: 'string' }
         scraperOptions:
           type: object
           properties:
@@ -536,9 +535,9 @@ components:
               type: object
               description: Metadata extracted from the page (title, description, etc.).
               example:
-                title: "Firecrawl | Build reliable crawlers and scrapers"
-                description: "Turn any website into clean, structured data."
-                ogTitle: "Firecrawl"
+                title: 'Firecrawl | Build reliable crawlers and scrapers'
+                description: 'Turn any website into clean, structured data.'
+                ogTitle: 'Firecrawl'
             screenshotUrl:
               type: string
               format: uri
@@ -549,7 +548,7 @@ components:
             sourceURL:
               type: string
               format: uri
-              example: "https://firecrawl.dev"
+              example: 'https://firecrawl.dev'
 
     CrawlRequestV2:
       type: object
@@ -560,7 +559,7 @@ components:
           type: string
           format: uri
           description: The starting URL for the crawl.
-          example: "https://firecrawl.dev/blog"
+          example: 'https://firecrawl.dev/blog'
         crawlerOptions:
           type: object
           properties:
@@ -569,13 +568,13 @@ components:
               items:
                 type: string
               description: Glob patterns to include in the crawl.
-              example: ["/blog/**"]
+              example: ['/blog/**']
             excludes:
               type: array
               items:
                 type: string
               description: Glob patterns to exclude from the crawl.
-              example: ["/blog/old-posts/**"]
+              example: ['/blog/old-posts/**']
             maxDepth:
               type: integer
               description: The maximum depth to crawl relative to the starting URL.
@@ -619,7 +618,7 @@ components:
         status:
           type: string
           enum: [crawling, completed, failed]
-          example: "completed"
+          example: 'completed'
         total:
           type: integer
           description: Total number of pages found.
@@ -631,7 +630,7 @@ components:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/ScrapeResponse"
+            $ref: '#/components/schemas/ScrapeResponse'
 
     SearchRequest:
       type: object
@@ -641,18 +640,18 @@ components:
         query:
           type: string
           description: The search query.
-          example: "What is Firecrawl?"
+          example: 'What is Firecrawl?'
         searchOptions:
           type: object
           properties:
             provider:
               type: string
               enum: [google, serper, searchapi, searxng]
-              default: "google"
+              default: 'google'
             region:
               type: string
               description: The geographic region for the search.
-              example: "us-east-1"
+              example: 'us-east-1'
             maxResults:
               type: integer
               description: The maximum number of search results to return.
@@ -663,17 +662,17 @@ components:
       properties:
         title:
           type: string
-          example: "Firecrawl - Turn any website into clean data"
+          example: 'Firecrawl - Turn any website into clean data'
         url:
           type: string
           format: uri
-          example: "https://firecrawl.dev"
+          example: 'https://firecrawl.dev'
         description:
           type: string
-          example: "Firecrawl is a powerful tool for web scraping and crawling..."
+          example: 'Firecrawl is a powerful tool for web scraping and crawling...'
         content:
           type: string
-          example: "Firecrawl helps developers turn websites into structured data..."
+          example: 'Firecrawl helps developers turn websites into structured data...'
 
     ExtractRequest:
       type: object
@@ -695,10 +694,10 @@ components:
               type: object
               description: The JSON schema to which the extracted data should conform.
               example:
-                type: "object"
+                type: 'object'
                 properties:
-                  author: { type: "string" }
-                  published_date: { type: "string", format: "date" }
+                  author: { type: 'string' }
+                  published_date: { type: 'string', format: 'date' }
             extractionPrompt:
               type: string
               description: A natural language prompt to guide the extraction process.
@@ -706,7 +705,7 @@ components:
               type: string
               enum:
                 - llm-extraction
-              default: "llm-extraction"
+              default: 'llm-extraction'
 
     ExtractResponse:
       type: object
@@ -717,5 +716,5 @@ components:
           type: object
           description: The extracted data matching the provided schema.
           example:
-            author: "John Doe"
-            published_date: "2024-01-15"
+            author: 'John Doe'
+            published_date: '2024-01-15'
