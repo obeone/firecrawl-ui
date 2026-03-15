@@ -18,12 +18,7 @@
       </div>
       <div class="form-group">
         <label for="baseUrl">Firecrawl API base URL (optional):</label>
-        <input
-          id="baseUrl"
-          v-model="baseUrl"
-          type="text"
-          placeholder="https://api.firecrawl.dev"
-        />
+        <input id="baseUrl" v-model="baseUrl" type="text" placeholder="https://api.firecrawl.dev" />
         <small> Leave blank to use the default URL. </small>
       </div>
       <button type="submit" class="primary-button">Save</button>

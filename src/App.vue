@@ -1,8 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 
 const isMenuOpen = ref(false);
+
+const storedTheme = localStorage.getItem('theme');
+const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+const theme = ref(storedTheme ?? (prefersDark ? 'dark' : 'light'));
+document.documentElement.setAttribute('data-theme', theme.value);
+
+watch(theme, (newTheme) => {
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+});
 
 /**
  * Toggles the visibility of the sidebar menu on small screens.
@@ -10,11 +20,21 @@ const isMenuOpen = ref(false);
 function toggleMenu(): void {
   isMenuOpen.value = !isMenuOpen.value;
 }
+
+/**
+ * Switches between light and dark themes and persists the choice.
+ */
+function toggleTheme(): void {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark';
+}
 </script>
 
 <template>
   <div class="app-layout" :class="{ 'menu-open': isMenuOpen }">
     <button class="menu-button" @click="toggleMenu" aria-label="Toggle navigation">☰</button>
+    <button class="theme-toggle" @click="toggleTheme" aria-label="Toggle theme">
+      {{ theme === 'dark' ? '🌞' : '🌙' }}
+    </button>
     <aside class="sidebar" :class="{ open: isMenuOpen }">
       <img alt="Firecrawl UI logo" class="logo" src="@/assets/logo.png" width="80" height="80" />
       <nav @click="isMenuOpen = false">
@@ -89,6 +109,28 @@ function toggleMenu(): void {
   background-color: hsla(160, 100%, 37%, 0.2); /* Active link background */
   color: hsla(160, 100%, 37%, 1); /* Active link text color */
   font-weight: 600;
+}
+
+.theme-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  background-color: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: var(--color-heading);
+  z-index: 1100;
+}
+
+.theme-toggle:hover {
+  background-color: var(--color-background-mute);
 }
 
 .menu-button {

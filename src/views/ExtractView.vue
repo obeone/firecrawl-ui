@@ -3,13 +3,13 @@
     <h1>Extract Data</h1>
     <form @submit.prevent="runExtraction" class="extract-form">
       <div class="form-group">
-        <label for="url-input">URLs (one per line)</label>
+        <label for="url-input">URLs (optional, one per line)</label>
+        <small class="hint">Leave blank when providing only a prompt.</small>
         <textarea
           id="url-input"
           v-model="urlInput"
           rows="4"
           placeholder="https://example.com/blog/*"
-          required
         ></textarea>
       </div>
 
@@ -67,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, ref } from 'vue';
+import { computed, inject, ref, watch } from 'vue';
 import type { FirecrawlExtractResponse, FirecrawlExtractionApi } from '@/services/firecrawl';
 
 /**
@@ -86,24 +86,30 @@ const loading = ref(false); // Indicates if an extraction request is in progress
 const error = ref(''); // Stores any error messages from the extraction process.
 const result = ref<FirecrawlExtractResponse['data'] | null>(null); // Stores the successful extraction result.
 const schemaError = ref<string | null>(null); // Stores error messages related to JSON schema parsing.
+const parsedSchema = ref<any>(undefined); // Holds the parsed schema object.
 
 /**
- * Parse the schema string. If invalid, schemaError will contain the message.
+ * Watcher to parse the schema string and update the parsed schema.
+ * Sets an error message if parsing fails.
  */
-const parsedSchema = computed(() => {
-  if (!schemaString.value.trim()) {
-    schemaError.value = null;
-    return undefined;
-  }
-  try {
-    const parsed = JSON.parse(schemaString.value);
-    schemaError.value = null;
-    return parsed;
-  } catch (e: any) {
-    schemaError.value = e.message;
-    return null;
-  }
-});
+watch(
+  schemaString,
+  (newVal) => {
+    if (!newVal.trim()) {
+      schemaError.value = null;
+      parsedSchema.value = undefined;
+      return;
+    }
+    try {
+      parsedSchema.value = JSON.parse(newVal);
+      schemaError.value = null;
+    } catch (e: any) {
+      schemaError.value = e.message;
+      parsedSchema.value = null;
+    }
+  },
+  { immediate: true },
+);
 
 /** Format result as pretty JSON. */
 const formattedResult = computed(() => (result.value ? JSON.stringify(result.value, null, 2) : ''));
@@ -118,13 +124,13 @@ const runExtraction = async (): Promise<void> => {
     .split('\n')
     .map((u) => u.trim())
     .filter((u) => u);
-  if (!urls.length) {
-    error.value = 'Please provide at least one URL.';
+  if (!urls.length && !promptInput.value.trim()) {
+    error.value = 'Please provide at least one URL or a prompt.';
     return;
   }
 
   const payload = {
-    urls,
+    ...(urls.length && { urls }),
     ...(promptInput.value && { prompt: promptInput.value }),
     ...(parsedSchema.value && { schema: parsedSchema.value }),
     ...(options.value.enableWebSearch && { enableWebSearch: true }),
@@ -239,5 +245,11 @@ pre {
 
 .schema-error {
   color: #d9534f;
+}
+
+.hint {
+  display: block;
+  margin-top: 4px;
+  color: #666;
 }
 </style>

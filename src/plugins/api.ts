@@ -12,7 +12,10 @@ import { createFirecrawlApiClients, type FirecrawlApiClients } from '../services
  * @param app - The Vue application instance to which API clients will be registered.
  */
 let appInstance: App | null = null;
-const apiClients: FirecrawlApiClients = createFirecrawlApiClients(apiConfig.apiKey, apiConfig.basePath);
+const apiClients: FirecrawlApiClients = createFirecrawlApiClients(
+  apiConfig.apiKey,
+  apiConfig.basePath,
+);
 
 const apiPlugin = {
   install(app: App): void {

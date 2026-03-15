@@ -116,14 +116,18 @@ interface LegacySearchResponse {
  * Legacy-compatible scraping client.
  */
 export interface FirecrawlScrapingApi {
-  scrapeAndExtractFromUrl(payload: Record<string, unknown>): Promise<WrappedResponse<LegacyScrapeResponse>>;
+  scrapeAndExtractFromUrl(
+    payload: Record<string, unknown>,
+  ): Promise<WrappedResponse<LegacyScrapeResponse>>;
 }
 
 /**
  * Legacy-compatible crawling client.
  */
 export interface FirecrawlCrawlingApi {
-  crawlUrls(payload: Record<string, unknown>): Promise<WrappedResponse<{ id: string; url: string }>>;
+  crawlUrls(
+    payload: Record<string, unknown>,
+  ): Promise<WrappedResponse<{ id: string; url: string }>>;
   getCrawlStatus(id: string): Promise<WrappedResponse<LegacyCrawlStatusResponse>>;
 }
 
@@ -255,7 +259,8 @@ function toLegacySearchResult(result: Record<string, unknown>): Record<string, u
 
     return {
       ...legacyDocument,
-      title: (metadata.title as string | undefined) || (legacyDocument.url as string | undefined) || '',
+      title:
+        (metadata.title as string | undefined) || (legacyDocument.url as string | undefined) || '',
       url: (legacyDocument.url as string | undefined) || '',
       description: (metadata.description as string | undefined) || '',
     };
@@ -271,7 +276,10 @@ function toLegacySearchResult(result: Record<string, unknown>): Record<string, u
  * @param payload - The original payload used to enrich JSON and change-tracking formats.
  * @returns A v2-compatible formats array.
  */
-function toV2Formats(formats: unknown, payload: Record<string, unknown>): Array<string | Record<string, unknown>> | undefined {
+function toV2Formats(
+  formats: unknown,
+  payload: Record<string, unknown>,
+): Array<string | Record<string, unknown>> | undefined {
   if (!Array.isArray(formats) || formats.length === 0) {
     return undefined;
   }
@@ -359,7 +367,10 @@ function toV2Formats(formats: unknown, payload: Record<string, unknown>): Array<
  * @param payload - The raw legacy payload.
  * @returns The target URL and v2 scrape options.
  */
-function toScrapeRequest(payload: Record<string, unknown>): { url: string; options: Record<string, unknown> } {
+function toScrapeRequest(payload: Record<string, unknown>): {
+  url: string;
+  options: Record<string, unknown>;
+} {
   const url = typeof payload.url === 'string' ? payload.url : '';
   const formats = toV2Formats(payload.formats, payload);
   const location =
@@ -409,7 +420,10 @@ function toScrapeRequest(payload: Record<string, unknown>): { url: string; optio
  * @param payload - The crawl payload built by the view.
  * @returns The target URL and v2 crawl options.
  */
-function toCrawlRequest(payload: Record<string, unknown>): { url: string; options: Record<string, unknown> } {
+function toCrawlRequest(payload: Record<string, unknown>): {
+  url: string;
+  options: Record<string, unknown>;
+} {
   const url = typeof payload.url === 'string' ? payload.url : '';
   const scrapeOptions =
     typeof payload.scrapeOptions === 'object' && payload.scrapeOptions !== null
@@ -523,10 +537,13 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
       async crawlUrls(payload) {
         try {
           const { url, options } = toCrawlRequest(payload);
-          const response = await http.post<{ success: boolean; id: string; url: string }>('/v2/crawl', {
-            url,
-            ...options,
-          });
+          const response = await http.post<{ success: boolean; id: string; url: string }>(
+            '/v2/crawl',
+            {
+              url,
+              ...options,
+            },
+          );
 
           return {
             data: {
@@ -585,8 +602,12 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
             links?: Array<string | { url: string }>;
           }>('/v2/map', {
             url: String(payload.url ?? ''),
-            ...(typeof payload.search === 'string' && payload.search ? { search: payload.search } : {}),
-            ...(payload.sitemap === 'skip' || payload.sitemap === 'include' || payload.sitemap === 'only'
+            ...(typeof payload.search === 'string' && payload.search
+              ? { search: payload.search }
+              : {}),
+            ...(payload.sitemap === 'skip' ||
+            payload.sitemap === 'include' ||
+            payload.sitemap === 'only'
               ? { sitemap: payload.sitemap }
               : payload.sitemapOnly === true
                 ? { sitemap: 'only' }

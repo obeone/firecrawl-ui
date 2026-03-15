@@ -31,8 +31,8 @@
                 v-model="includesInput"
                 type="text"
                 placeholder="/blog/.*, /products/.*"
-                @blur="parseIncludes"
               />
+              <div v-if="includesError" class="error-message">{{ includesError }}</div>
               <small>Comma-separated regex patterns. Only matching URLs will be included.</small>
             </div>
             <div class="form-group">
@@ -42,8 +42,8 @@
                 v-model="excludesInput"
                 type="text"
                 placeholder="/login, /private/.*"
-                @blur="parseExcludes"
               />
+              <div v-if="excludesError" class="error-message">{{ excludesError }}</div>
               <small>Comma-separated regex patterns to exclude URLs.</small>
             </div>
             <div class="form-group">
@@ -101,6 +101,17 @@
                 placeholder="e.g. 5"
               />
               <small>Maximum number of pages processed in parallel.</small>
+            </div>
+            <div class="form-group">
+              <label for="statusInterval">Status Check Interval (seconds):</label>
+              <input
+                id="statusInterval"
+                v-model.number="statusCheckInterval"
+                type="number"
+                min="1"
+                placeholder="e.g. 5"
+              />
+              <small>Time between status checks.</small>
             </div>
           </div>
           <div class="grid-layout">
@@ -236,11 +247,10 @@
           </div>
           <div class="form-group">
             <label for="jsonSchema">JSON Options Schema (JSON):</label>
-            <textarea
-              id="jsonSchema"
-              v-model="jsonOptionsSchemaInput"
-              @blur="parseJsonOptionsSchema"
-            ></textarea>
+            <textarea id="jsonSchema" v-model="jsonOptionsSchemaInput"></textarea>
+            <div v-if="jsonOptionsSchemaError" class="error-message">
+              {{ jsonOptionsSchemaError }}
+            </div>
           </div>
           <div class="form-group">
             <label for="jsonSystemPrompt">JSON System Prompt:</label>
@@ -268,11 +278,10 @@
           </div>
           <div class="form-group">
             <label for="changeSchema">Change Tracking Schema (JSON):</label>
-            <textarea
-              id="changeSchema"
-              v-model="changeTrackingSchemaInput"
-              @blur="parseChangeTrackingSchema"
-            ></textarea>
+            <textarea id="changeSchema" v-model="changeTrackingSchemaInput"></textarea>
+            <div v-if="changeTrackingSchemaError" class="error-message">
+              {{ changeTrackingSchemaError }}
+            </div>
           </div>
           <div class="form-group">
             <label for="changePrompt">Change Tracking Prompt:</label>
@@ -309,8 +318,10 @@
                 id="webhookHeaders"
                 v-model="webhookHeadersInput"
                 placeholder='{"Authorization": "token"}'
-                @blur="parseWebhookHeaders"
               ></textarea>
+              <div v-if="webhookHeadersError" class="error-message">
+                {{ webhookHeadersError }}
+              </div>
             </div>
             <div class="form-group">
               <label for="webhookMetadata">Webhook Metadata (JSON):</label>
@@ -318,8 +329,10 @@
                 id="webhookMetadata"
                 v-model="webhookMetadataInput"
                 placeholder='{"source": "ui"}'
-                @blur="parseWebhookMetadata"
               ></textarea>
+              <div v-if="webhookMetadataError" class="error-message">
+                {{ webhookMetadataError }}
+              </div>
             </div>
             <div class="form-group">
               <label for="webhookEvents">Webhook Events:</label>
@@ -360,6 +373,7 @@
       </div>
       <p>{{ progress }}% Completed</p>
       <p>{{ pagesCompleted }} / {{ totalPages }} pages processed</p>
+      <button class="primary-button" type="button" @click="cancelCurrentCrawl">Cancel Crawl</button>
     </div>
 
     <!-- Section for download options after crawl completion -->
@@ -462,7 +476,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, inject, onMounted, onUnmounted, computed } from 'vue';
+import { defineComponent, ref, inject, onMounted, onUnmounted, computed, watch } from 'vue';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import axios from 'axios';
@@ -621,36 +635,64 @@ export default defineComponent({
     const changeTrackingSchemaInput = ref('');
     const changeTrackingModesInput = ref('');
 
+    const includesError = ref('');
+    const excludesError = ref('');
+    const webhookHeadersError = ref('');
+    const webhookMetadataError = ref('');
+    const jsonOptionsSchemaError = ref('');
+    const changeTrackingSchemaError = ref('');
+
     // State for collapsible sections
     const isCrawlerOptionsCollapsed = ref(true);
     const isScrapeOptionsCollapsed = ref(true);
     const isWebhookOptionsCollapsed = ref(true);
     const useSubfolders = ref(false);
+    const statusCheckInterval = ref(3);
 
     const crawlerOptionsArrow = computed(() => (isCrawlerOptionsCollapsed.value ? '▶' : '▼'));
     const scrapeOptionsArrow = computed(() => (isScrapeOptionsCollapsed.value ? '▶' : '▼'));
     const webhookOptionsArrow = computed(() => (isWebhookOptionsCollapsed.value ? '▶' : '▼'));
 
     /**
-     * Parses a comma-separated string of regex patterns from the includes input
-     * and updates the formData.crawlerOptions.includes array.
+     * Parses and validates regex patterns from the includes input.
+     * Updates formData.crawlerOptions.includes when all patterns are valid.
      */
-    const parseIncludes = () => {
-      formData.value.crawlerOptions.includes = includesInput.value
+    const parseIncludes = (): void => {
+      const patterns = includesInput.value
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);
+      for (const pattern of patterns) {
+        try {
+          new RegExp(pattern);
+        } catch (e: any) {
+          includesError.value = `Invalid regex pattern: ${pattern}`;
+          return;
+        }
+      }
+      includesError.value = '';
+      formData.value.crawlerOptions.includes = patterns;
     };
 
     /**
-     * Parses a comma-separated string of regex patterns from the excludes input
-     * and updates the formData.crawlerOptions.excludes array.
+     * Parses and validates regex patterns from the excludes input.
+     * Updates formData.crawlerOptions.excludes when all patterns are valid.
      */
-    const parseExcludes = () => {
-      formData.value.crawlerOptions.excludes = excludesInput.value
+    const parseExcludes = (): void => {
+      const patterns = excludesInput.value
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);
+      for (const pattern of patterns) {
+        try {
+          new RegExp(pattern);
+        } catch (e: any) {
+          excludesError.value = `Invalid regex pattern: ${pattern}`;
+          return;
+        }
+      }
+      excludesError.value = '';
+      formData.value.crawlerOptions.excludes = patterns;
     };
 
     /**
@@ -679,13 +721,14 @@ export default defineComponent({
      * Parses the webhookHeadersInput string as JSON and updates
      * formData.webhookOptions.headers. Sets an error message if parsing fails.
      */
-    const parseWebhookHeaders = () => {
+    const parseWebhookHeaders = (): void => {
       try {
         formData.value.webhookOptions.headers = webhookHeadersInput.value
           ? JSON.parse(webhookHeadersInput.value)
           : {};
+        webhookHeadersError.value = '';
       } catch (e: any) {
-        error.value = `Invalid JSON for webhook headers: ${e.message}`;
+        webhookHeadersError.value = `Invalid JSON: ${e.message}`;
       }
     };
 
@@ -693,13 +736,14 @@ export default defineComponent({
      * Parses the webhookMetadataInput string as JSON and updates
      * formData.webhookOptions.metadata. Sets an error message if parsing fails.
      */
-    const parseWebhookMetadata = () => {
+    const parseWebhookMetadata = (): void => {
       try {
         formData.value.webhookOptions.metadata = webhookMetadataInput.value
           ? JSON.parse(webhookMetadataInput.value)
           : {};
+        webhookMetadataError.value = '';
       } catch (e: any) {
-        error.value = `Invalid JSON for webhook metadata: ${e.message}`;
+        webhookMetadataError.value = `Invalid JSON: ${e.message}`;
       }
     };
 
@@ -719,14 +763,15 @@ export default defineComponent({
      * Parses the jsonOptionsSchemaInput string as JSON and updates
      * formData.scrapeOptions.jsonOptions.schema. Sets an error message if parsing fails.
      */
-    const parseJsonOptionsSchema = () => {
+    const parseJsonOptionsSchema = (): void => {
       try {
         formData.value.scrapeOptions.jsonOptions = formData.value.scrapeOptions.jsonOptions || {};
         formData.value.scrapeOptions.jsonOptions.schema = jsonOptionsSchemaInput.value
           ? JSON.parse(jsonOptionsSchemaInput.value)
           : undefined;
+        jsonOptionsSchemaError.value = '';
       } catch (e: any) {
-        error.value = `Invalid JSON for JSON schema: ${e.message}`;
+        jsonOptionsSchemaError.value = `Invalid JSON: ${e.message}`;
       }
     };
 
@@ -734,15 +779,16 @@ export default defineComponent({
      * Parses the changeTrackingSchemaInput string as JSON and updates
      * formData.scrapeOptions.changeTrackingOptions.schema. Sets an error message if parsing fails.
      */
-    const parseChangeTrackingSchema = () => {
+    const parseChangeTrackingSchema = (): void => {
       try {
         formData.value.scrapeOptions.changeTrackingOptions =
           formData.value.scrapeOptions.changeTrackingOptions || {};
         formData.value.scrapeOptions.changeTrackingOptions.schema = changeTrackingSchemaInput.value
           ? JSON.parse(changeTrackingSchemaInput.value)
           : undefined;
+        changeTrackingSchemaError.value = '';
       } catch (e: any) {
-        error.value = `Invalid JSON for change tracking schema: ${e.message}`;
+        changeTrackingSchemaError.value = `Invalid JSON: ${e.message}`;
       }
     };
 
@@ -759,6 +805,14 @@ export default defineComponent({
         .filter(Boolean);
     };
 
+    // Watchers to validate inputs in real time
+    watch(includesInput, parseIncludes, { immediate: true });
+    watch(excludesInput, parseExcludes, { immediate: true });
+    watch(webhookHeadersInput, parseWebhookHeaders, { immediate: true });
+    watch(webhookMetadataInput, parseWebhookMetadata, { immediate: true });
+    watch(jsonOptionsSchemaInput, parseJsonOptionsSchema, { immediate: true });
+    watch(changeTrackingSchemaInput, parseChangeTrackingSchema, { immediate: true });
+
     const loading = ref(false);
     const crawling = ref(false);
     const progress = ref(0);
@@ -769,6 +823,7 @@ export default defineComponent({
     const crawlStatus = ref<string | undefined>('');
     const error = ref('');
     const result = ref<any>(null);
+    const currentCrawlId = ref<string | null>(null);
     const crawlHistory = ref<any[]>([]); // Initialize with empty array
 
     // State for selected crawl history item
@@ -818,6 +873,10 @@ export default defineComponent({
      * Clear the crawl history and remove the stored data.
      */
     const clearHistory = () => {
+      for (const id in historyIntervalIds) {
+        clearInterval(historyIntervalIds[id]);
+        delete historyIntervalIds[id];
+      }
       crawlHistory.value = [];
       selectedCrawlId.value = null;
       localStorage.removeItem(HISTORY_STORAGE_KEY);
@@ -1177,6 +1236,18 @@ export default defineComponent({
       parseWebhookHeaders();
       parseWebhookMetadata();
 
+      if (
+        includesError.value ||
+        excludesError.value ||
+        webhookHeadersError.value ||
+        webhookMetadataError.value ||
+        jsonOptionsSchemaError.value ||
+        changeTrackingSchemaError.value
+      ) {
+        error.value = 'Please fix the errors above before submitting';
+        return;
+      }
+
       // Basic form validation
       if (!isValidUrl(formData.value.url)) {
         error.value = 'Please enter a valid URL (e.g. https://example.com)';
@@ -1291,6 +1362,7 @@ export default defineComponent({
         totalPages.value = 0;
         error.value = '';
         result.value = null;
+        currentCrawlId.value = null;
 
         // Call the crawling API to submit the crawl job
         const response = await api.crawling.crawlUrls(payload);
@@ -1298,6 +1370,7 @@ export default defineComponent({
 
         // Add the submitted job to history
         if (response.data && response.data.id) {
+          currentCrawlId.value = response.data.id;
           crawlHistory.value.unshift({
             // Add to the beginning of the array
             id: response.data.id,
@@ -1328,11 +1401,40 @@ export default defineComponent({
         }
         loading.value = false; // Stop loading on error
         crawling.value = false; // Stop crawling animation on error
+        currentCrawlId.value = null;
+      }
+    };
+
+    /**
+     * Cancel the currently running crawl job.
+     * Stops status polling and updates the UI state accordingly.
+     */
+    const cancelCurrentCrawl = async (): Promise<void> => {
+      if (!currentCrawlId.value) {
+        return;
+      }
+      try {
+        await api.crawling.cancelCrawl(currentCrawlId.value);
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+        crawlStatus.value = 'cancelled';
+        crawling.value = false;
+        const historyItem = crawlHistory.value.find((c) => c.id === currentCrawlId.value);
+        if (historyItem) {
+          historyItem.status = 'cancelled';
+          saveHistory();
+        }
+        currentCrawlId.value = null;
+      } catch (err: any) {
+        error.value = `Failed to cancel crawl: ${err.message || 'Unknown error'}`;
       }
     };
 
     // Interval ID for polling crawl status
     let intervalId: ReturnType<typeof setInterval> | null = null;
+    const historyIntervalIds: Record<string, ReturnType<typeof setInterval>> = {};
 
     /**
      * Fetch crawl status and progress periodically from the API.
@@ -1373,11 +1475,18 @@ export default defineComponent({
             `Crawl status for ${jobId}: ${data.status}, Completed: ${data.completed}/${data.total}`,
           );
 
+          const historyItem = crawlHistory.value.find((c) => c.id === jobId);
+          if (historyItem) {
+            historyItem.status = data.status;
+            saveHistory();
+          }
+
           // Stop polling when completed or failed
           if (data.status === 'completed' || data.status === 'failed') {
             clearInterval(intervalId);
             intervalId = null; // Clear intervalId after clearing interval
             crawling.value = false; // Update crawling state
+            currentCrawlId.value = null;
             saveHistory(); // Save history when status changes to completed or failed
           }
         } catch (err: any) {
@@ -1387,12 +1496,78 @@ export default defineComponent({
           intervalId = null;
           crawling.value = false;
           crawlStatus.value = 'failed'; // Indicate failure in UI
+          currentCrawlId.value = null;
           error.value = `Failed to fetch crawl status: ${err.message || 'Unknown error'}`;
+          const historyItem = crawlHistory.value.find((c) => c.id === jobId);
+          if (historyItem) {
+            historyItem.status = 'failed';
+            saveHistory();
+          }
         }
-      }, 1000); // Poll every 1 second
+      }, statusCheckInterval.value * 1000);
     };
 
-    onMounted(() => {
+    /**
+     * Check the status of a crawl from history and update its record.
+     * Starts polling if the crawl is still running.
+     * @param crawl - History entry to check.
+     */
+    const checkHistoryStatus = async (crawl: any) => {
+      try {
+        const response = await api.crawling.getCrawlStatus(crawl.id);
+        crawl.status = response.data.status;
+        saveHistory();
+        if (crawl.status !== 'completed' && crawl.status !== 'failed') {
+          startHistoryPolling(crawl.id);
+        }
+      } catch (err) {
+        console.error(`Failed to fetch status for crawl ${crawl.id}:`, err);
+        crawl.status = 'unavailable';
+        saveHistory();
+      }
+    };
+
+    /**
+     * Start polling status for a specific history entry.
+     * @param id - Crawl job identifier.
+     */
+    const startHistoryPolling = (id: string) => {
+      stopHistoryPolling(id);
+      historyIntervalIds[id] = setInterval(async () => {
+        const crawl = crawlHistory.value.find((c) => c.id === id);
+        if (!crawl) {
+          stopHistoryPolling(id);
+          return;
+        }
+        try {
+          const response = await api.crawling.getCrawlStatus(id);
+          crawl.status = response.data.status;
+          saveHistory();
+          if (crawl.status === 'completed' || crawl.status === 'failed') {
+            stopHistoryPolling(id);
+          }
+        } catch (err) {
+          console.error(`Polling failed for crawl ${id}:`, err);
+          crawl.status = 'unavailable';
+          saveHistory();
+          stopHistoryPolling(id);
+        }
+      }, statusCheckInterval.value * 1000);
+    };
+
+    /**
+     * Stop polling status for a specific history entry.
+     * @param id - Crawl job identifier.
+     */
+    const stopHistoryPolling = (id: string) => {
+      const intId = historyIntervalIds[id];
+      if (intId) {
+        clearInterval(intId);
+        delete historyIntervalIds[id];
+      }
+    };
+
+    onMounted(async () => {
       // Load history from LocalStorage on component mount
       const savedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
       if (savedHistory) {
@@ -1400,10 +1575,9 @@ export default defineComponent({
           crawlHistory.value = JSON.parse(savedHistory);
         } catch (e) {
           console.error('Failed to parse crawl history from LocalStorage:', e);
-          // Optionally clear invalid data
-          // localStorage.removeItem(HISTORY_STORAGE_KEY);
         }
       }
+      await Promise.all(crawlHistory.value.map((c) => checkHistoryStatus(c)));
     });
 
     // Cleanup polling interval when the component unmounts
@@ -1411,6 +1585,10 @@ export default defineComponent({
       if (intervalId) {
         clearInterval(intervalId);
         intervalId = null;
+      }
+      for (const id in historyIntervalIds) {
+        clearInterval(historyIntervalIds[id]);
+        delete historyIntervalIds[id];
       }
     });
 
@@ -1426,16 +1604,16 @@ export default defineComponent({
       jsonOptionsSchemaInput,
       changeTrackingSchemaInput,
       changeTrackingModesInput,
-      parseIncludes,
-      parseExcludes,
+      includesError,
+      excludesError,
+      webhookHeadersError,
+      webhookMetadataError,
+      jsonOptionsSchemaError,
+      changeTrackingSchemaError,
       parseIncludeTags,
       parseExcludeTags,
       parseLocationLanguages,
-      parseJsonOptionsSchema,
-      parseChangeTrackingSchema,
       parseChangeTrackingModes,
-      parseWebhookHeaders,
-      parseWebhookMetadata,
       loading,
       crawling,
       progress,
@@ -1445,6 +1623,7 @@ export default defineComponent({
       error,
       result,
       handleSubmit,
+      cancelCurrentCrawl,
       isCrawlerOptionsCollapsed,
       isScrapeOptionsCollapsed,
       isWebhookOptionsCollapsed,
@@ -1461,6 +1640,7 @@ export default defineComponent({
       scrapeOptionsArrow,
       webhookOptionsArrow,
       useSubfolders,
+      statusCheckInterval,
       clearHistory,
       // Expose saveHistory if needed elsewhere, though not strictly necessary for this task
       // saveHistory,
@@ -1503,6 +1683,11 @@ export default defineComponent({
   font-size: 0.8em;
   color: #666;
   margin-top: 3px;
+}
+.error-message {
+  color: red;
+  font-size: 0.9em;
+  margin-top: 5px;
 }
 .status {
   display: flex;

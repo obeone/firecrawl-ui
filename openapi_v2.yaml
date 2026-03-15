@@ -1,0 +1,720 @@
+openapi: 3.1.0
+info:
+  title: Firecrawl API v2
+  description: |-
+    API for scraping, crawling, and searching web pages.
+    Firecrawl turns any website into clean, structured data.
+
+    **Authentication:**
+    All API requests must be authenticated with a Bearer Token.
+    Provide your API key in the `Authorization` header: `Authorization: Bearer YOUR_API_KEY`.
+  version: '2.3.0'
+  contact:
+    name: Firecrawl Team
+    email: team@firecrawl.dev
+    url: 'https://firecrawl.dev'
+servers:
+  - url: https://api.firecrawl.dev/v2
+    description: Production Server
+tags:
+  - name: Scraping
+    description: Endpoints for scraping individual or multiple URLs.
+  - name: Crawling
+    description: Endpoints for managing website crawl jobs.
+  - name: Searching
+    description: Endpoints for performing web searches.
+  - name: Utilities
+    description: Helper endpoints for tasks like sitemap retrieval and data extraction.
+paths:
+  /scrape:
+    post:
+      tags:
+        - Scraping
+      summary: Scrape a URL
+      description: |
+        Scrapes a single URL and returns its content.
+        The response can be plain text, Markdown, or structured data based on a provided schema.
+      operationId: scrapeUrl
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScrapeRequestV2'
+            examples:
+              llm_extraction_example:
+                summary: LLM Extraction
+                value:
+                  url: 'https://mendable.ai'
+                  pageOptions:
+                    onlyMainContent: true
+                  extractorOptions:
+                    mode: 'llm-extraction'
+                    extractionPrompt: 'Extract the pricing information and features for each plan.'
+                    extractionSchema:
+                      type: 'object'
+                      properties:
+                        plans:
+                          type: 'array'
+                          items:
+                            type: 'object'
+                            properties:
+                              name: { type: 'string' }
+                              price: { type: 'string' }
+                              features: { type: 'array', items: { type: 'string' } }
+              markdown_example:
+                summary: Markdown Content
+                value:
+                  url: 'https://firecrawl.dev/blog/how-to-scrape-amazon'
+                  pageOptions:
+                    onlyMainContent: true
+      responses:
+        '200':
+          description: Successfully scraped the URL.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScrapeResponse'
+        '202':
+          description: Scrape job accepted for asynchronous processing (when a webhook is provided).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+                    description: The ID of the accepted job.
+                    example: 'c6a2c5a0-4a6a-4f9a-9b8a-3e2b1f1c7a6d'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /crawl:
+    post:
+      tags:
+        - Crawling
+      summary: Start a Crawl Job
+      description: Initiates a crawl job for a given URL. This is an asynchronous operation that returns a `jobId`.
+      operationId: startCrawl
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrawlRequestV2'
+            examples:
+              basic_crawl:
+                summary: Basic Crawl
+                value:
+                  url: 'https://firecrawl.dev'
+                  crawlerOptions:
+                    maxDepth: 2
+                    maxPages: 10
+      responses:
+        '200':
+          description: Crawl job started successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+                    description: The ID for the initiated crawl job.
+                    example: 'e8a3b5c0-4b6a-4f9a-9b8a-3e2b1f1c7a6d'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /crawl/status/{jobId}:
+    get:
+      tags:
+        - Crawling
+      summary: Check Crawl Job Status
+      description: Retrieves the current status and data of a crawl job.
+      operationId: getCrawlStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          description: The ID of the crawl job to check.
+          schema:
+            type: string
+            format: uuid
+            example: 'e8a3b5c0-4b6a-4f9a-9b8a-3e2b1f1c7a6d'
+      responses:
+        '200':
+          description: The current status of the crawl job.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrawlStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /crawl/cancel:
+    post:
+      tags:
+        - Crawling
+      summary: Cancel a Crawl Job
+      description: Cancels an ongoing crawl job.
+      operationId: cancelCrawl
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobId
+              properties:
+                jobId:
+                  type: string
+                  description: The ID of the crawl job to cancel.
+                  example: 'e8a3b5c0-4b6a-4f9a-9b8a-3e2b1f1c7a6d'
+      responses:
+        '200':
+          description: The job was successfully cancelled.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: 'cancelled'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /search:
+    post:
+      tags:
+        - Searching
+      summary: Perform a Search
+      description: Performs a search using a specified search engine and returns the results.
+      operationId: search
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: Search completed successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SearchResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /map:
+    post:
+      tags:
+        - Utilities
+      summary: Get Sitemap Data
+      description: Retrieves and returns the sitemap data for a given URL.
+      operationId: getSitemap
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  description: The URL to fetch the sitemap for.
+                  example: 'https://firecrawl.dev'
+      responses:
+        '200':
+          description: Sitemap data retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: uri
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /batch-scrape:
+    post:
+      tags:
+        - Scraping
+      summary: Batch Scrape URLs
+      description: Scrapes multiple URLs in a single request and returns their content.
+      operationId: batchScrape
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                urls:
+                  type: array
+                  items:
+                    type: string
+                    format: uri
+                scrapeOptions:
+                  $ref: '#/components/schemas/ScrapeRequestV2'
+      responses:
+        '200':
+          description: Successfully scraped all URLs.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScrapeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /extract:
+    post:
+      tags:
+        - Utilities
+      summary: Extract content from HTML or Markdown
+      description: Extracts structured data from raw HTML or Markdown content based on a provided schema.
+      operationId: extractData
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractRequest'
+      responses:
+        '200':
+          description: Successfully extracted data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 'API Key for authentication. Get yours from [firecrawl.dev](https://firecrawl.dev).'
+  responses:
+    BadRequest:
+      description: The request was malformed or contained invalid parameters.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GenericError'
+    Unauthorized:
+      description: Authentication failed. The API key is missing, invalid, or expired.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GenericError'
+    NotFound:
+      description: The requested resource could not be found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GenericError'
+    UnprocessableEntity:
+      description: The request was well-formed but could not be processed due to validation errors.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+    TooManyRequests:
+      description: The rate limit for your plan has been exceeded.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GenericError'
+    InternalServerError:
+      description: An unexpected error occurred on the server.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GenericError'
+  schemas:
+    GenericError:
+      type: object
+      properties:
+        error:
+          type: string
+          description: A message describing the error.
+          example: 'Invalid API Key'
+
+    ValidationError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: 'Validation failed'
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              path:
+                type: array
+                items:
+                  type: string
+                example: ['crawlerOptions', 'maxDepth']
+              message:
+                type: string
+                example: 'Number must be less than or equal to 10'
+
+    ScrapeRequestV2:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          format: uri
+          description: The URL to scrape.
+          example: 'https://firecrawl.dev'
+        pageOptions:
+          type: object
+          properties:
+            screenshot:
+              type: boolean
+              description: Whether to take a screenshot of the page.
+              default: false
+            onlyMainContent:
+              type: boolean
+              description: Whether to return only the main content of the page, without headers, footers, etc.
+              default: false
+            includeHtml:
+              type: boolean
+              description: Include the full HTML of the page in the response.
+              default: false
+            waitFor:
+              type: number
+              description: Time in milliseconds to wait for the page to load before scraping.
+              example: 2000
+            headers:
+              type: object
+              additionalProperties:
+                type: string
+              description: Custom headers to use for the request.
+              example:
+                User-Agent: 'My-Custom-Scraper/1.0'
+        extractorOptions:
+          type: object
+          properties:
+            mode:
+              type: string
+              enum:
+                - llm-extraction
+              description: The extraction mode.
+              example: 'llm-extraction'
+            extractionPrompt:
+              type: string
+              description: A specific prompt to guide the LLM for data extraction.
+              example: 'Extract the main title and the first paragraph of the article.'
+            extractionSchema:
+              type: object
+              description: The JSON schema for the data to be extracted.
+              example:
+                type: 'object'
+                properties:
+                  title: { type: 'string' }
+                  first_paragraph: { type: 'string' }
+        scraperOptions:
+          type: object
+          properties:
+            useUnstructured:
+              type: boolean
+              description: Use an unstructured scraper (experimental).
+              default: false
+
+    ScrapeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            content:
+              type: string
+              description: The main content of the page, either in plain text or Markdown.
+            markdown:
+              type: string
+              description: The content of the page in Markdown format.
+            html:
+              type: string
+              description: The full HTML of the page.
+            metadata:
+              type: object
+              description: Metadata extracted from the page (title, description, etc.).
+              example:
+                title: 'Firecrawl | Build reliable crawlers and scrapers'
+                description: 'Turn any website into clean, structured data.'
+                ogTitle: 'Firecrawl'
+            screenshotUrl:
+              type: string
+              format: uri
+              description: URL of the screenshot if requested.
+        metadata:
+          type: object
+          properties:
+            sourceURL:
+              type: string
+              format: uri
+              example: 'https://firecrawl.dev'
+
+    CrawlRequestV2:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          format: uri
+          description: The starting URL for the crawl.
+          example: 'https://firecrawl.dev/blog'
+        crawlerOptions:
+          type: object
+          properties:
+            includes:
+              type: array
+              items:
+                type: string
+              description: Glob patterns to include in the crawl.
+              example: ['/blog/**']
+            excludes:
+              type: array
+              items:
+                type: string
+              description: Glob patterns to exclude from the crawl.
+              example: ['/blog/old-posts/**']
+            maxDepth:
+              type: integer
+              description: The maximum depth to crawl relative to the starting URL.
+              default: 3
+              minimum: 0
+            maxPages:
+              type: integer
+              description: The maximum number of pages to crawl.
+              default: 100
+              minimum: 1
+            returnOnlyUrls:
+              type: boolean
+              description: If true, only the URLs will be returned, not the content.
+              default: false
+        pageOptions:
+          type: object
+          properties:
+            onlyMainContent:
+              type: boolean
+              default: false
+            includeHtml:
+              type: boolean
+              default: false
+            screenshot:
+              type: boolean
+              default: false
+        webhook:
+          type: object
+          properties:
+            url:
+              type: string
+              format: uri
+              description: The webhook URL to send the results to.
+            secret:
+              type: string
+              description: A secret to verify the webhook request.
+
+    CrawlStatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [crawling, completed, failed]
+          example: 'completed'
+        total:
+          type: integer
+          description: Total number of pages found.
+          example: 25
+        progress:
+          type: integer
+          description: Number of pages processed.
+          example: 25
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScrapeResponse'
+
+    SearchRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          description: The search query.
+          example: 'What is Firecrawl?'
+        searchOptions:
+          type: object
+          properties:
+            provider:
+              type: string
+              enum: [google, serper, searchapi, searxng]
+              default: 'google'
+            region:
+              type: string
+              description: The geographic region for the search.
+              example: 'us-east-1'
+            maxResults:
+              type: integer
+              description: The maximum number of search results to return.
+              default: 10
+
+    SearchResult:
+      type: object
+      properties:
+        title:
+          type: string
+          example: 'Firecrawl - Turn any website into clean data'
+        url:
+          type: string
+          format: uri
+          example: 'https://firecrawl.dev'
+        description:
+          type: string
+          example: 'Firecrawl is a powerful tool for web scraping and crawling...'
+        content:
+          type: string
+          example: 'Firecrawl helps developers turn websites into structured data...'
+
+    ExtractRequest:
+      type: object
+      required:
+        - extractorOptions
+      properties:
+        html:
+          type: string
+          description: HTML content to extract from.
+        markdown:
+          type: string
+          description: Markdown content to extract from.
+        extractorOptions:
+          type: object
+          required:
+            - extractionSchema
+          properties:
+            extractionSchema:
+              type: object
+              description: The JSON schema to which the extracted data should conform.
+              example:
+                type: 'object'
+                properties:
+                  author: { type: 'string' }
+                  published_date: { type: 'string', format: 'date' }
+            extractionPrompt:
+              type: string
+              description: A natural language prompt to guide the extraction process.
+            mode:
+              type: string
+              enum:
+                - llm-extraction
+              default: 'llm-extraction'
+
+    ExtractResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          description: The extracted data matching the provided schema.
+          example:
+            author: 'John Doe'
+            published_date: '2024-01-15'

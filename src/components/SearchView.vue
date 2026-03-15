@@ -199,9 +199,9 @@ async function onSearch(): Promise<void> {
   error.value = '';
   loading.value = true;
 
-  const selectedSources = (Object.entries(options.value.sources) as Array<
-    [keyof SearchOptions['sources'], boolean]
-  >)
+  const selectedSources = (
+    Object.entries(options.value.sources) as Array<[keyof SearchOptions['sources'], boolean]>
+  )
     .filter(([, enabled]) => enabled)
     .map(([source]) => source);
 

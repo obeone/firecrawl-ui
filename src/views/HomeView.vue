@@ -102,21 +102,6 @@ export default defineComponent({
 
 <style scoped>
 /*
- * Global CSS variables for consistent theming across the HomeView component.
- * Defines colors, backgrounds, and shadow properties.
- */
-:root {
-  --primary-bg: #f7f8fa;
-  --card-bg: #fff;
-  --primary: #2563eb;
-  --primary-dark: #1e40af;
-  --accent: #f59e42;
-  --text-main: #1a202c;
-  --text-muted: #555;
-  --card-shadow: 0 2px 16px rgba(30, 64, 175, 0.07);
-}
-
-/*
  * Styles for the main container of the HomeView.
  * Centers content, sets padding, and defines background.
  */
@@ -127,7 +112,8 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--primary-bg);
+  background: var(--color-background);
+  color: var(--color-text);
   min-height: 100vh;
 }
 
@@ -151,13 +137,14 @@ h1 {
   font-size: 2.8rem;
   font-weight: 800;
   margin-bottom: 0.5rem;
-  color: var(--primary);
+  color: #2563eb;
   letter-spacing: -1px;
 }
 
 .subtitle {
   font-size: 1.2rem;
-  color: var(--text-muted);
+  color: var(--color-text);
+  opacity: 0.7;
   margin-bottom: 0.5rem;
   font-family: 'Inter', Arial, sans-serif;
 }
@@ -179,9 +166,9 @@ h1 {
  * Includes background, shadow, padding, and hover effects for interactivity.
  */
 .feature-card {
-  background: var(--card-bg);
+  background: var(--color-background-soft);
   border-radius: 12px;
-  box-shadow: var(--card-shadow);
+  box-shadow: 0 2px 16px rgba(30, 64, 175, 0.07);
   padding: 2rem 1.5rem 1.5rem 1.5rem;
   width: 240px;
   display: flex;
@@ -191,6 +178,7 @@ h1 {
     box-shadow 0.2s,
     transform 0.2s;
   position: relative;
+  color: var(--color-text);
 }
 
 .feature-card:hover {
@@ -202,20 +190,21 @@ h1 {
   width: 38px;
   height: 38px;
   margin-bottom: 0.7rem;
-  color: var(--primary);
+  color: #2563eb;
 }
 
 .feature-card h2 {
   font-size: 1.18rem;
   margin-bottom: 0.4rem;
-  color: var(--text-main);
+  color: var(--color-heading);
   font-family: 'Montserrat', Arial, sans-serif;
   font-weight: 700;
 }
 
 .feature-card p {
   font-size: 1rem;
-  color: var(--text-muted);
+  color: var(--color-text);
+  opacity: 0.8;
   margin-bottom: 1.2rem;
   text-align: center;
   min-height: 48px;
@@ -227,7 +216,7 @@ h1 {
  */
 .feature-link {
   color: #fff;
-  background: var(--primary);
+  background: #2563eb;
   padding: 0.5rem 1.2rem;
   border-radius: 5px;
   text-decoration: none;
@@ -243,7 +232,7 @@ h1 {
 }
 
 .feature-link:hover {
-  background: var(--primary-dark);
+  background: #1e40af;
 }
 
 /*
@@ -253,20 +242,19 @@ h1 {
 .about {
   margin-top: 2.5rem;
   width: 100%;
-  /* Gradient background with accent border for visual separation */
-  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-  border-left: 4px solid var(--accent);
+  background: var(--color-background-soft);
+  border-left: 4px solid #f59e42;
   border-radius: 10px;
-  box-shadow: var(--card-shadow);
+  box-shadow: 0 2px 16px rgba(30, 64, 175, 0.07);
   padding: 2rem 2.5rem;
-  color: #f3f3f3;
+  color: var(--color-text);
   font-family: 'Inter', Arial, sans-serif;
   line-height: 1.6;
 }
 
 .about h2 {
   font-size: 1.5rem;
-  color: var(--primary);
+  color: #2563eb;
   margin-bottom: 0.7rem;
   font-family: 'Montserrat', Arial, sans-serif;
   font-weight: 700;
@@ -276,7 +264,7 @@ h1 {
   margin: 1rem 0 1.5rem 1.5rem;
   padding: 0;
   list-style-type: square;
-  color: #f3f3f3;
+  color: var(--color-text);
   font-size: 1.05rem;
 }
 
@@ -285,7 +273,8 @@ h1 {
 }
 
 .local-note {
-  color: #f3f3f3;
+  color: var(--color-text);
+  opacity: 0.9;
   margin-bottom: 1.5rem;
   font-size: 1rem;
 }
@@ -295,8 +284,8 @@ h1 {
  * Applies a gradient background and hover effects.
  */
 .about-link {
-  color: #fff;
-  background: linear-gradient(90deg, var(--accent) 0%, #eab308 100%);
+  color: var(--color-background);
+  background: linear-gradient(90deg, #f59e42 0%, #eab308 100%);
   padding: 0.5rem 1.2rem;
   border-radius: 5px;
   text-decoration: none;

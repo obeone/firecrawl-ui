@@ -89,7 +89,7 @@ section h2 {
 }
 
 section p {
-  color: #e0e0e0;
+  color: var(--color-text);
 }
 
 a {
@@ -102,6 +102,7 @@ a {
   padding-left: 1.5rem;
   max-width: 600px;
   text-align: left;
+  color: var(--color-text);
 }
 
 .feature-list li {
