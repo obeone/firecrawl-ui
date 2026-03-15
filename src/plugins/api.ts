@@ -1,13 +1,6 @@
 import type { App } from 'vue';
-import {
-  BillingApi,
-  CrawlingApi,
-  ExtractionApi,
-  MappingApi,
-  ScrapingApi,
-  SearchApi,
-} from '../api-client/index.js';
 import apiConfig, { getApiConfig, updateApiConfig } from '../config/api.js';
+import { createFirecrawlApiClients, type FirecrawlApiClients } from '../services/firecrawl.js';
 
 /**
  * Vue plugin responsible for registering and providing various Firecrawl API clients
@@ -18,24 +11,8 @@ import apiConfig, { getApiConfig, updateApiConfig } from '../config/api.js';
  *
  * @param app - The Vue application instance to which API clients will be registered.
  */
-interface FirecrawlApiClients {
-  billing: BillingApi;
-  crawling: CrawlingApi;
-  extraction: ExtractionApi;
-  mapping: MappingApi;
-  scraping: ScrapingApi;
-  search: SearchApi;
-}
-
 let appInstance: App | null = null;
-const apiClients: FirecrawlApiClients = {
-  billing: new BillingApi(apiConfig),
-  crawling: new CrawlingApi(apiConfig),
-  extraction: new ExtractionApi(apiConfig),
-  mapping: new MappingApi(apiConfig),
-  scraping: new ScrapingApi(apiConfig),
-  search: new SearchApi(apiConfig),
-};
+const apiClients: FirecrawlApiClients = createFirecrawlApiClients(apiConfig.apiKey, apiConfig.basePath);
 
 const apiPlugin = {
   install(app: App): void {
@@ -53,14 +30,11 @@ const apiPlugin = {
  */
 export function refreshApiClients(baseUrl?: string, apiKey?: string): void {
   updateApiConfig(baseUrl, apiKey);
-  apiClients.billing = new BillingApi(getApiConfig());
-  apiClients.crawling = new CrawlingApi(getApiConfig());
-  apiClients.extraction = new ExtractionApi(getApiConfig());
-  apiClients.mapping = new MappingApi(getApiConfig());
-  apiClients.scraping = new ScrapingApi(getApiConfig());
-  apiClients.search = new SearchApi(getApiConfig());
+  const config = getApiConfig();
+  Object.assign(apiClients, createFirecrawlApiClients(config.apiKey, config.basePath));
 
   if (appInstance) {
+    appInstance.provide('api', apiClients);
     appInstance.config.globalProperties.$api = apiClients;
   }
 }

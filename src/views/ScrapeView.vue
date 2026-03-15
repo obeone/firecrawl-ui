@@ -15,9 +15,13 @@
           <option value="html">HTML</option>
           <option value="rawHtml">Raw HTML</option>
           <option value="links">Links</option>
+          <option value="images">Images</option>
+          <option value="summary">Summary</option>
           <option value="screenshot">Screenshot (Viewport)</option>
           <option value="screenshot@fullPage">Screenshot (Full Page)</option>
-          <option value="json">JSON (Requires Extractor Options)</option>
+          <option value="json">JSON (Structured Extraction)</option>
+          <option value="attributes">Attributes</option>
+          <option value="branding">Branding</option>
           <option value="changeTracking">Change Tracking (Requires Markdown)</option>
         </select>
         <small>Select one or more formats.</small>
@@ -120,9 +124,11 @@
             <div class="form-group">
               <label for="proxy">Proxy:</label>
               <select id="proxy" v-model="formData.pageOptions.proxy">
-                <option value="">Auto</option>
+                <option value="">Default</option>
+                <option value="auto">Auto</option>
                 <option value="basic">Basic</option>
                 <option value="stealth">Stealth</option>
+                <option value="enhanced">Enhanced</option>
               </select>
               <small>Proxy type for request.</small>
             </div>
@@ -235,12 +241,7 @@
         </div>
       </fieldset>
 
-      <div
-        v-if="
-          formData.scrapeOptions.formats.includes(ScrapeAndExtractFromUrlRequestFormatsEnum.Extract)
-        "
-        class="form-group"
-      >
+      <div v-if="formData.scrapeOptions.formats.includes('json')" class="form-group">
         <label for="extractorOptions">Extractor Options (JSON format):</label>
         <textarea
           id="extractorOptions"
@@ -251,6 +252,20 @@
         <small>Enter JSON options for extraction. Must be valid JSON.</small>
         <div v-if="extractorOptionsError" class="error-message">
           {{ extractorOptionsError }}
+        </div>
+      </div>
+
+      <div v-if="formData.scrapeOptions.formats.includes('attributes')" class="form-group">
+        <label for="attributesOptions">Attribute Selectors (JSON format):</label>
+        <textarea
+          id="attributesOptions"
+          v-model="attributesOptionsJson"
+          rows="8"
+          placeholder='[{"selector": "a", "attribute": "href"}]'
+        ></textarea>
+        <small>Enter a JSON array of selector and attribute pairs.</small>
+        <div v-if="attributesOptionsError" class="error-message">
+          {{ attributesOptionsError }}
         </div>
       </div>
 
@@ -288,15 +303,12 @@
 <script lang="ts">
 import { defineComponent, ref, inject, watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import {
-  ScrapeAndExtractFromUrlRequestFormatsEnum,
-  type ScrapeAndExtractFromUrlRequest,
-  type ScrapeResponse,
-  type ScrapingApi,
-  type ScrapeAndExtractFromUrlRequestExtract,
-} from '../api-client/api';
+import type { FirecrawlScrapingApi } from '../services/firecrawl';
 
-type ScrapeResult = ScrapeResponse;
+type ScrapeResult = {
+  success: boolean;
+  data: Record<string, unknown>;
+};
 
 /**
  * @typedef {object} FormDataPageOptions
@@ -309,7 +321,7 @@ type ScrapeResult = ScrapeResponse;
  * @property {number} [maxAge] - Use cached page if younger than this age in milliseconds.
  * @property {boolean} [parsePDF] - Parse PDF files instead of returning base64.
  * @property {boolean} [storeInCache] - Store the page in Firecrawl cache.
- * @property {'basic' | 'stealth' | ''} [proxy] - Proxy type for the request ('basic', 'stealth', or empty for auto).
+ * @property {'basic' | 'stealth' | 'enhanced' | 'auto' | ''} [proxy] - Proxy type for the request.
  * @property {Record<string, string>} [headers] - HTTP headers as a JSON object.
  * @property {string} [action] - HTTP method for the request (e.g., 'GET', 'POST').
  * @property {string} [location] - Request location (e.g., 'US', 'EU', 'ASIA').
@@ -325,7 +337,7 @@ interface FormDataPageOptions {
   maxAge?: number;
   parsePDF?: boolean;
   storeInCache?: boolean;
-  proxy?: 'basic' | 'stealth' | '';
+  proxy?: 'basic' | 'stealth' | 'enhanced' | 'auto' | '';
   headers?: Record<string, string>;
   action?: string;
   location?: string;
@@ -348,10 +360,23 @@ interface FormDataScrapeOptions {
 
 /**
  * @typedef {object} FormDataExtractorOptions
- * @extends Partial<ScrapeAndExtractFromUrlRequestExtract>
  * @description Extractor options for JSON format, extending the API request structure.
  */
-interface FormDataExtractorOptions extends Partial<ScrapeAndExtractFromUrlRequestExtract> {}
+interface FormDataExtractorOptions {
+  prompt?: string;
+  schema?: Record<string, unknown>;
+}
+
+/**
+ * @typedef {object} FormDataAttributesOptions
+ * @property {Array<{selector: string, attribute: string}>} selectors - Attribute selectors to extract.
+ */
+interface FormDataAttributesOptions {
+  selectors?: Array<{
+    selector: string;
+    attribute: string;
+  }>;
+}
 
 /**
  * @typedef {object} FormDataChangeTrackingOptions
@@ -369,6 +394,7 @@ interface FormDataChangeTrackingOptions {
  * @property {FormDataPageOptions} pageOptions - Options related to page loading and network requests.
  * @property {FormDataScrapeOptions} scrapeOptions - Options related to content scraping.
  * @property {FormDataExtractorOptions} [extractorOptions] - Options for data extraction when 'json' format is selected.
+ * @property {FormDataAttributesOptions} [attributesOptions] - Options for attribute extraction when 'attributes' format is selected.
  * @property {FormDataChangeTrackingOptions} changeTrackingOptions - Options for change tracking.
  */
 interface FormData {
@@ -376,6 +402,7 @@ interface FormData {
   pageOptions: FormDataPageOptions;
   scrapeOptions: FormDataScrapeOptions;
   extractorOptions?: FormDataExtractorOptions;
+  attributesOptions?: FormDataAttributesOptions;
   changeTrackingOptions: FormDataChangeTrackingOptions;
 }
 
@@ -394,7 +421,7 @@ export default defineComponent({
   setup() {
     const router = useRouter();
     // Inject the API client for scraping operations.
-    const api = inject('api') as { scraping: ScrapingApi };
+    const api = inject('api') as { scraping: FirecrawlScrapingApi };
 
     /**
      * Reactive form data for scrape configuration.
@@ -420,11 +447,14 @@ export default defineComponent({
       },
       scrapeOptions: {
         onlyMainContent: true,
-        formats: [ScrapeAndExtractFromUrlRequestFormatsEnum.Markdown],
+        formats: ['markdown'],
         includeTags: '',
         excludeTags: '',
       },
       extractorOptions: {},
+      attributesOptions: {
+        selectors: [],
+      },
       changeTrackingOptions: {
         threshold: 10,
         frequency: 60,
@@ -501,8 +531,7 @@ export default defineComponent({
         return;
       }
 
-      // Construct the request payload matching the ScrapeAndExtractFromUrlRequest interface.
-      const requestPayload: ScrapeAndExtractFromUrlRequest = {
+      const requestPayload = {
         url: formData.value.url,
         ...(formData.value.pageOptions.waitFor !== undefined &&
           formData.value.pageOptions.waitFor > 0 && {
@@ -533,7 +562,7 @@ export default defineComponent({
         }),
         ...(formData.value.pageOptions.proxy &&
           formData.value.pageOptions.proxy !== '' && {
-            proxy: formData.value.pageOptions.proxy as 'basic' | 'stealth',
+            proxy: formData.value.pageOptions.proxy,
           }),
         ...(formData.value.pageOptions.headers &&
           Object.keys(formData.value.pageOptions.headers).length > 0 && {
@@ -549,8 +578,7 @@ export default defineComponent({
           }),
 
         // Include scrapeOptions properties directly.
-        formats: formData.value.scrapeOptions
-          .formats as unknown as ScrapeAndExtractFromUrlRequestFormatsEnum[],
+        formats: formData.value.scrapeOptions.formats,
         ...(formData.value.scrapeOptions.onlyMainContent === false && {
           onlyMainContent: false,
         }),
@@ -570,12 +598,15 @@ export default defineComponent({
           }),
 
         // Include extractorOptions and changeTrackingOptions if applicable.
-        ...(formData.value.scrapeOptions.formats.includes(
-          ScrapeAndExtractFromUrlRequestFormatsEnum.Extract,
-        ) &&
+        ...(formData.value.scrapeOptions.formats.includes('json') &&
           formData.value.extractorOptions &&
           Object.keys(formData.value.extractorOptions).length > 0 && {
-            extract: formData.value.extractorOptions as ScrapeAndExtractFromUrlRequestExtract,
+            extract: formData.value.extractorOptions,
+          }),
+        ...(formData.value.scrapeOptions.formats.includes('attributes') &&
+          formData.value.attributesOptions?.selectors &&
+          formData.value.attributesOptions.selectors.length > 0 && {
+            attributesOptions: formData.value.attributesOptions,
           }),
         ...(formData.value.scrapeOptions.formats.includes('changeTracking') && {
           changeTrackingOptions: {
@@ -621,15 +652,12 @@ export default defineComponent({
 
       // Map specific format names to their corresponding data keys in the result.
       const formatMap: Record<string, string> = {
-        extract: 'llm_extraction',
+        json: 'llm_extraction',
         'screenshot@fullPage': 'screenshot',
       };
 
       const key = formatMap[format] ?? format;
-      const data: unknown =
-        format === 'json'
-          ? result.value.data
-          : result.value.data[key as keyof typeof result.value.data];
+      const data: unknown = result.value.data[key as keyof typeof result.value.data];
 
       // Handle screenshot download separately as it's a data URL.
       if (format.startsWith('screenshot') && typeof data === 'string') {
@@ -703,6 +731,35 @@ export default defineComponent({
     });
 
     /**
+     * Reactive variable for the JSON string of attribute selectors.
+     * @type {Ref<string>}
+     */
+    const attributesOptionsJson = ref(
+      JSON.stringify(formData.value.attributesOptions?.selectors || [], null, 2),
+    );
+    /**
+     * Reactive variable for displaying attribute selector JSON parsing errors.
+     * @type {Ref<string>}
+     */
+    const attributesOptionsError = ref('');
+
+    /**
+     * Watcher for `attributesOptionsJson` to parse and update `formData.attributesOptions`.
+     * Provides real-time validation for JSON input.
+     */
+    watch(attributesOptionsJson, (newVal) => {
+      try {
+        const parsedValue = newVal ? JSON.parse(newVal) : [];
+        formData.value.attributesOptions = {
+          selectors: Array.isArray(parsedValue) ? parsedValue : [],
+        };
+        attributesOptionsError.value = '';
+      } catch {
+        attributesOptionsError.value = 'Invalid JSON format.';
+      }
+    });
+
+    /**
      * Reactive variable for the JSON string of HTTP headers.
      * @type {Ref<string>}
      */
@@ -760,10 +817,11 @@ export default defineComponent({
       downloadFormats,
       extractorOptionsJson,
       extractorOptionsError,
+      attributesOptionsJson,
+      attributesOptionsError,
       actionTypes,
       addAction,
       removeAction,
-      ScrapeAndExtractFromUrlRequestFormatsEnum,
       isScrapeOptionsCollapsed,
       isPageOptionsCollapsed,
     };

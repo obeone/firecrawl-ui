@@ -7,6 +7,17 @@
       <fieldset class="advanced-options">
         <legend>Advanced Options</legend>
         <label>
+          Sources:
+          <span class="source-flags">
+            <input type="checkbox" v-model="options.sources.web" />
+            Web
+            <input type="checkbox" v-model="options.sources.news" />
+            News
+            <input type="checkbox" v-model="options.sources.images" />
+            Images
+          </span>
+        </label>
+        <label>
           <input type="checkbox" v-model="options.includeMetadata" />
           Include metadata in results
         </label>
@@ -19,16 +30,8 @@
           <input type="number" v-model.number="options.maxResults" min="1" max="100" />
         </label>
         <label>
-          Language:
-          <input type="text" v-model="options.lang" placeholder="en" />
-        </label>
-        <label>
-          Country:
-          <input type="text" v-model="options.country" placeholder="us" />
-        </label>
-        <label>
           Location:
-          <input type="text" v-model="options.location" />
+          <input type="text" v-model="options.location" placeholder="Paris, France" />
         </label>
         <label>
           Time range (tbs):
@@ -50,6 +53,15 @@
       <ul>
         <li v-for="(result, index) in results" :key="index" class="result-item">
           <a :href="result.url" target="_blank" rel="noopener noreferrer">{{ result.title }}</a>
+          <small class="result-kind">{{ result.sourceType }}</small>
+          <p v-if="result.description">{{ result.description }}</p>
+          <p v-if="result.date" class="metadata">{{ result.date }}</p>
+          <img
+            v-if="result.imageUrl"
+            :src="result.imageUrl"
+            :alt="result.title"
+            class="result-image"
+          />
           <div v-if="options.includeMetadata && result.metadata" class="metadata">
             <small>{{ result.metadata.title }}</small>
           </div>
@@ -78,7 +90,7 @@
 
 <script setup lang="ts">
 import { ref, inject, computed } from 'vue';
-import type { SearchApi, SearchRequest } from '@/api-client/search.js';
+import type { FirecrawlSearchApi } from '@/services/firecrawl';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import axios from 'axios';
@@ -87,9 +99,12 @@ import axios from 'axios';
  * Defines the structure for a single search result item.
  */
 interface SearchResult {
+  sourceType: 'web' | 'news' | 'images';
   title: string;
   url: string;
   description?: string;
+  date?: string;
+  imageUrl?: string;
   markdown?: string | null;
   html?: string | null;
   rawHtml?: string | null;
@@ -111,18 +126,21 @@ interface SearchOptions {
   includeMetadata: boolean;
   extractContent: boolean;
   maxResults: number;
-  lang: string;
-  country: string;
   location: string;
   tbs: string;
   timeout?: number;
+  sources: {
+    web: boolean;
+    news: boolean;
+    images: boolean;
+  };
 }
 
 /**
  * Injects the API client, specifically the search API.
  * Throws an error if the search API is not available.
  */
-const api = inject('api') as { search?: SearchApi } | undefined;
+const api = inject('api') as { search?: FirecrawlSearchApi } | undefined;
 if (!api?.search) {
   throw new Error('Search API is not available');
 }
@@ -139,11 +157,14 @@ const options = ref<SearchOptions>({
   includeMetadata: true,
   extractContent: false,
   maxResults: 5,
-  lang: 'en',
-  country: 'us',
   location: '',
   tbs: '',
   timeout: undefined,
+  sources: {
+    web: true,
+    news: false,
+    images: false,
+  },
 });
 
 /**
@@ -178,12 +199,17 @@ async function onSearch(): Promise<void> {
   error.value = '';
   loading.value = true;
 
-  const payload: SearchRequest = {
+  const selectedSources = (Object.entries(options.value.sources) as Array<
+    [keyof SearchOptions['sources'], boolean]
+  >)
+    .filter(([, enabled]) => enabled)
+    .map(([source]) => source);
+
+  const payload = {
     query: query.value,
+    ...(selectedSources.length > 0 ? { sources: selectedSources } : {}),
     limit: options.value.maxResults,
     ...(options.value.tbs && { tbs: options.value.tbs }),
-    ...(options.value.lang && { lang: options.value.lang }),
-    ...(options.value.country && { country: options.value.country }),
     ...(options.value.location && { location: options.value.location }),
     ...(options.value.timeout && { timeout: options.value.timeout }),
     ...(options.value.extractContent && {
@@ -194,7 +220,29 @@ async function onSearch(): Promise<void> {
   try {
     const response = await api.search.search(payload);
     requestedFormats.value = payload.scrapeOptions?.formats ?? [];
-    results.value = (response.data.data || []).map(normalizeResult);
+    results.value = [
+      ...(response.data.web || []).map((item) => normalizeResult({ ...item, sourceType: 'web' })),
+      ...(response.data.news || []).map((item) =>
+        normalizeResult({
+          ...item,
+          sourceType: 'news',
+          title: String(item.title || item.url || 'Untitled result'),
+          url: String(item.url || ''),
+          description: typeof item.snippet === 'string' ? item.snippet : undefined,
+          date: typeof item.date === 'string' ? item.date : undefined,
+          imageUrl: typeof item.imageUrl === 'string' ? item.imageUrl : undefined,
+        } as SearchResult),
+      ),
+      ...(response.data.images || []).map((item) =>
+        normalizeResult({
+          ...item,
+          sourceType: 'images',
+          title: String(item.title || item.url || 'Untitled image'),
+          url: String(item.url || ''),
+          imageUrl: typeof item.imageUrl === 'string' ? item.imageUrl : undefined,
+        } as SearchResult),
+      ),
+    ];
   } catch (err: any) {
     error.value = err?.message || 'Search request failed';
   } finally {
@@ -214,6 +262,8 @@ function normalizeResult(item: SearchResult): SearchResult {
     ...item,
     title: fixEncoding(item.title),
     description: fixEncoding(item.description),
+    date: fixEncoding(item.date),
+    imageUrl: fixEncoding(item.imageUrl),
     markdown: fixEncoding(item.markdown),
     html: fixEncoding(item.html),
     rawHtml: fixEncoding(item.rawHtml),
@@ -386,6 +436,13 @@ async function handleDownload(type: string): Promise<void> {
   margin-bottom: 1rem;
 }
 
+.source-flags {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .result-item a {
   color: #4fc08d;
   text-decoration: none;
@@ -398,6 +455,20 @@ async function handleDownload(type: string): Promise<void> {
 .metadata {
   color: #666;
   font-size: 0.85rem;
+}
+
+.result-kind {
+  display: inline-block;
+  margin-left: 0.5rem;
+  text-transform: uppercase;
+  color: #666;
+}
+
+.result-image {
+  display: block;
+  max-width: 240px;
+  margin-top: 0.75rem;
+  border-radius: 8px;
 }
 
 .extract-button {
