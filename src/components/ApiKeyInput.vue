@@ -18,12 +18,7 @@
       </div>
       <div class="form-group">
         <label for="baseUrl">Firecrawl API base URL (optional):</label>
-        <input
-          id="baseUrl"
-          v-model="baseUrl"
-          type="text"
-          placeholder="https://api.firecrawl.dev/v1"
-        />
+        <input id="baseUrl" v-model="baseUrl" type="text" placeholder="https://api.firecrawl.dev" />
         <small> Leave blank to use the default URL. </small>
       </div>
       <button type="submit" class="primary-button">Save</button>
@@ -38,6 +33,7 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted } from 'vue';
 import { refreshApiClients } from '@/plugins/api';
+import { normalizeFirecrawlBaseUrl } from '@/services/firecrawl';
 
 /**
  * Component allowing users to configure and store the Firecrawl API key and base URL.
@@ -59,6 +55,9 @@ export default defineComponent({
       if (!apiKey.value) {
         error.value = 'Please configure your API key to continue';
       }
+      if (baseUrl.value) {
+        baseUrl.value = normalizeFirecrawlBaseUrl(baseUrl.value);
+      }
     });
 
     const saveApiConfig = () => {
@@ -69,7 +68,7 @@ export default defineComponent({
         // Save the API key
         localStorage.setItem('firecrawl_api_key', apiKey.value);
         // Save the base URL (even if empty to override any previous value if needed)
-        localStorage.setItem('firecrawl_base_url', baseUrl.value);
+        localStorage.setItem('firecrawl_base_url', normalizeFirecrawlBaseUrl(baseUrl.value));
 
         success.value = true;
         error.value = '';

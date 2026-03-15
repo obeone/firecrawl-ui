@@ -1,4 +1,4 @@
-import { Configuration } from '../api-client/configuration.js';
+import { normalizeFirecrawlBaseUrl } from '../services/firecrawl.js';
 
 /**
  * Returns the base URL for the Firecrawl API.
@@ -7,10 +7,10 @@ import { Configuration } from '../api-client/configuration.js';
  *   default value.
  */
 const getBaseUrl = (): string => {
-  return (
+  return normalizeFirecrawlBaseUrl(
     localStorage.getItem('firecrawl_base_url') ||
-    import.meta.env.VITE_FIRECRAWL_API_BASE_URL ||
-    'https://api.firecrawl.dev/v1'
+      import.meta.env.VITE_FIRECRAWL_API_BASE_URL ||
+      'https://api.firecrawl.dev',
   );
 };
 
@@ -22,31 +22,13 @@ const getApiKey = (): string => {
   return localStorage.getItem('firecrawl_api_key') || import.meta.env.VITE_FIRECRAWL_API_KEY || '';
 };
 
-// Initializes the API configuration with base URL, API key, and default headers.
-const apiConfig = new Configuration({
+/**
+ * Runtime API configuration used by the Firecrawl v2 adapter layer.
+ */
+const apiConfig = {
   basePath: getBaseUrl(),
-  apiKey: getApiKey,
-  baseOptions: {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  },
-});
-
-// Dynamically adds the Authorization header if an API key is available.
-// This ensures that authenticated requests are properly handled.
-
-// Dynamically add the Authorization header if an API key is available
-const apiKey = getApiKey();
-if (apiKey) {
-  apiConfig.baseOptions = {
-    ...apiConfig.baseOptions,
-    headers: {
-      ...apiConfig.baseOptions?.headers,
-      Authorization: `Bearer ${apiKey}`,
-    },
-  };
-}
+  apiKey: getApiKey(),
+};
 
 /**
  * Updates the API configuration at runtime.
@@ -57,20 +39,12 @@ if (apiKey) {
 export function updateApiConfig(baseUrl?: string, apiKeyValue?: string): void {
   if (typeof baseUrl === 'string') {
     localStorage.setItem('firecrawl_base_url', baseUrl);
-    apiConfig.basePath = baseUrl || 'https://api.firecrawl.dev/v1';
+    apiConfig.basePath = normalizeFirecrawlBaseUrl(baseUrl || 'https://api.firecrawl.dev');
   }
   if (typeof apiKeyValue === 'string') {
     localStorage.setItem('firecrawl_api_key', apiKeyValue);
     apiConfig.apiKey = apiKeyValue;
   }
-
-  const key = apiKeyValue ?? getApiKey();
-  apiConfig.baseOptions = {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(key ? { Authorization: `Bearer ${key}` } : {}),
-    },
-  };
 }
 
 /**
@@ -78,7 +52,7 @@ export function updateApiConfig(baseUrl?: string, apiKeyValue?: string): void {
  *
  * @returns The active API configuration.
  */
-export function getApiConfig(): Configuration {
+export function getApiConfig(): typeof apiConfig {
   return apiConfig;
 }
 

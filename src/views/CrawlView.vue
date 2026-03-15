@@ -92,6 +92,17 @@
               <small>Delay between pages to respect rate limits.</small>
             </div>
             <div class="form-group">
+              <label for="maxConcurrency">Max Concurrency:</label>
+              <input
+                id="maxConcurrency"
+                v-model.number="formData.crawlerOptions.maxConcurrency"
+                type="number"
+                min="1"
+                placeholder="e.g. 5"
+              />
+              <small>Maximum number of pages processed in parallel.</small>
+            </div>
+            <div class="form-group">
               <label for="statusInterval">Status Check Interval (seconds):</label>
               <input
                 id="statusInterval"
@@ -104,10 +115,14 @@
             </div>
           </div>
           <div class="grid-layout">
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="formData.crawlerOptions.ignoreSitemap" />
-              Ignore Sitemap
-            </label>
+            <div class="form-group">
+              <label for="sitemapMode">Sitemap Mode:</label>
+              <select id="sitemapMode" v-model="formData.crawlerOptions.sitemap">
+                <option value="include">Include sitemap</option>
+                <option value="skip">Skip sitemap</option>
+                <option value="only">Only sitemap URLs</option>
+              </select>
+            </div>
             <label class="checkbox-label">
               <input type="checkbox" v-model="formData.crawlerOptions.ignoreQueryParameters" />
               Ignore Query Parameters
@@ -115,6 +130,10 @@
             <label class="checkbox-label">
               <input type="checkbox" v-model="formData.crawlerOptions.allowExternalLinks" />
               Allow External Links
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="formData.crawlerOptions.allowSubdomains" />
+              Allow Subdomains
             </label>
             <label class="checkbox-label">
               <input type="checkbox" v-model="formData.crawlerOptions.navigateBacklinks" />
@@ -140,9 +159,13 @@
               <option value="html">HTML</option>
               <option value="rawHtml">Raw HTML</option>
               <option value="links">Links</option>
+              <option value="images">Images</option>
+              <option value="summary">Summary</option>
               <option value="screenshot">Screenshot (Viewport)</option>
               <option value="screenshot@fullPage">Screenshot (Full Page)</option>
               <option value="json">JSON</option>
+              <option value="attributes">Attributes</option>
+              <option value="branding">Branding</option>
               <option value="changeTracking">Change Tracking</option>
             </select>
             <small>Select one or more formats.</small>
@@ -197,8 +220,10 @@
             <label for="proxy">Proxy:</label>
             <select id="proxy" v-model="formData.scrapeOptions.proxy">
               <option value="">Default</option>
+              <option value="auto">Auto</option>
               <option value="basic">Basic</option>
               <option value="stealth">Stealth</option>
+              <option value="enhanced">Enhanced</option>
             </select>
           </div>
           <div class="form-group">
@@ -456,14 +481,12 @@ import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
-// Import the crawling API client (adjust import path as needed)
 import {
-  type BillingApi,
-  type CrawlingApi,
-  type ExtractionApi,
-  type MappingApi,
-  type ScrapingApi,
-} from '../api-client/api';
+  type FirecrawlCrawlingApi,
+  type FirecrawlExtractionApi,
+  type FirecrawlMappingApi,
+  type FirecrawlScrapingApi,
+} from '../services/firecrawl';
 
 /**
  * Interface for Crawler Options section of the form.
@@ -473,11 +496,14 @@ interface CrawlerOptions {
   excludes?: string[];
   maxDepth?: number;
   maxDiscoveryDepth?: number;
+  sitemap?: 'include' | 'skip' | 'only';
   ignoreSitemap?: boolean;
   ignoreQueryParameters?: boolean;
   limit?: number;
   delay?: number;
+  maxConcurrency?: number;
   allowExternalLinks?: boolean;
+  allowSubdomains?: boolean;
   navigateBacklinks?: boolean;
 }
 
@@ -546,11 +572,10 @@ export default defineComponent({
     const router = useRouter();
     // Define the type of the injected api object based on the structure provided in src/plugins/api.ts
     const api = inject('api') as {
-      billing: BillingApi;
-      crawling: CrawlingApi;
-      extraction: ExtractionApi;
-      mapping: MappingApi;
-      scraping: ScrapingApi;
+      crawling: FirecrawlCrawlingApi;
+      extraction: FirecrawlExtractionApi;
+      mapping: FirecrawlMappingApi;
+      scraping: FirecrawlScrapingApi;
     };
 
     // Reactive form data with explicit defaults to avoid undefined values.
@@ -562,11 +587,14 @@ export default defineComponent({
         excludes: [],
         maxDepth: undefined,
         maxDiscoveryDepth: undefined,
+        sitemap: 'include',
         ignoreSitemap: false,
         ignoreQueryParameters: false,
         limit: undefined,
         delay: undefined,
+        maxConcurrency: undefined,
         allowExternalLinks: false,
+        allowSubdomains: false,
         navigateBacklinks: false,
       },
       scrapeOptions: {
@@ -1242,12 +1270,15 @@ export default defineComponent({
       if (crawler.maxDepth !== undefined) payload.maxDepth = crawler.maxDepth;
       if (crawler.maxDiscoveryDepth !== undefined)
         payload.maxDiscoveryDepth = crawler.maxDiscoveryDepth;
+      if (crawler.sitemap) payload.sitemap = crawler.sitemap;
       if (crawler.ignoreSitemap) payload.ignoreSitemap = true;
       if (crawler.ignoreQueryParameters) payload.ignoreQueryParameters = true;
       if (crawler.limit !== undefined) payload.limit = crawler.limit;
       if (crawler.delay !== undefined) payload.delay = crawler.delay;
+      if (crawler.maxConcurrency !== undefined) payload.maxConcurrency = crawler.maxConcurrency;
       if (crawler.navigateBacklinks) payload.allowBackwardLinks = true;
       if (crawler.allowExternalLinks) payload.allowExternalLinks = true;
+      if (crawler.allowSubdomains) payload.allowSubdomains = true;
 
       const scrape = formData.value.scrapeOptions;
       const scrapePayload: any = {};

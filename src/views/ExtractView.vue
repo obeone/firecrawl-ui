@@ -43,6 +43,10 @@
           <input type="checkbox" v-model="options.showSources" />
           Show Sources
         </label>
+        <label>
+          <input type="checkbox" v-model="options.allowExternalLinks" />
+          Allow External Links
+        </label>
       </div>
 
       <button type="submit" class="primary-button" :disabled="loading || !!schemaError">
@@ -64,12 +68,12 @@
 
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue';
-import { ExtractionApi, type ExtractDataRequest, type ExtractResponse } from '@/api-client';
+import type { FirecrawlExtractResponse, FirecrawlExtractionApi } from '@/services/firecrawl';
 
 /**
  * Injection of the API client. The apiPlugin must provide an `extraction` instance.
  */
-const api = inject('api') as { extraction?: ExtractionApi } | undefined;
+const api = inject('api') as { extraction?: FirecrawlExtractionApi } | undefined;
 if (!api?.extraction) {
   throw new Error('Extraction API is not available');
 }
@@ -77,10 +81,10 @@ if (!api?.extraction) {
 const urlInput = ref(''); // Stores the URLs entered by the user.
 const promptInput = ref(''); // Stores the prompt for data extraction.
 const schemaString = ref(''); // Stores the JSON schema string provided by the user.
-const options = ref({ enableWebSearch: false, showSources: false }); // Stores extraction options.
+const options = ref({ enableWebSearch: false, showSources: false, allowExternalLinks: false }); // Stores extraction options.
 const loading = ref(false); // Indicates if an extraction request is in progress.
 const error = ref(''); // Stores any error messages from the extraction process.
-const result = ref<ExtractResponse['data'] | null>(null); // Stores the successful extraction result.
+const result = ref<FirecrawlExtractResponse['data'] | null>(null); // Stores the successful extraction result.
 const schemaError = ref<string | null>(null); // Stores error messages related to JSON schema parsing.
 const parsedSchema = ref<any>(undefined); // Holds the parsed schema object.
 
@@ -125,13 +129,14 @@ const runExtraction = async (): Promise<void> => {
     return;
   }
 
-  const payload: ExtractDataRequest = {
+  const payload = {
     ...(urls.length && { urls }),
     ...(promptInput.value && { prompt: promptInput.value }),
     ...(parsedSchema.value && { schema: parsedSchema.value }),
     ...(options.value.enableWebSearch && { enableWebSearch: true }),
     ...(options.value.showSources && { showSources: true }),
-  } as ExtractDataRequest;
+    ...(options.value.allowExternalLinks && { allowExternalLinks: true }),
+  };
 
   try {
     loading.value = true;

@@ -15,7 +15,7 @@ import vueParser from 'vue-eslint-parser';
 export default [
   {
     // Ignore linting for files in node_modules directory
-    ignores: ['node_modules/**'],
+    ignores: ['node_modules/**', '.history/**'],
   },
   {
     // Apply these settings to TypeScript, Vue, and JavaScript files

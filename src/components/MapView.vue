@@ -13,11 +13,12 @@
       </div>
 
       <div class="form-group checkbox">
-        <label> <input type="checkbox" v-model="ignoreSitemap" /> Ignore Sitemap </label>
-      </div>
-
-      <div class="form-group checkbox">
-        <label> <input type="checkbox" v-model="sitemapOnly" /> Sitemap Only </label>
+        <label for="sitemapMode">Sitemap Mode:</label>
+        <select id="sitemapMode" v-model="sitemapMode">
+          <option value="include">Include sitemap</option>
+          <option value="skip">Skip sitemap</option>
+          <option value="only">Only sitemap URLs</option>
+        </select>
       </div>
 
       <div class="form-group checkbox">
@@ -52,7 +53,7 @@
 
 <script setup lang="ts">
 import { ref, inject } from 'vue';
-import type { MappingApi, MapUrlsRequest } from '@/api-client';
+import type { FirecrawlMappingApi } from '@/services/firecrawl';
 
 /**
  * MapView Component
@@ -67,7 +68,7 @@ import type { MappingApi, MapUrlsRequest } from '@/api-client';
  * This instance is expected to contain a `mapping` property for URL mapping operations.
  * @type {{ mapping?: MappingApi } | undefined}
  */
-const api = inject('api') as { mapping?: MappingApi } | undefined;
+const api = inject('api') as { mapping?: FirecrawlMappingApi } | undefined;
 if (!api?.mapping) {
   throw new Error(
     'Mapping API is not available. Ensure the API plugin is correctly configured and provides the mapping service.',
@@ -91,14 +92,7 @@ const search = ref('');
  * Defaults to `true`.
  * @type {Ref<boolean>}
  */
-const ignoreSitemap = ref(true);
-
-/**
- * Reactive variable to control whether only links found in the website sitemap should be returned.
- * Defaults to `false`.
- * @type {Ref<boolean>}
- */
-const sitemapOnly = ref(false);
+const sitemapMode = ref<'include' | 'skip' | 'only'>('skip');
 
 /**
  * Reactive variable to control whether subdomains of the website should be included in the mapping.
@@ -146,11 +140,10 @@ const error = ref('');
  * @returns {Promise<void>} A promise that resolves when the API call is complete.
  */
 async function handleSubmit(): Promise<void> {
-  const payload: MapUrlsRequest = {
+  const payload = {
     url: baseUrl.value,
     search: search.value || undefined,
-    ignoreSitemap: ignoreSitemap.value,
-    sitemapOnly: sitemapOnly.value,
+    sitemap: sitemapMode.value,
     includeSubdomains: includeSubdomains.value,
     limit: limit.value || undefined,
     timeout: timeout.value ?? undefined,
