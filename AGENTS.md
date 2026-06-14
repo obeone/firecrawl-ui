@@ -8,7 +8,6 @@
   All code, comments, docstrings, variable and function names must be in English.
 - **Documentation:**
   Every class, function/method, and file should be fully documented (docstrings/JSDoc), including:
-
   - Arguments (type + description)
   - Return values
   - Exceptions (if any)
