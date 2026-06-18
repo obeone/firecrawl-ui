@@ -124,12 +124,51 @@ export interface FirecrawlScrapingApi {
 /**
  * Legacy-compatible crawling client.
  */
+export interface CrawlError {
+  id?: string;
+  timestamp?: string | null;
+  url?: string;
+  error?: string;
+}
+
+/**
+ * Crawl error report returned by the errors endpoint.
+ */
+export interface CrawlErrorsReport {
+  errors: CrawlError[];
+  robotsBlocked: string[];
+}
+
 export interface FirecrawlCrawlingApi {
   crawlUrls(
     payload: Record<string, unknown>,
   ): Promise<WrappedResponse<{ id: string; url: string }>>;
   getCrawlStatus(id: string): Promise<WrappedResponse<LegacyCrawlStatusResponse>>;
   cancelCrawl(id: string): Promise<WrappedResponse<{ status: string }>>;
+  getCrawlErrors(id: string): Promise<WrappedResponse<CrawlErrorsReport>>;
+}
+
+/**
+ * Status of a batch scrape job, mirroring the crawl status structure with the
+ * extra `creditsUsed` counter exposed by the batch endpoint.
+ */
+export interface BatchScrapeStatusResponse {
+  status: CrawlJob['status'];
+  completed: number;
+  total: number;
+  creditsUsed: number;
+  next: string | null;
+  data: Record<string, unknown>[];
+}
+
+/**
+ * Legacy-compatible batch scraping client.
+ */
+export interface FirecrawlBatchScrapingApi {
+  batchScrape(
+    payload: Record<string, unknown>,
+  ): Promise<WrappedResponse<{ id: string; url: string }>>;
+  getBatchScrapeStatus(id: string): Promise<WrappedResponse<BatchScrapeStatusResponse>>;
 }
 
 /**
@@ -167,10 +206,18 @@ export interface CreditUsage {
 }
 
 /**
+ * Team token usage information returned by Firecrawl (Extract feature).
+ */
+export interface TokenUsage {
+  remainingTokens: number | null;
+}
+
+/**
  * Legacy-compatible billing client.
  */
 export interface FirecrawlBillingApi {
   getCreditUsage(): Promise<WrappedResponse<CreditUsage>>;
+  getTokenUsage(): Promise<WrappedResponse<TokenUsage>>;
 }
 
 /**
@@ -178,6 +225,7 @@ export interface FirecrawlBillingApi {
  */
 export interface FirecrawlApiClients {
   billing: FirecrawlBillingApi;
+  batchScraping: FirecrawlBatchScrapingApi;
   crawling: FirecrawlCrawlingApi;
   extraction: FirecrawlExtractionApi;
   mapping: FirecrawlMappingApi;
@@ -563,6 +611,25 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
           throw formatApiError(error, 'Failed to fetch credit usage');
         }
       },
+      async getTokenUsage() {
+        try {
+          const response = await http.get<{
+            success?: boolean;
+            data?: { remaining_tokens?: number };
+          }>('/v2/team/token-usage');
+
+          const data = response.data.data ?? {};
+
+          return {
+            data: {
+              remainingTokens:
+                typeof data.remaining_tokens === 'number' ? data.remaining_tokens : null,
+            },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch token usage');
+        }
+      },
     },
     scraping: {
       async scrapeAndExtractFromUrl(payload) {
@@ -637,12 +704,82 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
           );
 
           return {
-            data: {
-              status: response.data.status ?? 'cancelled',
-            },
+            data: { status: response.data.status ?? 'cancelled' },
           };
         } catch (error) {
           throw formatApiError(error, 'Failed to cancel crawl');
+        }
+      },
+      async getCrawlErrors(id) {
+        try {
+          const response = await http.get<{
+            errors?: CrawlError[];
+            robotsBlocked?: string[];
+          }>(`/v2/crawl/${id}/errors`);
+
+          return {
+            data: {
+              errors: response.data.errors ?? [],
+              robotsBlocked: response.data.robotsBlocked ?? [],
+            },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch crawl errors');
+        }
+      },
+    },
+    batchScraping: {
+      async batchScrape(payload) {
+        try {
+          const urls = Array.isArray(payload.urls)
+            ? (payload.urls as unknown[]).filter((url): url is string => typeof url === 'string')
+            : [];
+          // Reuse the single-scrape option mapping to keep batch options in sync.
+          const { options } = toScrapeRequest({ url: '', ...payload });
+          const response = await http.post<{ success: boolean; id: string; url: string }>(
+            '/v2/batch/scrape',
+            {
+              urls,
+              ...options,
+              ...(typeof payload.webhook === 'object' && payload.webhook !== null
+                ? { webhook: payload.webhook }
+                : {}),
+            },
+          );
+
+          return {
+            data: {
+              id: response.data.id,
+              url: response.data.url,
+            },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Batch scrape request failed');
+        }
+      },
+      async getBatchScrapeStatus(id) {
+        try {
+          const response = await http.get<{
+            status?: CrawlJob['status'];
+            completed?: number;
+            total?: number;
+            creditsUsed?: number;
+            next?: string | null;
+            data?: Document[];
+          }>(`/v2/batch/scrape/${id}`);
+
+          return {
+            data: {
+              status: response.data.status ?? 'scraping',
+              completed: response.data.completed ?? 0,
+              total: response.data.total ?? 0,
+              creditsUsed: response.data.creditsUsed ?? 0,
+              next: response.data.next ?? null,
+              data: (response.data.data ?? []).map(toLegacyDocument),
+            },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch batch scrape status');
         }
       },
     },
