@@ -20,6 +20,10 @@
           <span class="credit-label">Plan credits</span>
           <span class="credit-value">{{ formatNumber(usage.planCredits) }}</span>
         </div>
+        <div v-if="tokenUsage" class="credit-card">
+          <span class="credit-label">Remaining tokens (Extract)</span>
+          <span class="credit-value">{{ formatNumber(tokenUsage.remainingTokens) }}</span>
+        </div>
       </div>
 
       <div v-if="usage.billingPeriodStart || usage.billingPeriodEnd" class="billing-period">
@@ -36,7 +40,7 @@
 
 <script setup lang="ts">
 import { ref, inject, onMounted } from 'vue';
-import type { CreditUsage, FirecrawlBillingApi } from '@/services/firecrawl';
+import type { CreditUsage, TokenUsage, FirecrawlBillingApi } from '@/services/firecrawl';
 
 /**
  * BillingView Component
@@ -63,6 +67,12 @@ if (!api?.billing) {
  * @type {Ref<CreditUsage | null>}
  */
 const usage = ref<CreditUsage | null>(null);
+
+/**
+ * Reactive token usage data (Extract feature), or `null` before the first load.
+ * @type {Ref<TokenUsage | null>}
+ */
+const tokenUsage = ref<TokenUsage | null>(null);
 
 /**
  * Reactive flag indicating whether a request is currently in progress.
@@ -96,12 +106,18 @@ async function fetchUsage(): Promise<void> {
   loading.value = true;
   error.value = '';
   try {
-    const response = await api.billing!.getCreditUsage();
-    usage.value = response.data;
+    // Fetch credit and token usage together; both belong to the Billing tag.
+    const [creditResponse, tokenResponse] = await Promise.all([
+      api.billing!.getCreditUsage(),
+      api.billing!.getTokenUsage(),
+    ]);
+    usage.value = creditResponse.data;
+    tokenUsage.value = tokenResponse.data;
   } catch (err: unknown) {
     error.value =
-      err instanceof Error ? err.message : 'Failed to fetch credit usage. Please try again.';
+      err instanceof Error ? err.message : 'Failed to fetch usage information. Please try again.';
     usage.value = null;
+    tokenUsage.value = null;
   } finally {
     loading.value = false;
   }
