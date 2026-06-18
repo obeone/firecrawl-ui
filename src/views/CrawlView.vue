@@ -472,6 +472,30 @@
       <button class="primary-button" @click="selectedCrawlId = null">Hide Details</button>
     </div>
 
+    <!-- Section for active crawls fetched from the API -->
+    <div class="active-crawls-section">
+      <div class="active-crawls-header">
+        <h2>Active Crawls</h2>
+        <button class="primary-button" type="button" @click="loadActiveCrawls">Refresh</button>
+      </div>
+      <div v-if="activeCrawls.length > 0">
+        <ul class="history-list">
+          <li v-for="crawl in activeCrawls" :key="crawl.id" class="history-item">
+            <span class="history-info">
+              <strong>{{ crawl.url || '—' }}</strong>
+              – ID: {{ crawl.id }}
+            </span>
+            <button class="history-button" type="button" @click.prevent="selectCrawl(crawl.id)">
+              View
+            </button>
+          </li>
+        </ul>
+      </div>
+      <div v-else>
+        <p>No active crawls.</p>
+      </div>
+    </div>
+
     <!-- Section for crawl history -->
     <div class="crawl-history-section">
       <h2>Crawl History</h2>
@@ -509,6 +533,7 @@ import { saveAs } from 'file-saver';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
 import {
+  type ActiveCrawl,
   type CrawlError,
   type FirecrawlCrawlingApi,
   type FirecrawlExtractionApi,
@@ -862,6 +887,9 @@ export default defineComponent({
     const crawlErrors = ref<CrawlError[]>([]);
     const robotsBlocked = ref<string[]>([]);
     const crawlErrorsLoaded = ref(false);
+
+    // State for active crawls fetched from the API.
+    const activeCrawls = ref<ActiveCrawl[]>([]);
 
     // LocalStorage key for crawl history
     const HISTORY_STORAGE_KEY = 'crawlHistory';
@@ -1485,6 +1513,23 @@ export default defineComponent({
       }
     };
 
+    /**
+     * Fetch the list of currently active crawl jobs from the API.
+     * Populates the `activeCrawls` ref on success; routes errors into the
+     * existing `error` ref so the user sees a consistent error banner.
+     *
+     * @returns {Promise<void>} Resolves when the request completes or fails.
+     */
+    const loadActiveCrawls = async (): Promise<void> => {
+      error.value = '';
+      try {
+        const response = await api.crawling.getActiveCrawls();
+        activeCrawls.value = response.data.crawls;
+      } catch (err: any) {
+        error.value = `Failed to fetch active crawls: ${err.message || 'Unknown error'}`;
+      }
+    };
+
     // Interval ID for polling crawl status
     let intervalId: ReturnType<typeof setInterval> | null = null;
     const historyIntervalIds: Record<string, ReturnType<typeof setInterval>> = {};
@@ -1699,6 +1744,8 @@ export default defineComponent({
       useSubfolders,
       statusCheckInterval,
       clearHistory,
+      activeCrawls,
+      loadActiveCrawls,
       // Expose saveHistory if needed elsewhere, though not strictly necessary for this task
       // saveHistory,
     };
@@ -1825,6 +1872,21 @@ export default defineComponent({
   list-style: disc;
   padding-left: 1.5rem;
   word-break: break-all;
+}
+
+.active-crawls-section {
+  margin: 20px 0;
+}
+
+.active-crawls-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.active-crawls-header h2 {
+  margin: 0;
 }
 
 .crawl-history-section li {
