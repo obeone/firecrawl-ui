@@ -6,6 +6,7 @@ import ApiConfigView from '../views/ApiConfigView.vue';
 import ExtractView from '../views/ExtractView.vue'; // Import the new view
 import MapView from '../components/MapView.vue';
 import SearchView from '../components/SearchView.vue';
+import BillingView from '../views/BillingView.vue';
 import AboutView from '../views/AboutView.vue';
 
 const router = createRouter({
@@ -45,6 +46,11 @@ const router = createRouter({
       path: '/search',
       name: 'search',
       component: SearchView, // Route for the search functionality view.
+    },
+    {
+      path: '/billing',
+      name: 'billing',
+      component: BillingView, // Route for the billing and credit usage view.
     },
     {
       path: '/about',

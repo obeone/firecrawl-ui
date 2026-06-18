@@ -41,6 +41,12 @@
       </div>
       <div class="feature-card">
         <IconSupport class="icon" />
+        <h2>Billing</h2>
+        <p>Monitor your team's remaining Firecrawl credits and plan usage.</p>
+        <router-link to="/billing" class="feature-link">View Billing</router-link>
+      </div>
+      <div class="feature-card">
+        <IconSupport class="icon" />
         <h2>API Configuration</h2>
         <p>Configure your API keys and access points for custom workflows.</p>
         <router-link to="/api-config" class="feature-link">Configure API</router-link>
