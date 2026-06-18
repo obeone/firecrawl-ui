@@ -373,7 +373,34 @@
       </div>
       <p>{{ progress }}% Completed</p>
       <p>{{ pagesCompleted }} / {{ totalPages }} pages processed</p>
-      <button class="primary-button" type="button" @click="cancelCurrentCrawl">Cancel Crawl</button>
+      <div class="crawl-status-actions">
+        <button class="primary-button" type="button" @click="cancelCurrentCrawl">
+          Cancel Crawl
+        </button>
+        <button class="download-button" type="button" @click="loadCrawlErrors()">
+          Check Errors
+        </button>
+      </div>
+    </div>
+
+    <!-- Section listing scrape errors for the current crawl -->
+    <div v-if="crawlErrorsLoaded" class="crawl-errors-section">
+      <h3>Crawl Errors</h3>
+      <p v-if="crawlErrors.length === 0 && robotsBlocked.length === 0">
+        No errors reported for this crawl.
+      </p>
+      <ul v-if="crawlErrors.length > 0" class="errors-list">
+        <li v-for="(err, index) in crawlErrors" :key="err.id || index">
+          <strong>{{ err.url || 'Unknown URL' }}</strong> — {{ err.error || 'Unknown error' }}
+          <em v-if="err.timestamp"> ({{ new Date(err.timestamp).toLocaleString() }})</em>
+        </li>
+      </ul>
+      <div v-if="robotsBlocked.length > 0">
+        <h4>Blocked by robots.txt</h4>
+        <ul class="errors-list">
+          <li v-for="(url, index) in robotsBlocked" :key="index">{{ url }}</li>
+        </ul>
+      </div>
     </div>
 
     <!-- Section for download options after crawl completion -->
@@ -482,6 +509,7 @@ import { saveAs } from 'file-saver';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
 import {
+  type CrawlError,
   type FirecrawlCrawlingApi,
   type FirecrawlExtractionApi,
   type FirecrawlMappingApi,
@@ -829,6 +857,11 @@ export default defineComponent({
     // State for selected crawl history item
     const selectedCrawlId = ref<string | null>(null);
     const simulatedFiles = ref<string[]>([]);
+
+    // State for the crawl errors report.
+    const crawlErrors = ref<CrawlError[]>([]);
+    const robotsBlocked = ref<string[]>([]);
+    const crawlErrorsLoaded = ref(false);
 
     // LocalStorage key for crawl history
     const HISTORY_STORAGE_KEY = 'crawlHistory';
@@ -1432,6 +1465,26 @@ export default defineComponent({
       }
     };
 
+    /**
+     * Fetch and display the error report for the active (or selected) crawl job.
+     * Falls back across the current job id, result id and selected history id.
+     */
+    const loadCrawlErrors = async (): Promise<void> => {
+      const jobId = currentCrawlId.value || result.value?.id || selectedCrawlId.value;
+      if (!jobId) {
+        error.value = 'No crawl job available to fetch errors.';
+        return;
+      }
+      try {
+        const response = await api.crawling.getCrawlErrors(jobId);
+        crawlErrors.value = response.data.errors;
+        robotsBlocked.value = response.data.robotsBlocked;
+        crawlErrorsLoaded.value = true;
+      } catch (err: any) {
+        error.value = `Failed to fetch crawl errors: ${err.message || 'Unknown error'}`;
+      }
+    };
+
     // Interval ID for polling crawl status
     let intervalId: ReturnType<typeof setInterval> | null = null;
     const historyIntervalIds: Record<string, ReturnType<typeof setInterval>> = {};
@@ -1624,6 +1677,10 @@ export default defineComponent({
       result,
       handleSubmit,
       cancelCurrentCrawl,
+      loadCrawlErrors,
+      crawlErrors,
+      robotsBlocked,
+      crawlErrorsLoaded,
       isCrawlerOptionsCollapsed,
       isScrapeOptionsCollapsed,
       isWebhookOptionsCollapsed,
@@ -1747,6 +1804,27 @@ export default defineComponent({
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.crawl-status-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.crawl-errors-section {
+  margin: 20px 0;
+  padding: 15px;
+  border: 1px solid #f0c0c0;
+  border-radius: 4px;
+  background: #fff7f7;
+}
+
+.errors-list {
+  list-style: disc;
+  padding-left: 1.5rem;
+  word-break: break-all;
 }
 
 .crawl-history-section li {
