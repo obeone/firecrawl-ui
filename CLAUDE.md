@@ -26,17 +26,17 @@ npx eslint .
 
 This is a Vue 3 + TypeScript + Vite SPA that provides a UI for the Firecrawl API.
 
-### API Client (`src/api-client/`)
+### API Adapter (`src/services/firecrawl.ts`)
 
-Auto-generated from `openapi.yaml` using OpenAPI Generator. **Do not edit these files manually** — regenerate them from the spec instead. The `search.ts` file is the only hand-written addition. Re-export everything through `index.ts`.
+Hand-written adapter layer that targets the Firecrawl **API v2** (`/v2/*` endpoints). `createFirecrawlApiClients()` builds a set of legacy-compatible clients (`crawling`, `extraction`, `mapping`, `scraping`, `search`) that translate the payloads the views build into v2 requests and normalize v2 responses back into the shapes the views expect. The v2 spec lives in `openapi_v2.yaml` for reference.
 
 ### API Configuration (`src/config/api.ts`)
 
-Manages runtime API config. Priority order for credentials: `localStorage` > `VITE_*` env vars > hardcoded defaults. Call `updateApiConfig()` to persist changes at runtime.
+Manages runtime API config. Priority order for credentials: `localStorage` > `VITE_*` env vars > hardcoded defaults. Call `updateApiConfig()` to persist changes at runtime. The base URL is normalized (any trailing `/v1` or `/v2` is stripped) so the adapter builds requests from the service root.
 
 ### API Plugin (`src/plugins/api.ts`)
 
-Vue plugin that instantiates all Firecrawl API clients (`BillingApi`, `CrawlingApi`, `ExtractionApi`, `MappingApi`, `ScrapingApi`, `SearchApi`) and provides them to the app via `inject('api', ...)` and `app.config.globalProperties.$api`. Call `refreshApiClients()` after changing API config to reinitialize the clients.
+Vue plugin that builds the Firecrawl adapter clients via `createFirecrawlApiClients()` and provides them to the app via `inject('api', ...)` and `app.config.globalProperties.$api`. Call `refreshApiClients()` after changing API config to reinitialize the clients.
 
 ### Routing (`src/router/index.ts`)
 
@@ -51,7 +51,7 @@ Uses `createWebHashHistory` (hash-based URLs, e.g. `/#/scrape`). Routes map dire
 
 ```sh
 VITE_FIRECRAWL_API_KEY=your_api_key
-VITE_FIRECRAWL_API_BASE_URL=https://api.firecrawl.dev/v1
+VITE_FIRECRAWL_API_BASE_URL=https://api.firecrawl.dev
 ```
 
 Create a `.env` file in the project root. These are optional — the app also stores config in `localStorage` via the settings page.

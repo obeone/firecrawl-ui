@@ -129,6 +129,7 @@ export interface FirecrawlCrawlingApi {
     payload: Record<string, unknown>,
   ): Promise<WrappedResponse<{ id: string; url: string }>>;
   getCrawlStatus(id: string): Promise<WrappedResponse<LegacyCrawlStatusResponse>>;
+  cancelCrawl(id: string): Promise<WrappedResponse<{ status: string }>>;
 }
 
 /**
@@ -577,6 +578,21 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
           };
         } catch (error) {
           throw formatApiError(error, 'Failed to fetch crawl status');
+        }
+      },
+      async cancelCrawl(id) {
+        try {
+          const response = await http.delete<{ success?: boolean; status?: string }>(
+            `/v2/crawl/${id}`,
+          );
+
+          return {
+            data: {
+              status: response.data.status ?? 'cancelled',
+            },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to cancel crawl');
         }
       },
     },
