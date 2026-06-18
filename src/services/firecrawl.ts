@@ -154,9 +154,30 @@ export interface FirecrawlSearchApi {
 }
 
 /**
+ * Team credit usage information returned by Firecrawl.
+ *
+ * Only `remainingCredits` is guaranteed by the API contract; the optional
+ * fields are surfaced when the Firecrawl plan exposes them.
+ */
+export interface CreditUsage {
+  remainingCredits: number | null;
+  planCredits?: number | null;
+  billingPeriodStart?: string | null;
+  billingPeriodEnd?: string | null;
+}
+
+/**
+ * Legacy-compatible billing client.
+ */
+export interface FirecrawlBillingApi {
+  getCreditUsage(): Promise<WrappedResponse<CreditUsage>>;
+}
+
+/**
  * Collection of all Firecrawl adapters exposed to Vue.
  */
 export interface FirecrawlApiClients {
+  billing: FirecrawlBillingApi;
   crawling: FirecrawlCrawlingApi;
   extraction: FirecrawlExtractionApi;
   mapping: FirecrawlMappingApi;
@@ -514,6 +535,35 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
   const http = createHttpClient(apiKey, baseUrl);
 
   return {
+    billing: {
+      async getCreditUsage() {
+        try {
+          const response = await http.get<{
+            success?: boolean;
+            data?: {
+              remaining_credits?: number;
+              plan_credits?: number;
+              billing_period_start?: string | null;
+              billing_period_end?: string | null;
+            };
+          }>('/v2/team/credit-usage');
+
+          const data = response.data.data ?? {};
+
+          return {
+            data: {
+              remainingCredits:
+                typeof data.remaining_credits === 'number' ? data.remaining_credits : null,
+              planCredits: typeof data.plan_credits === 'number' ? data.plan_credits : null,
+              billingPeriodStart: data.billing_period_start ?? null,
+              billingPeriodEnd: data.billing_period_end ?? null,
+            },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch credit usage');
+        }
+      },
+    },
     scraping: {
       async scrapeAndExtractFromUrl(payload) {
         try {
