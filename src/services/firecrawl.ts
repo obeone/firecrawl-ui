@@ -139,6 +139,13 @@ export interface CrawlErrorsReport {
   robotsBlocked: string[];
 }
 
+export interface ActiveCrawl {
+  id: string;
+  url?: string;
+  teamId?: string;
+  options?: Record<string, unknown>;
+}
+
 export interface FirecrawlCrawlingApi {
   crawlUrls(
     payload: Record<string, unknown>,
@@ -146,6 +153,7 @@ export interface FirecrawlCrawlingApi {
   getCrawlStatus(id: string): Promise<WrappedResponse<LegacyCrawlStatusResponse>>;
   cancelCrawl(id: string): Promise<WrappedResponse<{ status: string }>>;
   getCrawlErrors(id: string): Promise<WrappedResponse<CrawlErrorsReport>>;
+  getActiveCrawls(): Promise<WrappedResponse<{ crawls: ActiveCrawl[] }>>;
 }
 
 /**
@@ -169,6 +177,8 @@ export interface FirecrawlBatchScrapingApi {
     payload: Record<string, unknown>,
   ): Promise<WrappedResponse<{ id: string; url: string }>>;
   getBatchScrapeStatus(id: string): Promise<WrappedResponse<BatchScrapeStatusResponse>>;
+  cancelBatchScrape(id: string): Promise<WrappedResponse<{ message: string }>>;
+  getBatchScrapeErrors(id: string): Promise<WrappedResponse<CrawlErrorsReport>>;
 }
 
 /**
@@ -176,6 +186,7 @@ export interface FirecrawlBatchScrapingApi {
  */
 export interface FirecrawlExtractionApi {
   extractData(payload: Record<string, unknown>): Promise<WrappedResponse<FirecrawlExtractResponse>>;
+  getExtractStatus(id: string): Promise<WrappedResponse<FirecrawlExtractResponse>>;
 }
 
 /**
@@ -221,6 +232,67 @@ export interface FirecrawlBillingApi {
 }
 
 /**
+ * A single activity entry emitted while a deep research job progresses.
+ */
+export interface ResearchActivity {
+  type?: string;
+  status?: string;
+  message?: string;
+  timestamp?: string;
+  depth?: number;
+}
+
+/**
+ * A source discovered and analyzed during a deep research job.
+ */
+export interface ResearchSource {
+  url?: string;
+  title?: string;
+  description?: string;
+  favicon?: string;
+}
+
+/**
+ * Status and results of a deep research job.
+ */
+export interface DeepResearchStatus {
+  status: 'processing' | 'completed' | 'failed';
+  finalAnalysis: string;
+  json: Record<string, unknown> | null;
+  activities: ResearchActivity[];
+  sources: ResearchSource[];
+  currentDepth: number;
+  maxDepth: number;
+  totalUrls: number;
+  error: string | null;
+}
+
+/**
+ * Legacy-compatible deep research client.
+ */
+export interface FirecrawlResearchApi {
+  startDeepResearch(payload: Record<string, unknown>): Promise<WrappedResponse<{ id: string }>>;
+  getDeepResearchStatus(id: string): Promise<WrappedResponse<DeepResearchStatus>>;
+}
+
+/**
+ * Status and results of an LLMs.txt generation job.
+ */
+export interface LlmsTxtStatus {
+  status: 'processing' | 'completed' | 'failed';
+  llmstxt: string;
+  llmsfulltxt: string;
+}
+
+/**
+ * Legacy-compatible LLMs.txt generation client.
+ */
+export interface FirecrawlLlmsTxtApi {
+  generateLlmsTxt(payload: Record<string, unknown>): Promise<WrappedResponse<{ id: string }>>;
+  getLlmsTxtStatus(id: string): Promise<WrappedResponse<LlmsTxtStatus>>;
+}
+
+/**
  * Collection of all Firecrawl adapters exposed to Vue.
  */
 export interface FirecrawlApiClients {
@@ -228,7 +300,9 @@ export interface FirecrawlApiClients {
   batchScraping: FirecrawlBatchScrapingApi;
   crawling: FirecrawlCrawlingApi;
   extraction: FirecrawlExtractionApi;
+  llmsTxt: FirecrawlLlmsTxtApi;
   mapping: FirecrawlMappingApi;
+  research: FirecrawlResearchApi;
   scraping: FirecrawlScrapingApi;
   search: FirecrawlSearchApi;
 }
@@ -727,6 +801,19 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
           throw formatApiError(error, 'Failed to fetch crawl errors');
         }
       },
+      async getActiveCrawls() {
+        try {
+          const response = await http.get<{ success?: boolean; crawls?: ActiveCrawl[] }>(
+            '/v2/crawl/active',
+          );
+
+          return {
+            data: { crawls: response.data.crawls ?? [] },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch active crawls');
+        }
+      },
     },
     batchScraping: {
       async batchScrape(payload) {
@@ -782,6 +869,36 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
           throw formatApiError(error, 'Failed to fetch batch scrape status');
         }
       },
+      async cancelBatchScrape(id) {
+        try {
+          const response = await http.delete<{ success?: boolean; message?: string }>(
+            `/v2/batch/scrape/${id}`,
+          );
+
+          return {
+            data: { message: response.data.message ?? 'Batch scrape job cancelled.' },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to cancel batch scrape');
+        }
+      },
+      async getBatchScrapeErrors(id) {
+        try {
+          const response = await http.get<{
+            errors?: CrawlError[];
+            robotsBlocked?: string[];
+          }>(`/v2/batch/scrape/${id}/errors`);
+
+          return {
+            data: {
+              errors: response.data.errors ?? [],
+              robotsBlocked: response.data.robotsBlocked ?? [],
+            },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch batch scrape errors');
+        }
+      },
     },
     extraction: {
       async extractData(payload) {
@@ -794,6 +911,106 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
           };
         } catch (error) {
           throw formatApiError(error, 'Extract request failed');
+        }
+      },
+      async getExtractStatus(id) {
+        try {
+          const response = await http.get<FirecrawlExtractResponse>(`/v2/extract/${id}`);
+
+          return {
+            data: response.data,
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch extract status');
+        }
+      },
+    },
+    research: {
+      async startDeepResearch(payload) {
+        try {
+          const response = await http.post<{ success: boolean; id: string }>(
+            '/v2/deep-research',
+            payload,
+          );
+
+          return {
+            data: { id: response.data.id },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to start deep research');
+        }
+      },
+      async getDeepResearchStatus(id) {
+        try {
+          const response = await http.get<{
+            success?: boolean;
+            data?: {
+              status?: DeepResearchStatus['status'];
+              finalAnalysis?: string;
+              json?: Record<string, unknown> | null;
+              activities?: ResearchActivity[];
+              sources?: ResearchSource[];
+              currentDepth?: number;
+              maxDepth?: number;
+              totalUrls?: number;
+              error?: string;
+            };
+          }>(`/v2/deep-research/${id}`);
+
+          const data = response.data.data ?? {};
+
+          return {
+            data: {
+              status: data.status ?? 'processing',
+              finalAnalysis: data.finalAnalysis ?? '',
+              json: data.json ?? null,
+              activities: data.activities ?? [],
+              sources: data.sources ?? [],
+              currentDepth: data.currentDepth ?? 0,
+              maxDepth: data.maxDepth ?? 0,
+              totalUrls: data.totalUrls ?? 0,
+              error: data.error ?? null,
+            },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch deep research status');
+        }
+      },
+    },
+    llmsTxt: {
+      async generateLlmsTxt(payload) {
+        try {
+          const response = await http.post<{ success: boolean; id: string }>(
+            '/v2/llmstxt',
+            payload,
+          );
+
+          return {
+            data: { id: response.data.id },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to start LLMs.txt generation');
+        }
+      },
+      async getLlmsTxtStatus(id) {
+        try {
+          const response = await http.get<{
+            success?: boolean;
+            status?: LlmsTxtStatus['status'];
+            data?: { llmstxt?: string; llmsfulltxt?: string };
+          }>(`/v2/llmstxt/${id}`);
+
+          const data = response.data.data ?? {};
+
+          return {
+            data: {
+              status: response.data.status ?? 'processing',
+              llmstxt: data.llmstxt ?? '',
+              llmsfulltxt: data.llmsfulltxt ?? '',
+            },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch LLMs.txt status');
         }
       },
     },
