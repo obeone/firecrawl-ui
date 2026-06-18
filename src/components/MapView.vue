@@ -66,7 +66,7 @@ import type { FirecrawlMappingApi } from '@/services/firecrawl';
 /**
  * Injects the API instance provided by the API plugin.
  * This instance is expected to contain a `mapping` property for URL mapping operations.
- * @type {{ mapping?: MappingApi } | undefined}
+ * @type {{ mapping?: FirecrawlMappingApi } | undefined}
  */
 const api = inject('api') as { mapping?: FirecrawlMappingApi } | undefined;
 if (!api?.mapping) {
