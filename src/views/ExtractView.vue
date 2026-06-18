@@ -54,6 +54,16 @@
       </button>
     </form>
 
+    <div class="form-group resume-group">
+      <label for="resume-id-input">Resume by Job ID</label>
+      <div class="resume-row">
+        <input id="resume-id-input" v-model="resumeId" type="text" placeholder="Extract job ID" />
+        <button type="button" class="primary-button" :disabled="loading" @click="resumeExtraction">
+          Fetch Result
+        </button>
+      </div>
+    </div>
+
     <div v-if="loading && !result" class="status">Extracting...</div>
     <div v-if="error" class="status error">{{ error }}</div>
     <div v-if="result" class="result">
@@ -87,6 +97,7 @@ const error = ref(''); // Stores any error messages from the extraction process.
 const result = ref<FirecrawlExtractResponse['data'] | null>(null); // Stores the successful extraction result.
 const schemaError = ref<string | null>(null); // Stores error messages related to JSON schema parsing.
 const parsedSchema = ref<any>(undefined); // Holds the parsed schema object.
+const resumeId = ref(''); // Stores the job ID entered by the user for resuming an extract job.
 
 /**
  * Watcher to parse the schema string and update the parsed schema.
@@ -147,6 +158,53 @@ const runExtraction = async (): Promise<void> => {
       result.value = (respData as any).data;
     } else {
       throw new Error((respData as any).error || 'Extraction failed');
+    }
+  } catch (err: any) {
+    error.value = err?.message || 'Request failed';
+    result.value = null;
+  } finally {
+    loading.value = false;
+  }
+};
+
+/**
+ * Fetch the result of a previously submitted extract job by its ID.
+ *
+ * Calls `getExtractStatus` with the trimmed `resumeId`. If the job has
+ * completed and carries data, the result is displayed using the existing
+ * result section. If the job is still processing, a message is surfaced in
+ * the error display so the user knows to try again. If the job failed or
+ * returned no useful payload, the API error (or a generic fallback) is shown.
+ *
+ * @returns A promise that resolves when the status fetch and state update
+ *   are complete.
+ */
+const resumeExtraction = async (): Promise<void> => {
+  const id = resumeId.value.trim();
+  if (!id) {
+    error.value = 'Please enter an extract job ID.';
+    return;
+  }
+
+  try {
+    loading.value = true;
+    error.value = '';
+    result.value = null;
+
+    const response = await api.extraction.getExtractStatus(id);
+    const respData = response.data;
+
+    if (respData.status === 'processing') {
+      error.value = 'Job still processing, try again.';
+    } else if (respData.status === 'failed') {
+      throw new Error(respData.error || 'Extract job failed');
+    } else if (respData.status === 'completed' && respData.data) {
+      result.value = respData.data as FirecrawlExtractResponse['data'];
+    } else if ((respData as any).data) {
+      // No explicit status but data is present — treat as completed.
+      result.value = (respData as any).data;
+    } else {
+      throw new Error(respData.error || 'No data returned for this job ID');
     }
   } catch (err: any) {
     error.value = err?.message || 'Request failed';
@@ -251,5 +309,25 @@ pre {
   display: block;
   margin-top: 4px;
   color: #666;
+}
+
+.resume-group {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.resume-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.resume-row input[type='text'] {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-family: 'Courier New', Courier, monospace;
 }
 </style>
