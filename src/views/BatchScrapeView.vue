@@ -52,6 +52,38 @@
       </div>
       <p>{{ completed }} / {{ total }} pages scraped ({{ progress }}%)</p>
       <p v-if="creditsUsed">Credits used: {{ creditsUsed }}</p>
+      <div class="status-actions">
+        <!-- Cancel button: visible only while the job is actively running -->
+        <button
+          v-if="isJobRunning"
+          class="cancel-button"
+          type="button"
+          :disabled="cancelling"
+          @click="cancelJob"
+        >
+          {{ cancelling ? 'Cancelling…' : 'Cancel' }}
+        </button>
+        <!-- Check Errors button: visible whenever a job ID exists -->
+        <button class="download-button" type="button" @click="loadErrors">Check Errors</button>
+      </div>
+    </div>
+
+    <!-- Section listing scrape errors for the current batch job -->
+    <div v-if="errorsLoaded" class="batch-errors-section">
+      <h3>Batch Errors</h3>
+      <p v-if="batchErrors.length === 0 && batchRobotsBlocked.length === 0">No errors reported.</p>
+      <ul v-if="batchErrors.length > 0" class="errors-list">
+        <li v-for="(err, index) in batchErrors" :key="err.id || index">
+          <strong>{{ err.url || 'Unknown URL' }}</strong> — {{ err.error || 'Unknown error' }}
+          <em v-if="err.timestamp"> ({{ new Date(err.timestamp).toLocaleString() }})</em>
+        </li>
+      </ul>
+      <div v-if="batchRobotsBlocked.length > 0">
+        <h4>Blocked by robots.txt</h4>
+        <ul class="errors-list">
+          <li v-for="(url, index) in batchRobotsBlocked" :key="index">{{ url }}</li>
+        </ul>
+      </div>
     </div>
 
     <!-- Results once the batch is completed -->
@@ -68,14 +100,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, inject, onUnmounted } from 'vue';
-import type { FirecrawlBatchScrapingApi } from '@/services/firecrawl';
+import { ref, computed, inject, onUnmounted } from 'vue';
+import type { CrawlError, FirecrawlBatchScrapingApi } from '@/services/firecrawl';
 
 /**
  * BatchScrapeView Component
  *
  * Lets the user submit several URLs as a single batch scrape job, polls the job
  * status until completion, and renders the scraped documents with a JSON export.
+ * Also supports cancelling an in-progress job and fetching the error report.
  */
 
 /**
@@ -116,8 +149,30 @@ const creditsUsed = ref(0);
 /** Scraped documents returned once the job completes. */
 const results = ref<Record<string, unknown>[]>([]);
 
+/** Whether a cancel request is currently in flight. */
+const cancelling = ref(false);
+
+/** Errors reported for the current batch job. */
+const batchErrors = ref<CrawlError[]>([]);
+/** URLs blocked by robots.txt for the current batch job. */
+const batchRobotsBlocked = ref<string[]>([]);
+/** Whether the error report has been fetched at least once for the current job. */
+const errorsLoaded = ref(false);
+
 /** Polling interval handle. */
 let intervalId: ReturnType<typeof setInterval> | null = null;
+
+/**
+ * True while the job is actively scraping or processing (i.e. not yet in a
+ * terminal state). Used to control the visibility of the Cancel button.
+ */
+const isJobRunning = computed(
+  () =>
+    jobId.value !== null &&
+    status.value !== 'completed' &&
+    status.value !== 'failed' &&
+    status.value !== 'cancelled',
+);
 
 /**
  * Derive a human-readable label from a scraped document.
@@ -198,6 +253,9 @@ async function handleSubmit(): Promise<void> {
   error.value = '';
   results.value = [];
   jobId.value = null;
+  errorsLoaded.value = false;
+  batchErrors.value = [];
+  batchRobotsBlocked.value = [];
   try {
     const response = await api.batchScraping!.batchScrape({
       urls,
@@ -211,6 +269,55 @@ async function handleSubmit(): Promise<void> {
     error.value = err instanceof Error ? err.message : 'Failed to start batch scrape.';
   } finally {
     loading.value = false;
+  }
+}
+
+/**
+ * Cancel the currently running batch scrape job.
+ *
+ * Calls the cancel endpoint, stops polling, and sets the status to 'cancelled'.
+ * Any API error is surfaced through the existing error ref.
+ *
+ * @returns {Promise<void>} Resolves once the cancel request completes.
+ */
+async function cancelJob(): Promise<void> {
+  if (!jobId.value) {
+    return;
+  }
+  cancelling.value = true;
+  error.value = '';
+  try {
+    await api.batchScraping!.cancelBatchScrape(jobId.value);
+    stopPolling();
+    status.value = 'cancelled';
+  } catch (err: unknown) {
+    error.value = err instanceof Error ? err.message : 'Failed to cancel batch scrape job.';
+  } finally {
+    cancelling.value = false;
+  }
+}
+
+/**
+ * Fetch the error report for the current batch job and populate the errors section.
+ *
+ * Both `batchErrors` and `batchRobotsBlocked` are updated; `errorsLoaded` is
+ * set to true so the errors section becomes visible. Any API error is surfaced
+ * through the existing error ref.
+ *
+ * @returns {Promise<void>} Resolves once the error report has been fetched.
+ */
+async function loadErrors(): Promise<void> {
+  if (!jobId.value) {
+    return;
+  }
+  error.value = '';
+  try {
+    const response = await api.batchScraping!.getBatchScrapeErrors(jobId.value);
+    batchErrors.value = response.data.errors;
+    batchRobotsBlocked.value = response.data.robotsBlocked;
+    errorsLoaded.value = true;
+  } catch (err: unknown) {
+    error.value = err instanceof Error ? err.message : 'Failed to fetch batch scrape errors.';
   }
 }
 
@@ -308,6 +415,32 @@ select {
   margin-top: 1.5rem;
 }
 
+.status-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.cancel-button {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+  background-color: #dc3545;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cancel-button:hover:not(:disabled) {
+  background-color: #b02a37;
+}
+
+.cancel-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .progress-container {
   width: 100%;
   background-color: #e0e0e0;
@@ -320,6 +453,20 @@ select {
   height: 20px;
   background-color: #4caf50;
   transition: width 0.5s ease;
+}
+
+.batch-errors-section {
+  margin: 1.5rem 0;
+  padding: 15px;
+  border: 1px solid #f0c0c0;
+  border-radius: 4px;
+  background: #fff7f7;
+}
+
+.errors-list {
+  list-style: disc;
+  padding-left: 1.5rem;
+  word-break: break-all;
 }
 
 .results {
