@@ -16,6 +16,12 @@
         <router-link to="/scrape" class="feature-link">Access Scraping</router-link>
       </div>
       <div class="feature-card">
+        <IconDocumentation class="icon" />
+        <h2>Batch Scrape</h2>
+        <p>Scrape multiple URLs at once and track the job until completion.</p>
+        <router-link to="/batch-scrape" class="feature-link">Access Batch Scrape</router-link>
+      </div>
+      <div class="feature-card">
         <IconEcosystem class="icon" />
         <h2>Crawl</h2>
         <p>Explore websites in depth and collect data on a large scale.</p>

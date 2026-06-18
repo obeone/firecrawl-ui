@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
 import HomeView from '../views/HomeView.vue';
 import ScrapeView from '../views/ScrapeView.vue';
+import BatchScrapeView from '../views/BatchScrapeView.vue';
 import CrawlView from '../views/CrawlView.vue';
 import ApiConfigView from '../views/ApiConfigView.vue';
 import ExtractView from '../views/ExtractView.vue'; // Import the new view
@@ -21,6 +22,11 @@ const router = createRouter({
       path: '/scrape',
       name: 'scrape',
       component: ScrapeView, // Route for the web scraping functionality.
+    },
+    {
+      path: '/batch-scrape',
+      name: 'batch-scrape',
+      component: BatchScrapeView, // Route for the batch scraping functionality.
     },
     {
       path: '/crawl',
