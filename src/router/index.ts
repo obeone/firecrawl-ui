@@ -7,6 +7,8 @@ import ApiConfigView from '../views/ApiConfigView.vue';
 import ExtractView from '../views/ExtractView.vue'; // Import the new view
 import MapView from '../components/MapView.vue';
 import SearchView from '../components/SearchView.vue';
+import ResearchView from '../views/ResearchView.vue';
+import LlmsTxtView from '../views/LlmsTxtView.vue';
 import BillingView from '../views/BillingView.vue';
 import AboutView from '../views/AboutView.vue';
 
@@ -52,6 +54,16 @@ const router = createRouter({
       path: '/search',
       name: 'search',
       component: SearchView, // Route for the search functionality view.
+    },
+    {
+      path: '/research',
+      name: 'research',
+      component: ResearchView, // Route for the deep research functionality.
+    },
+    {
+      path: '/llmstxt',
+      name: 'llmstxt',
+      component: LlmsTxtView, // Route for the LLMs.txt generation view.
     },
     {
       path: '/billing',

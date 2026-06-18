@@ -46,6 +46,18 @@
         <router-link to="/search" class="feature-link">Access Search</router-link>
       </div>
       <div class="feature-card">
+        <IconTooling class="icon" />
+        <h2>Deep Research</h2>
+        <p>Run an autonomous multi-step research agent over the web on any query.</p>
+        <router-link to="/research" class="feature-link">Access Deep Research</router-link>
+      </div>
+      <div class="feature-card">
+        <IconDocumentation class="icon" />
+        <h2>LLMs.txt</h2>
+        <p>Generate an llms.txt summary of a website for use with LLMs.</p>
+        <router-link to="/llmstxt" class="feature-link">Generate LLMs.txt</router-link>
+      </div>
+      <div class="feature-card">
         <IconSupport class="icon" />
         <h2>Billing</h2>
         <p>Monitor your team's remaining Firecrawl credits and plan usage.</p>
