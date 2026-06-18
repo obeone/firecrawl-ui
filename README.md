@@ -120,6 +120,8 @@ A prebuilt image is also published and can be pulled from:
 
 The OpenAPI document describing all endpoints is available in `openapi_v2.yaml`. The application targets the Firecrawl **API v2** (`/v2/*`) through the adapter in `src/services/firecrawl.ts`.
 
+> **Note:** Firecrawl still exposes the legacy **v1** API (`/v1/*`) alongside v2, so existing v1 integrations keep working — this UI simply builds its requests against v2. Set `VITE_FIRECRAWL_API_BASE_URL` to the service root (e.g. `https://api.firecrawl.dev`); any trailing `/v1` or `/v2` is stripped automatically, and the adapter appends `/v2` itself.
+
 ## Contributing
 
 Contributions are welcome. Please open an issue or submit a pull request.
