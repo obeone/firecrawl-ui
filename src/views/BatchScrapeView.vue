@@ -344,7 +344,7 @@ onUnmounted(stopPolling);
   max-width: 700px;
   margin: 1rem auto;
   padding: 1rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-family: Arial, sans-serif;
 }
@@ -374,13 +374,16 @@ textarea,
 select {
   padding: 0.5rem;
   font-size: 1rem;
-  border: 1px solid #aaa;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
+  background-color: var(--color-background-mute);
+  color: var(--color-text);
 }
 
 .form-group small {
   font-size: 0.8em;
-  color: #666;
+  color: var(--color-text);
+  opacity: 0.7;
   margin-top: 3px;
 }
 
@@ -443,7 +446,7 @@ select {
 
 .progress-container {
   width: 100%;
-  background-color: #e0e0e0;
+  background-color: var(--color-background-mute);
   border-radius: 5px;
   margin: 10px 0;
   overflow: hidden;
@@ -458,9 +461,9 @@ select {
 .batch-errors-section {
   margin: 1.5rem 0;
   padding: 15px;
-  border: 1px solid #f0c0c0;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  background: #fff7f7;
+  background: var(--color-background-soft);
 }
 
 .errors-list {

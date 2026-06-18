@@ -133,7 +133,7 @@ onMounted(fetchUsage);
   max-width: 600px;
   margin: 1rem auto;
   padding: 1rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-family: Arial, sans-serif;
 }
@@ -182,16 +182,16 @@ onMounted(fetchUsage);
   flex-direction: column;
   gap: 0.4rem;
   padding: 1rem 1.25rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   min-width: 160px;
-  background: #f8f9fb;
+  background: var(--color-background-soft);
 }
 
 /* Emphasized card for the primary metric. */
 .credit-card.highlight {
   border-color: #007acc;
-  background: #eaf4fb;
+  background: var(--color-background-mute);
 }
 
 /* Small label above each credit value. */

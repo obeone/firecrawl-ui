@@ -228,7 +228,7 @@ onUnmounted(stopPolling);
   max-width: 700px;
   margin: 1rem auto;
   padding: 1rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-family: Arial, sans-serif;
 }
@@ -258,13 +258,16 @@ input[type='url'],
 input[type='number'] {
   padding: 0.5rem;
   font-size: 1rem;
-  border: 1px solid #aaa;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
+  background-color: var(--color-background-mute);
+  color: var(--color-text);
 }
 
 .form-group small {
   font-size: 0.8em;
-  color: #666;
+  color: var(--color-text);
+  opacity: 0.7;
   margin-top: 3px;
 }
 
@@ -301,7 +304,8 @@ input[type='number'] {
 
 .generating-status {
   font-style: italic;
-  color: #555;
+  color: var(--color-text);
+  opacity: 0.7;
 }
 
 .results {
@@ -312,7 +316,7 @@ input[type='number'] {
 }
 
 .result-block {
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   overflow: hidden;
 }
@@ -322,8 +326,8 @@ input[type='number'] {
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 1rem;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #ddd;
+  background-color: var(--color-background-soft);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .result-header h3 {
@@ -339,7 +343,8 @@ input[type='number'] {
   padding: 1rem;
   margin: 0;
   font-size: 0.85rem;
-  background-color: #fafafa;
+  background-color: var(--color-background-mute);
+  color: var(--color-text);
   font-family: monospace;
 }
 

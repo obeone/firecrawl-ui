@@ -449,7 +449,7 @@ onUnmounted(stopPolling);
   max-width: 700px;
   margin: 1rem auto;
   padding: 1rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-family: Arial, sans-serif;
 }
@@ -491,13 +491,16 @@ select,
 input[type='number'] {
   padding: 0.5rem;
   font-size: 1rem;
-  border: 1px solid #aaa;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
+  background-color: var(--color-background-mute);
+  color: var(--color-text);
 }
 
 .form-group small {
   font-size: 0.8em;
-  color: #666;
+  color: var(--color-text);
+  opacity: 0.7;
   margin-top: 3px;
 }
 
@@ -524,9 +527,9 @@ input[type='number'] {
   flex-direction: column;
   gap: 1rem;
   padding: 0.75rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
-  background-color: #fafafa;
+  background-color: var(--color-background-soft);
 }
 
 .primary-button {
@@ -580,7 +583,7 @@ input[type='number'] {
   font-size: 0.9rem;
   padding: 0.25rem 0.5rem;
   border-radius: 3px;
-  background-color: #f5f5f5;
+  background-color: var(--color-background-soft);
 }
 
 .activity-status {
@@ -603,7 +606,8 @@ input[type='number'] {
 }
 
 .status-info {
-  color: #888;
+  color: var(--color-text);
+  opacity: 0.7;
 }
 
 .activity-message {
@@ -612,7 +616,8 @@ input[type='number'] {
 
 .activity-timestamp {
   font-size: 0.75em;
-  color: #999;
+  color: var(--color-text);
+  opacity: 0.6;
   white-space: nowrap;
 }
 
@@ -664,7 +669,8 @@ a.source-title:hover {
 
 .source-description {
   font-size: 0.85rem;
-  color: #555;
+  color: var(--color-text);
+  opacity: 0.7;
   margin: 0;
 }
 
@@ -675,8 +681,8 @@ a.source-title:hover {
 .analysis-content {
   white-space: pre-wrap;
   word-break: break-word;
-  background-color: #f9f9f9;
-  border: 1px solid #ddd;
+  background-color: var(--color-background-mute);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   padding: 1rem;
   font-size: 0.9rem;
