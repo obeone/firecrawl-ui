@@ -16,6 +16,12 @@
         <router-link to="/scrape" class="feature-link">Access Scraping</router-link>
       </div>
       <div class="feature-card">
+        <IconDocumentation class="icon" />
+        <h2>Batch Scrape</h2>
+        <p>Scrape multiple URLs at once and track the job until completion.</p>
+        <router-link to="/batch-scrape" class="feature-link">Access Batch Scrape</router-link>
+      </div>
+      <div class="feature-card">
         <IconEcosystem class="icon" />
         <h2>Crawl</h2>
         <p>Explore websites in depth and collect data on a large scale.</p>
@@ -38,6 +44,24 @@
         <h2>Search</h2>
         <p>Search and filter quickly in your crawl and scrape results.</p>
         <router-link to="/search" class="feature-link">Access Search</router-link>
+      </div>
+      <div class="feature-card">
+        <IconTooling class="icon" />
+        <h2>Deep Research</h2>
+        <p>Run an autonomous multi-step research agent over the web on any query.</p>
+        <router-link to="/research" class="feature-link">Access Deep Research</router-link>
+      </div>
+      <div class="feature-card">
+        <IconDocumentation class="icon" />
+        <h2>LLMs.txt</h2>
+        <p>Generate an llms.txt summary of a website for use with LLMs.</p>
+        <router-link to="/llmstxt" class="feature-link">Generate LLMs.txt</router-link>
+      </div>
+      <div class="feature-card">
+        <IconSupport class="icon" />
+        <h2>Billing</h2>
+        <p>Monitor your team's remaining Firecrawl credits and plan usage.</p>
+        <router-link to="/billing" class="feature-link">View Billing</router-link>
       </div>
       <div class="feature-card">
         <IconSupport class="icon" />
