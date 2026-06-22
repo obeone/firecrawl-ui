@@ -98,8 +98,10 @@ export default defineComponent({
   max-width: 500px;
   margin: 0 auto;
   padding: 20px;
-  border: 1px solid #eee;
-  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background-soft);
+  box-shadow: var(--box-shadow-card);
 }
 
 .form-group {
@@ -115,26 +117,43 @@ label {
 input {
   width: 100%;
   padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
 }
 
+/* The Save button is a primary action — fire gradient to match .primary-button. */
 button {
-  background-color: #0066cc;
-  color: white;
+  background: var(--gradient-fire);
+  color: #fff;
   padding: 10px 15px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  font-weight: 600;
+  box-shadow: var(--box-shadow-button);
+  transition:
+    background var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+button:hover {
+  background: var(--gradient-fire-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px -6px rgba(250, 77, 18, 0.6);
+}
+
+button:active {
+  transform: translateY(0);
 }
 
 .error-message {
-  color: #cc0000;
+  color: var(--hue-danger);
   margin-top: 10px;
 }
 
 .success-message {
-  color: #00aa00;
+  color: var(--hue-success);
   margin-top: 10px;
 }
 
@@ -142,6 +161,6 @@ small {
   display: block;
   margin-top: 5px;
   font-size: 0.8em;
-  color: #666;
+  color: var(--color-text-mute);
 }
 </style>
