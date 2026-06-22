@@ -1,310 +1,335 @@
 <template>
-  <div class="page-container">
-    <h1>Scrape Configuration</h1>
-
-    <form class="scrape-config-form" @submit.prevent="handleSubmit">
-      <div class="form-group">
-        <label for="url">URL:</label>
-        <input id="url" v-model="formData.url" type="text" required />
-      </div>
-
-      <div class="form-group">
-        <label for="formats">Output Formats:</label>
-        <select id="formats" v-model="formData.scrapeOptions.formats" multiple>
-          <option value="markdown">Markdown</option>
-          <option value="html">HTML</option>
-          <option value="rawHtml">Raw HTML</option>
-          <option value="links">Links</option>
-          <option value="images">Images</option>
-          <option value="summary">Summary</option>
-          <option value="screenshot">Screenshot (Viewport)</option>
-          <option value="screenshot@fullPage">Screenshot (Full Page)</option>
-          <option value="json">JSON (Structured Extraction)</option>
-          <option value="attributes">Attributes</option>
-          <option value="branding">Branding</option>
-          <option value="changeTracking">Change Tracking (Requires Markdown)</option>
-        </select>
-        <small>Select one or more formats.</small>
-      </div>
-
-      <!-- Change Tracking Options (conditional) -->
-      <div v-if="formData.scrapeOptions.formats.includes('changeTracking')" class="form-group">
-        <label for="changeTrackingThreshold">Change Threshold (%):</label>
-        <input
-          id="changeTrackingThreshold"
-          type="number"
-          min="0"
-          max="100"
-          v-model.number="formData.changeTrackingOptions.threshold"
-        />
-        <small>Minimum percentage change to trigger tracking.</small>
-
-        <label for="changeTrackingFrequency">Check Frequency (minutes):</label>
-        <input
-          id="changeTrackingFrequency"
-          type="number"
-          min="1"
-          v-model.number="formData.changeTrackingOptions.frequency"
-        />
-        <small>Frequency to check for changes.</small>
-      </div>
-
-      <fieldset class="form-group options-fieldset">
-        <legend
-          class="collapsible-header"
-          @click="isScrapeOptionsCollapsed = !isScrapeOptionsCollapsed"
-        >
-          Scrape Options
-        </legend>
-        <div v-show="!isScrapeOptionsCollapsed">
-          <label>
-            <input type="checkbox" v-model="formData.scrapeOptions.onlyMainContent" />
-            Only Main Content (exclude headers, footers, etc.)
-          </label>
-          <div class="form-group">
-            <label for="includeTags">Include Tags (comma separated):</label>
-            <input
-              id="includeTags"
-              type="text"
-              v-model="formData.scrapeOptions.includeTags"
-              placeholder="e.g. p, div, span"
-            />
-          </div>
-          <div class="form-group">
-            <label for="excludeTags">Exclude Tags (comma separated):</label>
-            <input
-              id="excludeTags"
-              type="text"
-              v-model="formData.scrapeOptions.excludeTags"
-              placeholder="e.g. script, style"
-            />
-          </div>
+  <PlaygroundLayout
+    title="Scrape"
+    subtitle="Extract content from a single page"
+    :tabs="responseTabs"
+    :running="loading"
+    :error="error || null"
+    :has-result="!!result"
+    :status="statusLabel"
+    :status-type="statusType"
+    :duration="durationMs"
+    empty-hint="Configure a URL and run a scrape to see the response here."
+  >
+    <!-- REQUEST: scrape configuration form + submit button -->
+    <template #request>
+      <form class="scrape-config-form" @submit.prevent="handleSubmit">
+        <div class="form-group">
+          <label for="url">URL:</label>
+          <input id="url" v-model="formData.url" type="text" required />
         </div>
-      </fieldset>
 
-      <fieldset class="form-group options-fieldset">
-        <legend
-          class="collapsible-header"
-          @click="isPageOptionsCollapsed = !isPageOptionsCollapsed"
-        >
-          Page Options
-        </legend>
-        <div v-show="!isPageOptionsCollapsed">
-          <div class="grid-layout">
+        <div class="form-group">
+          <label for="formats">Output Formats:</label>
+          <select id="formats" v-model="formData.scrapeOptions.formats" multiple>
+            <option value="markdown">Markdown</option>
+            <option value="html">HTML</option>
+            <option value="rawHtml">Raw HTML</option>
+            <option value="links">Links</option>
+            <option value="images">Images</option>
+            <option value="summary">Summary</option>
+            <option value="screenshot">Screenshot (Viewport)</option>
+            <option value="screenshot@fullPage">Screenshot (Full Page)</option>
+            <option value="json">JSON (Structured Extraction)</option>
+            <option value="attributes">Attributes</option>
+            <option value="branding">Branding</option>
+            <option value="changeTracking">Change Tracking (Requires Markdown)</option>
+          </select>
+          <small>Select one or more formats.</small>
+        </div>
+
+        <!-- Change Tracking Options (conditional) -->
+        <div v-if="formData.scrapeOptions.formats.includes('changeTracking')" class="form-group">
+          <label for="changeTrackingThreshold">Change Threshold (%):</label>
+          <input
+            id="changeTrackingThreshold"
+            type="number"
+            min="0"
+            max="100"
+            v-model.number="formData.changeTrackingOptions.threshold"
+          />
+          <small>Minimum percentage change to trigger tracking.</small>
+
+          <label for="changeTrackingFrequency">Check Frequency (minutes):</label>
+          <input
+            id="changeTrackingFrequency"
+            type="number"
+            min="1"
+            v-model.number="formData.changeTrackingOptions.frequency"
+          />
+          <small>Frequency to check for changes.</small>
+        </div>
+
+        <fieldset class="form-group options-fieldset">
+          <legend
+            class="collapsible-header"
+            @click="isScrapeOptionsCollapsed = !isScrapeOptionsCollapsed"
+          >
+            Scrape Options
+          </legend>
+          <div v-show="!isScrapeOptionsCollapsed">
+            <label>
+              <input type="checkbox" v-model="formData.scrapeOptions.onlyMainContent" />
+              Only Main Content (exclude headers, footers, etc.)
+            </label>
             <div class="form-group">
-              <label for="waitFor">Wait For (ms):</label>
+              <label for="includeTags">Include Tags (comma separated):</label>
               <input
-                id="waitFor"
-                v-model.number="formData.pageOptions.waitFor"
-                type="number"
-                min="0"
+                id="includeTags"
+                type="text"
+                v-model="formData.scrapeOptions.includeTags"
+                placeholder="e.g. p, div, span"
               />
-              <small>Delay before fetching content.</small>
             </div>
             <div class="form-group">
-              <label for="maxAge">Max Age (ms):</label>
+              <label for="excludeTags">Exclude Tags (comma separated):</label>
               <input
-                id="maxAge"
-                v-model.number="formData.pageOptions.maxAge"
-                type="number"
-                min="0"
+                id="excludeTags"
+                type="text"
+                v-model="formData.scrapeOptions.excludeTags"
+                placeholder="e.g. script, style"
               />
-              <small>Use cached page if younger than this age.</small>
             </div>
-            <div class="form-group">
-              <label for="timeout">Timeout (ms):</label>
-              <input
-                id="timeout"
-                v-model.number="formData.pageOptions.timeout"
-                type="number"
-                min="0"
-              />
-              <small>Page request timeout (default: 30000).</small>
-            </div>
-            <div class="form-group">
-              <label for="proxy">Proxy:</label>
-              <select id="proxy" v-model="formData.pageOptions.proxy">
-                <option value="">Default</option>
-                <option value="auto">Auto</option>
-                <option value="basic">Basic</option>
-                <option value="stealth">Stealth</option>
-                <option value="enhanced">Enhanced</option>
-              </select>
-              <small>Proxy type for request.</small>
-            </div>
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="formData.pageOptions.mobile" />
-              Emulate Mobile Device
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="formData.pageOptions.skipTlsVerification" />
-              Skip TLS Verification
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="formData.pageOptions.blockAds" />
-              Block Ads & Popups
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="formData.pageOptions.removeBase64Images" />
-              Remove Base64 Images
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="formData.pageOptions.parsePDF" />
-              Parse PDF Files
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="formData.pageOptions.storeInCache" />
-              Store In Cache
-            </label>
           </div>
-          <div class="form-group">
-            <label for="headers">HTTP Headers (JSON format):</label>
-            <textarea
-              id="headers"
-              v-model="headersJson"
-              rows="4"
-              placeholder='{"Authorization": "Bearer token", "Accept": "application/json"}'
-            ></textarea>
-            <div v-if="headersError" class="error-message">{{ headersError }}</div>
-            <small>Enter HTTP headers as JSON object.</small>
-          </div>
-          <div class="form-group">
-            <label for="action">HTTP Action:</label>
-            <select id="action" v-model="formData.pageOptions.action">
-              <option value="GET">GET</option>
-              <option value="POST">POST</option>
-              <option value="PUT">PUT</option>
-              <option value="DELETE">DELETE</option>
-              <option value="PATCH">PATCH</option>
-            </select>
-            <small>Select HTTP method for the request.</small>
-          </div>
-          <div class="form-group">
-            <label for="location">Location:</label>
-            <select id="location" v-model="formData.pageOptions.location">
-              <option value="">Auto</option>
-              <option value="US">US</option>
-              <option value="EU">EU</option>
-              <option value="ASIA">ASIA</option>
-            </select>
-            <small>Select request location.</small>
-          </div>
-          <div class="form-group">
-            <label>Actions:</label>
-            <div
-              v-for="(action, idx) in formData.pageOptions.actions"
-              :key="idx"
-              class="action-item"
-            >
-              <select v-model="action.type">
-                <option v-for="t in actionTypes" :key="t" :value="t">{{ t }}</option>
-              </select>
-              <template v-if="action.type === 'wait'">
+        </fieldset>
+
+        <fieldset class="form-group options-fieldset">
+          <legend
+            class="collapsible-header"
+            @click="isPageOptionsCollapsed = !isPageOptionsCollapsed"
+          >
+            Page Options
+          </legend>
+          <div v-show="!isPageOptionsCollapsed">
+            <div class="grid-layout">
+              <div class="form-group">
+                <label for="waitFor">Wait For (ms):</label>
                 <input
+                  id="waitFor"
+                  v-model.number="formData.pageOptions.waitFor"
                   type="number"
-                  v-model.number="action.milliseconds"
-                  placeholder="ms"
-                  min="1"
+                  min="0"
                 />
-                <input type="text" v-model="action.selector" placeholder="selector" />
-              </template>
-              <template v-else-if="action.type === 'screenshot'">
-                <label class="checkbox-label">
-                  <input type="checkbox" v-model="action.fullPage" /> Full Page
-                </label>
-              </template>
-              <template v-else-if="action.type === 'click'">
-                <input type="text" v-model="action.selector" placeholder="selector" />
-                <label class="checkbox-label">
-                  <input type="checkbox" v-model="action.all" /> All
-                </label>
-              </template>
-              <template v-else-if="action.type === 'write'">
-                <input type="text" v-model="action.text" placeholder="text" />
-              </template>
-              <template v-else-if="action.type === 'press'">
-                <input type="text" v-model="action.key" placeholder="key" />
-              </template>
-              <template v-else-if="action.type === 'scroll'">
-                <select v-model="action.direction">
-                  <option value="down">down</option>
-                  <option value="up">up</option>
+                <small>Delay before fetching content.</small>
+              </div>
+              <div class="form-group">
+                <label for="maxAge">Max Age (ms):</label>
+                <input
+                  id="maxAge"
+                  v-model.number="formData.pageOptions.maxAge"
+                  type="number"
+                  min="0"
+                />
+                <small>Use cached page if younger than this age.</small>
+              </div>
+              <div class="form-group">
+                <label for="timeout">Timeout (ms):</label>
+                <input
+                  id="timeout"
+                  v-model.number="formData.pageOptions.timeout"
+                  type="number"
+                  min="0"
+                />
+                <small>Page request timeout (default: 30000).</small>
+              </div>
+              <div class="form-group">
+                <label for="proxy">Proxy:</label>
+                <select id="proxy" v-model="formData.pageOptions.proxy">
+                  <option value="">Default</option>
+                  <option value="auto">Auto</option>
+                  <option value="basic">Basic</option>
+                  <option value="stealth">Stealth</option>
+                  <option value="enhanced">Enhanced</option>
                 </select>
-                <input type="text" v-model="action.selector" placeholder="selector" />
-              </template>
-              <template v-else-if="action.type === 'executeJavascript'">
-                <textarea v-model="action.script" rows="2" placeholder="script"></textarea>
-              </template>
-              <button type="button" @click="removeAction(idx)">Remove</button>
+                <small>Proxy type for request.</small>
+              </div>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="formData.pageOptions.mobile" />
+                Emulate Mobile Device
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="formData.pageOptions.skipTlsVerification" />
+                Skip TLS Verification
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="formData.pageOptions.blockAds" />
+                Block Ads & Popups
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="formData.pageOptions.removeBase64Images" />
+                Remove Base64 Images
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="formData.pageOptions.parsePDF" />
+                Parse PDF Files
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="formData.pageOptions.storeInCache" />
+                Store In Cache
+              </label>
             </div>
-            <button type="button" @click="addAction">Add Action</button>
+            <div class="form-group">
+              <label for="headers">HTTP Headers (JSON format):</label>
+              <textarea
+                id="headers"
+                v-model="headersJson"
+                rows="4"
+                placeholder='{"Authorization": "Bearer token", "Accept": "application/json"}'
+              ></textarea>
+              <div v-if="headersError" class="error-message">{{ headersError }}</div>
+              <small>Enter HTTP headers as JSON object.</small>
+            </div>
+            <div class="form-group">
+              <label for="action">HTTP Action:</label>
+              <select id="action" v-model="formData.pageOptions.action">
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="DELETE">DELETE</option>
+                <option value="PATCH">PATCH</option>
+              </select>
+              <small>Select HTTP method for the request.</small>
+            </div>
+            <div class="form-group">
+              <label for="location">Location:</label>
+              <select id="location" v-model="formData.pageOptions.location">
+                <option value="">Auto</option>
+                <option value="US">US</option>
+                <option value="EU">EU</option>
+                <option value="ASIA">ASIA</option>
+              </select>
+              <small>Select request location.</small>
+            </div>
+            <div class="form-group">
+              <label>Actions:</label>
+              <div
+                v-for="(action, idx) in formData.pageOptions.actions"
+                :key="idx"
+                class="action-item"
+              >
+                <select v-model="action.type">
+                  <option v-for="t in actionTypes" :key="t" :value="t">{{ t }}</option>
+                </select>
+                <template v-if="action.type === 'wait'">
+                  <input
+                    type="number"
+                    v-model.number="action.milliseconds"
+                    placeholder="ms"
+                    min="1"
+                  />
+                  <input type="text" v-model="action.selector" placeholder="selector" />
+                </template>
+                <template v-else-if="action.type === 'screenshot'">
+                  <label class="checkbox-label">
+                    <input type="checkbox" v-model="action.fullPage" /> Full Page
+                  </label>
+                </template>
+                <template v-else-if="action.type === 'click'">
+                  <input type="text" v-model="action.selector" placeholder="selector" />
+                  <label class="checkbox-label">
+                    <input type="checkbox" v-model="action.all" /> All
+                  </label>
+                </template>
+                <template v-else-if="action.type === 'write'">
+                  <input type="text" v-model="action.text" placeholder="text" />
+                </template>
+                <template v-else-if="action.type === 'press'">
+                  <input type="text" v-model="action.key" placeholder="key" />
+                </template>
+                <template v-else-if="action.type === 'scroll'">
+                  <select v-model="action.direction">
+                    <option value="down">down</option>
+                    <option value="up">up</option>
+                  </select>
+                  <input type="text" v-model="action.selector" placeholder="selector" />
+                </template>
+                <template v-else-if="action.type === 'executeJavascript'">
+                  <textarea v-model="action.script" rows="2" placeholder="script"></textarea>
+                </template>
+                <button type="button" @click="removeAction(idx)">Remove</button>
+              </div>
+              <button type="button" @click="addAction">Add Action</button>
+            </div>
+          </div>
+        </fieldset>
+
+        <div v-if="formData.scrapeOptions.formats.includes('json')" class="form-group">
+          <label for="extractorOptions">Extractor Options (JSON format):</label>
+          <textarea
+            id="extractorOptions"
+            v-model="extractorOptionsJson"
+            rows="8"
+            placeholder='e.g. {"key": "value"}'
+          ></textarea>
+          <small>Enter JSON options for extraction. Must be valid JSON.</small>
+          <div v-if="extractorOptionsError" class="error-message">
+            {{ extractorOptionsError }}
           </div>
         </div>
-      </fieldset>
 
-      <div v-if="formData.scrapeOptions.formats.includes('json')" class="form-group">
-        <label for="extractorOptions">Extractor Options (JSON format):</label>
-        <textarea
-          id="extractorOptions"
-          v-model="extractorOptionsJson"
-          rows="8"
-          placeholder='e.g. {"key": "value"}'
-        ></textarea>
-        <small>Enter JSON options for extraction. Must be valid JSON.</small>
-        <div v-if="extractorOptionsError" class="error-message">
-          {{ extractorOptionsError }}
+        <div v-if="formData.scrapeOptions.formats.includes('attributes')" class="form-group">
+          <label for="attributesOptions">Attribute Selectors (JSON format):</label>
+          <textarea
+            id="attributesOptions"
+            v-model="attributesOptionsJson"
+            rows="8"
+            placeholder='[{"selector": "a", "attribute": "href"}]'
+          ></textarea>
+          <small>Enter a JSON array of selector and attribute pairs.</small>
+          <div v-if="attributesOptionsError" class="error-message">
+            {{ attributesOptionsError }}
+          </div>
         </div>
+
+        <button type="submit" class="primary-button">Scrape</button>
+      </form>
+    </template>
+
+    <!-- RESPONSE: result rendering switched on the active tab -->
+    <template #response="{ activeTab }">
+      <!-- Preview: rendered markdown text or HTML content as plain text -->
+      <div v-if="activeTab === 'preview'" class="preview-pane">
+        <pre>{{ previewContent }}</pre>
       </div>
 
-      <div v-if="formData.scrapeOptions.formats.includes('attributes')" class="form-group">
-        <label for="attributesOptions">Attribute Selectors (JSON format):</label>
-        <textarea
-          id="attributesOptions"
-          v-model="attributesOptionsJson"
-          rows="8"
-          placeholder='[{"selector": "a", "attribute": "href"}]'
-        ></textarea>
-        <small>Enter a JSON array of selector and attribute pairs.</small>
-        <div v-if="attributesOptionsError" class="error-message">
-          {{ attributesOptionsError }}
-        </div>
+      <!-- Markdown: raw markdown via CodeBlock -->
+      <CodeBlock v-else-if="activeTab === 'markdown'" :content="markdownContent" label="Markdown" />
+
+      <!-- HTML: raw html string via CodeBlock -->
+      <CodeBlock v-else-if="activeTab === 'html'" :content="htmlContent" label="HTML" />
+
+      <!-- Links: list of discovered links via CodeBlock -->
+      <CodeBlock v-else-if="activeTab === 'links'" :content="linksContent" label="Links" />
+
+      <!-- Screenshot: rendered image -->
+      <div v-else-if="activeTab === 'screenshot'" class="screenshot-pane">
+        <img :src="screenshotContent" alt="Page screenshot" />
       </div>
 
-      <button type="submit" class="primary-button">Scrape</button>
-    </form>
+      <!-- Metadata: page metadata object as JSON -->
+      <CodeBlock v-else-if="activeTab === 'metadata'" :json="metadataContent" label="Metadata" />
 
-    <div v-if="loading" class="status loading">
-      <div class="spinner"></div>
-      <span>Processing your request...</span>
-    </div>
+      <!-- JSON: the full result object -->
+      <CodeBlock v-else :json="result" label="JSON" />
+    </template>
 
-    <div v-if="error" class="status error">
-      <div class="error-icon">!</div>
-      <div>
-        <h3>Error occurred</h3>
-        <p>{{ error }}</p>
-        <button class="primary-button" @click="error = ''">Try again</button>
-      </div>
-    </div>
-
-    <div v-if="result" class="result">
-      <div class="result-header">
-        <h2>Results</h2>
-        <div class="download-options">
-          <button v-for="fmt in downloadFormats" :key="fmt" @click="downloadResult(fmt)">
-            Download {{ fmt }}
-          </button>
-        </div>
-      </div>
-      <pre>{{ result }}</pre>
-    </div>
-  </div>
+    <!-- Response actions: copy current tab payload + download menu -->
+    <template #response-actions="{ activeTab }">
+      <CopyButton v-if="activeTab === 'json'" :text="resultJson" label="Copy JSON" />
+      <CopyButton v-else-if="activeTab === 'markdown'" :text="markdownContent" label="Copy" />
+      <CopyButton v-else-if="activeTab === 'html'" :text="htmlContent" label="Copy" />
+      <CopyButton v-else-if="activeTab === 'links'" :text="linksContent" label="Copy" />
+    </template>
+  </PlaygroundLayout>
 </template>
 
 <script lang="ts">
 import { defineComponent, ref, inject, watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import type { FirecrawlScrapingApi } from '../services/firecrawl';
+import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
+import CodeBlock from '../components/playground/CodeBlock.vue';
+import CopyButton from '../components/playground/CopyButton.vue';
 
 type ScrapeResult = {
   success: boolean;
@@ -414,6 +439,11 @@ interface FormData {
  */
 export default defineComponent({
   name: 'ScrapeView',
+  components: {
+    PlaygroundLayout,
+    CodeBlock,
+    CopyButton,
+  },
   /**
    * Setup function for the ScrapeView component.
    * Initializes reactive data, handles form submission, and manages API interactions.
@@ -490,6 +520,13 @@ export default defineComponent({
     const result = ref<ScrapeResult | null>(null);
 
     /**
+     * Reactive duration (in milliseconds) of the most recent scrape request,
+     * measured around the API call. Null until a request has completed.
+     * @type {Ref<number | null>}
+     */
+    const durationMs = ref<number | null>(null);
+
+    /**
      * Computed property to determine available download formats based on selected scrape formats.
      * Ensures 'json' is always an option if results are present.
      * @returns {string[]} Array of unique download formats.
@@ -497,6 +534,116 @@ export default defineComponent({
     const downloadFormats = computed(() =>
       Array.from(new Set(['json', ...formData.value.scrapeOptions.formats])),
     );
+
+    /**
+     * The raw `data` object of the current result, or null when there is none.
+     * Centralizes the optional-chaining used by the response computeds below.
+     * @returns {Record<string, unknown> | null}
+     */
+    const resultData = computed<Record<string, unknown> | null>(() => result.value?.data ?? null);
+
+    /**
+     * Pretty-printed JSON of the full result, used by the JSON copy action.
+     * @returns {string}
+     */
+    const resultJson = computed<string>(() =>
+      result.value ? JSON.stringify(result.value, null, 2) : '',
+    );
+
+    /**
+     * Raw markdown string from the result, when present.
+     * @returns {string}
+     */
+    const markdownContent = computed<string>(() => {
+      const md = resultData.value?.markdown;
+      return typeof md === 'string' ? md : '';
+    });
+
+    /**
+     * Raw HTML string from the result (prefers `html`, falls back to `rawHtml`).
+     * @returns {string}
+     */
+    const htmlContent = computed<string>(() => {
+      const html = resultData.value?.html ?? resultData.value?.rawHtml;
+      return typeof html === 'string' ? html : '';
+    });
+
+    /**
+     * Newline-joined list of discovered links, when present.
+     * @returns {string}
+     */
+    const linksContent = computed<string>(() => {
+      const links = resultData.value?.links;
+      return Array.isArray(links) ? links.join('\n') : '';
+    });
+
+    /**
+     * Screenshot data URL from the result, when present.
+     * @returns {string}
+     */
+    const screenshotContent = computed<string>(() => {
+      const shot = resultData.value?.screenshot;
+      return typeof shot === 'string' ? shot : '';
+    });
+
+    /**
+     * Page metadata object from the result, when present.
+     * @returns {Record<string, unknown> | null}
+     */
+    const metadataContent = computed<Record<string, unknown> | null>(() => {
+      const meta = resultData.value?.metadata;
+      return meta && typeof meta === 'object' ? (meta as Record<string, unknown>) : null;
+    });
+
+    /**
+     * Text shown in the Preview tab: rendered markdown if available, otherwise
+     * the HTML content, otherwise a stringified dump of the result data.
+     * @returns {string}
+     */
+    const previewContent = computed<string>(() => {
+      if (markdownContent.value) return markdownContent.value;
+      if (htmlContent.value) return htmlContent.value;
+      return resultData.value ? JSON.stringify(resultData.value, null, 2) : '';
+    });
+
+    /**
+     * Response tabs built from what the current result actually contains.
+     * Only tabs backed by real data are shown; JSON is always available.
+     * @returns {{ key: string; label: string }[]}
+     */
+    const responseTabs = computed<{ key: string; label: string }[]>(() => {
+      const tabs: { key: string; label: string }[] = [];
+      if (markdownContent.value || htmlContent.value) {
+        tabs.push({ key: 'preview', label: 'Preview' });
+      }
+      if (markdownContent.value) tabs.push({ key: 'markdown', label: 'Markdown' });
+      if (htmlContent.value) tabs.push({ key: 'html', label: 'HTML' });
+      if (linksContent.value) tabs.push({ key: 'links', label: 'Links' });
+      if (screenshotContent.value) tabs.push({ key: 'screenshot', label: 'Screenshot' });
+      if (metadataContent.value) tabs.push({ key: 'metadata', label: 'Metadata' });
+      tabs.push({ key: 'json', label: 'JSON' });
+      return tabs;
+    });
+
+    /**
+     * Status label for the playground status bar: reflects success, error, or idle.
+     * @returns {string | null}
+     */
+    const statusLabel = computed<string | null>(() => {
+      if (error.value) return 'Failed';
+      if (result.value) return 'Success';
+      return null;
+    });
+
+    /**
+     * Semantic status type driving the status-dot color in the playground shell.
+     * @returns {'success' | 'error' | 'idle'}
+     */
+    const statusType = computed<'success' | 'error' | 'idle'>(() => {
+      if (error.value) return 'error';
+      if (result.value) return 'success';
+      return 'idle';
+    });
 
     /**
      * Validates if a given string is a well-formed URL.
@@ -617,6 +764,8 @@ export default defineComponent({
         }),
       };
 
+      // Record the request start time to compute elapsed duration on resolve.
+      const startedAt = performance.now();
       try {
         loading.value = true;
         error.value = '';
@@ -638,6 +787,8 @@ export default defineComponent({
           error.value = 'An unexpected error occurred.';
         }
       } finally {
+        // Capture how long the request took for the playground status bar.
+        durationMs.value = performance.now() - startedAt;
         loading.value = false;
       }
     };
@@ -840,17 +991,24 @@ export default defineComponent({
       removeAction,
       isScrapeOptionsCollapsed,
       isPageOptionsCollapsed,
+      // Playground-specific reactive helpers.
+      durationMs,
+      responseTabs,
+      statusLabel,
+      statusType,
+      resultJson,
+      markdownContent,
+      htmlContent,
+      linksContent,
+      screenshotContent,
+      metadataContent,
+      previewContent,
     };
   },
 });
 </script>
 
 <style scoped>
-.scrape-view {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-}
 .form-group {
   margin-bottom: 20px; /* Increased margin */
 }
@@ -867,7 +1025,7 @@ export default defineComponent({
 }
 .grid-layout {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive grid */
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* Responsive grid */
   gap: 15px; /* Gap between grid items */
 }
 .checkbox-label {
@@ -883,83 +1041,9 @@ export default defineComponent({
   color: var(--color-text-mute);
   margin-top: 3px;
 }
-.status {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 15px;
-  border-radius: var(--radius-sm);
-  margin: 20px 0;
-}
-
-/* Loading state: soft info tint */
-.loading {
-  background: var(--hue-info-soft);
-  color: var(--hue-info);
-}
-
-/* Error state: soft danger tint */
-.error {
-  background: var(--hue-danger-soft);
-  color: var(--hue-danger);
-}
 
 .collapsible-header {
   cursor: pointer;
-}
-
-/* Result panel as a subtle card surface */
-.result {
-  margin-top: 20px;
-  padding: 15px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-background-soft);
-  box-shadow: var(--box-shadow-card);
-}
-
-.result-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.result-header h2 {
-  margin: 0;
-}
-
-/* Download buttons use the fire gradient primary style */
-.download-options button {
-  margin-left: 10px;
-  padding: 5px 10px;
-  background: var(--gradient-fire);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  box-shadow: var(--box-shadow-button);
-  transition:
-    background var(--transition-fast),
-    box-shadow var(--transition-fast),
-    transform var(--transition-fast);
-}
-
-.download-options button:hover {
-  background: var(--gradient-fire-hover);
-  transform: translateY(-1px);
-}
-
-/* Pre block: muted background, heading-weight text */
-.result pre {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  background: var(--color-background-mute);
-  color: var(--color-heading);
-  padding: 10px;
-  border-radius: var(--radius-sm);
-  max-height: 400px;
-  overflow-y: auto;
 }
 
 /* Inline validation error text */
@@ -969,16 +1053,6 @@ export default defineComponent({
   margin-top: 5px;
 }
 
-/* Spinner uses the brand ember accent color */
-.spinner {
-  border: 4px solid var(--color-border);
-  border-left-color: var(--brand);
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  animation: spin 1s linear infinite;
-}
-
 .action-item {
   display: flex;
   align-items: center;
@@ -986,12 +1060,39 @@ export default defineComponent({
   margin-bottom: 10px;
 }
 
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+/* Preview pane: wrapped monospace dump of the rendered content. */
+.preview-pane {
+  height: 100%;
+  overflow: auto;
+}
+
+.preview-pane pre {
+  margin: 0;
+  padding: 1rem;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+  line-height: 1.6;
+  color: var(--color-text);
+  background: var(--color-background);
+}
+
+/* Screenshot pane: centered, scrollable image surface. */
+.screenshot-pane {
+  height: 100%;
+  overflow: auto;
+  padding: 1rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: var(--color-background);
+}
+
+.screenshot-pane img {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
 }
 </style>

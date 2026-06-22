@@ -1,91 +1,150 @@
 <template>
-  <div class="page-container">
-    <form @submit.prevent="onSearch" class="scrape-config-form">
-      <label for="query">Search Query:</label>
-      <input id="query" v-model="query" type="text" placeholder="Enter search terms" required />
+  <PlaygroundLayout
+    title="Search"
+    subtitle="Search the web with Firecrawl"
+    :tabs="[
+      { key: 'results', label: 'Results' },
+      { key: 'json', label: 'JSON' },
+    ]"
+    :running="loading"
+    :error="error || null"
+    :has-result="hasResult"
+    :status="statusLabel"
+    :status-type="statusType"
+    :duration="durationMs"
+    empty-hint="Enter a query and run a search to see results here."
+  >
+    <!-- REQUEST pane: form + submit button -->
+    <template #request>
+      <form @submit.prevent="onSearch" class="search-form">
+        <label for="query" class="field-label">Search Query</label>
+        <input
+          id="query"
+          v-model="query"
+          type="text"
+          class="field-input"
+          placeholder="Enter search terms"
+          required
+        />
 
-      <fieldset class="advanced-options">
-        <legend>Advanced Options</legend>
-        <label>
-          Sources:
-          <span class="source-flags">
-            <input type="checkbox" v-model="options.sources.web" />
-            Web
-            <input type="checkbox" v-model="options.sources.news" />
-            News
-            <input type="checkbox" v-model="options.sources.images" />
-            Images
-          </span>
-        </label>
-        <label>
-          <input type="checkbox" v-model="options.includeMetadata" />
-          Include metadata in results
-        </label>
-        <label>
-          <input type="checkbox" v-model="options.extractContent" />
-          Enable content extraction
-        </label>
-        <label>
-          Max results:
-          <input type="number" v-model.number="options.maxResults" min="1" max="100" />
-        </label>
-        <label>
-          Location:
-          <input type="text" v-model="options.location" placeholder="Paris, France" />
-        </label>
-        <label>
-          Time range (tbs):
-          <input type="text" v-model="options.tbs" />
-        </label>
-        <label>
-          Timeout (ms):
-          <input type="number" v-model.number="options.timeout" min="0" />
-        </label>
-      </fieldset>
+        <fieldset class="advanced-options">
+          <legend class="options-legend">Advanced Options</legend>
 
-      <button type="submit" class="primary-button">Search</button>
-      <span v-if="loading" class="status">Loading...</span>
-      <span v-if="error" class="status error">{{ error }}</span>
-    </form>
-
-    <section v-if="results.length" class="results">
-      <h2>Search Results</h2>
-      <ul>
-        <li v-for="(result, index) in results" :key="index" class="result-item">
-          <a :href="result.url" target="_blank" rel="noopener noreferrer">{{ result.title }}</a>
-          <small class="result-kind">{{ result.sourceType }}</small>
-          <p v-if="result.description">{{ result.description }}</p>
-          <p v-if="result.date" class="metadata">{{ result.date }}</p>
-          <img
-            v-if="result.imageUrl"
-            :src="result.imageUrl"
-            :alt="result.title"
-            class="result-image"
-          />
-          <div v-if="options.includeMetadata && result.metadata" class="metadata">
-            <small>{{ result.metadata.title }}</small>
+          <div class="field-row">
+            <span class="field-label">Sources</span>
+            <span class="source-flags">
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="options.sources.web" />
+                Web
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="options.sources.news" />
+                News
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="options.sources.images" />
+                Images
+              </label>
+            </span>
           </div>
-          <!-- Content extraction is available for download but not shown inline -->
-        </li>
-      </ul>
-      <div class="download-section">
-        <h3>Download Results</h3>
-        <div class="download-buttons">
-          <button
-            v-for="fmt in activeFormats"
-            :key="fmt"
-            class="download-button"
-            @click="handleDownload(fmt)"
-          >
-            Download {{ fmt }} Archive
-          </button>
-          <button class="download-button" @click="handleDownload('Full JSON')">
-            Download Full JSON
-          </button>
+
+          <label class="checkbox-label block">
+            <input type="checkbox" v-model="options.includeMetadata" />
+            Include metadata in results
+          </label>
+          <label class="checkbox-label block">
+            <input type="checkbox" v-model="options.extractContent" />
+            Enable content extraction
+          </label>
+
+          <label class="field-label" for="maxResults">Max results</label>
+          <input
+            id="maxResults"
+            type="number"
+            class="field-input field-input--short"
+            v-model.number="options.maxResults"
+            min="1"
+            max="100"
+          />
+
+          <label class="field-label" for="location">Location</label>
+          <input
+            id="location"
+            type="text"
+            class="field-input"
+            v-model="options.location"
+            placeholder="Paris, France"
+          />
+
+          <label class="field-label" for="tbs">Time range (tbs)</label>
+          <input id="tbs" type="text" class="field-input" v-model="options.tbs" />
+
+          <label class="field-label" for="timeout">Timeout (ms)</label>
+          <input
+            id="timeout"
+            type="number"
+            class="field-input field-input--short"
+            v-model.number="options.timeout"
+            min="0"
+          />
+        </fieldset>
+
+        <button type="submit" class="run-button" :disabled="loading">
+          {{ loading ? 'Searching…' : 'Search' }}
+        </button>
+      </form>
+    </template>
+
+    <!-- RESPONSE pane: tab-switched results -->
+    <template #response="{ activeTab }">
+      <!-- Results tab: rendered result cards -->
+      <div v-if="activeTab === 'results'" class="results-list">
+        <ul>
+          <li v-for="(result, index) in results" :key="index" class="result-item">
+            <div class="result-header">
+              <a :href="result.url" target="_blank" rel="noopener noreferrer" class="result-title">
+                {{ result.title }}
+              </a>
+              <small class="result-kind">{{ result.sourceType }}</small>
+            </div>
+            <p v-if="result.description" class="result-description">{{ result.description }}</p>
+            <p v-if="result.date" class="result-meta">{{ result.date }}</p>
+            <img
+              v-if="result.imageUrl"
+              :src="result.imageUrl"
+              :alt="result.title"
+              class="result-image"
+            />
+            <div v-if="options.includeMetadata && result.metadata" class="result-meta">
+              <small>{{ result.metadata.title }}</small>
+            </div>
+            <!-- Content extraction is available for download but not shown inline -->
+          </li>
+        </ul>
+
+        <!-- Download section (only visible in Results tab) -->
+        <div v-if="activeFormats.length || results.length" class="download-section">
+          <p class="download-label">Download Results</p>
+          <div class="download-buttons">
+            <button
+              v-for="fmt in activeFormats"
+              :key="fmt"
+              class="download-button"
+              @click="handleDownload(fmt)"
+            >
+              Download {{ fmt }} Archive
+            </button>
+            <button class="download-button" @click="handleDownload('Full JSON')">
+              Download Full JSON
+            </button>
+          </div>
         </div>
       </div>
-    </section>
-  </div>
+
+      <!-- JSON tab: raw API response -->
+      <CodeBlock v-else-if="activeTab === 'json'" :json="results" label="Search results" />
+    </template>
+  </PlaygroundLayout>
 </template>
 
 <script setup lang="ts">
@@ -94,6 +153,8 @@ import type { FirecrawlSearchApi } from '@/services/firecrawl';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import axios from 'axios';
+import PlaygroundLayout from './playground/PlaygroundLayout.vue';
+import CodeBlock from './playground/CodeBlock.vue';
 
 /**
  * Defines the structure for a single search result item.
@@ -185,9 +246,40 @@ const results = ref<SearchResult[]>([]);
 const requestedFormats = ref<string[]>([]);
 
 /**
+ * Elapsed milliseconds for the last completed request, used by the status bar.
+ * Null until the first request completes.
+ */
+const durationMs = ref<number | null>(null);
+
+/**
  * Computed property to determine the currently active download formats based on requested formats.
  */
 const activeFormats = computed(() => requestedFormats.value);
+
+/**
+ * Whether the response pane has content to show.
+ */
+const hasResult = computed<boolean>(() => results.value.length > 0);
+
+/**
+ * Human-readable status label for the PlaygroundLayout status bar.
+ * Shows result count on success, 'Failed' on error, null when idle.
+ */
+const statusLabel = computed<string | null>(() => {
+  if (error.value) return 'Failed';
+  if (hasResult.value)
+    return `${results.value.length} result${results.value.length === 1 ? '' : 's'}`;
+  return null;
+});
+
+/**
+ * Semantic status type driving the status dot color in PlaygroundLayout.
+ */
+const statusType = computed<'success' | 'error' | 'idle'>(() => {
+  if (error.value) return 'error';
+  if (hasResult.value) return 'success';
+  return 'idle';
+});
 
 /**
  * Execute the search with the current query and options.
@@ -198,6 +290,8 @@ async function onSearch(): Promise<void> {
   results.value = [];
   error.value = '';
   loading.value = true;
+  durationMs.value = null;
+  const startTime = performance.now();
 
   const selectedSources = (
     Object.entries(options.value.sources) as Array<[keyof SearchOptions['sources'], boolean]>
@@ -247,6 +341,7 @@ async function onSearch(): Promise<void> {
     error.value = err?.message || 'Search request failed';
   } finally {
     loading.value = false;
+    durationMs.value = performance.now() - startTime;
   }
 }
 
@@ -294,7 +389,7 @@ function fixEncoding(value?: string | null): string | undefined {
     // Attempt to decode assuming it was originally UTF-8 but escaped as Latin-1
     const decoded = decodeURIComponent(escape(value));
     // Check for replacement character (U+FFFD) which indicates decoding failure
-    if (!decoded.includes('\ufffd')) {
+    if (!decoded.includes('�')) {
       return decoded;
     }
   } catch (e) {
@@ -305,7 +400,7 @@ function fixEncoding(value?: string | null): string | undefined {
     // Attempt to decode as UTF-8 from a byte array representation
     const bytes = Uint8Array.from([...value].map((c) => c.charCodeAt(0)));
     const decoded = new TextDecoder('utf-8').decode(bytes);
-    if (!decoded.includes('\ufffd')) {
+    if (!decoded.includes('�')) {
       return decoded;
     }
   } catch (e) {
@@ -408,65 +503,179 @@ async function handleDownload(type: string): Promise<void> {
 
 <!-- Scoped styles for the SearchView component -->
 <style scoped>
-.search-view {
-  max-width: 600px;
-  margin: 0 auto;
-  font-family: var(--font-sans);
-}
-
+/* Form layout inside the request pane */
 .search-form {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  gap: 0.6rem;
 }
 
-/* Advanced options fieldset uses the design-system border token */
+.field-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-soft);
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.field-input {
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  color: var(--color-text);
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast);
+}
+
+.field-input:focus {
+  outline: none;
+  border-color: var(--ember-500);
+}
+
+.field-input--short {
+  width: 6rem;
+}
+
+/* Advanced options fieldset */
 .advanced-options {
   border: 1px solid var(--color-border);
-  padding: 0.5rem;
-  margin-top: 0.5rem;
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
 }
 
-/* Results section separator uses the border token */
-.results {
-  border-top: 1px solid var(--color-border);
-  padding-top: 1rem;
+.options-legend {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-text-mute);
+  padding: 0 0.25rem;
 }
 
-.result-item {
-  margin-bottom: 1rem;
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .source-flags {
   display: inline-flex;
-  gap: 0.5rem;
+  gap: 0.75rem;
   align-items: center;
   flex-wrap: wrap;
 }
 
-/* Result links use the themed link color (ember in light, lighter ember in dark) */
-.result-item a {
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.88rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.checkbox-label.block {
+  display: flex;
+}
+
+/* Submit button — fire gradient, matches other playground views */
+.run-button {
+  margin-top: 0.4rem;
+  padding: 0.55rem 1.2rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  background: var(--gradient-fire);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  box-shadow: var(--box-shadow-button);
+  transition:
+    background var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+  align-self: flex-start;
+}
+
+.run-button:hover:not(:disabled) {
+  background: var(--gradient-fire-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px -6px rgba(250, 77, 18, 0.6);
+}
+
+.run-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Results list in the response pane — scrolls inside pg-result */
+.results-list {
+  padding: 1rem;
+}
+
+.results-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.result-item {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.result-item:last-child {
+  border-bottom: none;
+}
+
+.result-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Result links use the themed link color */
+.result-title {
+  font-weight: 600;
   color: var(--color-link);
   text-decoration: none;
 }
 
-.result-item a:hover {
+.result-title:hover {
   text-decoration: underline;
 }
 
-/* Muted metadata text */
-.metadata {
+/* Source-type badge */
+.result-kind {
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
   color: var(--color-text-mute);
-  font-size: 0.85rem;
 }
 
-/* Source-type badge in muted text */
-.result-kind {
-  display: inline-block;
-  margin-left: 0.5rem;
-  text-transform: uppercase;
+.result-description {
+  margin: 0.3rem 0 0;
+  font-size: 0.88rem;
+  color: var(--color-text-soft);
+  line-height: 1.5;
+}
+
+/* Muted metadata text */
+.result-meta {
+  margin: 0.25rem 0 0;
   color: var(--color-text-mute);
+  font-size: 0.82rem;
 }
 
 .result-image {
@@ -476,33 +685,20 @@ async function handleDownload(type: string): Promise<void> {
   border-radius: var(--radius-sm);
 }
 
-.extract-button {
-  margin-top: 0.25rem;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-/* Extracted content panel: muted surface + brand accent left border */
-.extracted-content {
-  background-color: var(--color-background-mute);
-  border-left: 3px solid var(--color-link);
-  padding: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.status {
-  margin-left: 0.5rem;
-  font-size: 0.9rem;
-}
-
-/* Error state uses the semantic danger token */
-.status.error {
-  color: var(--hue-danger);
-}
-
+/* Download section */
 .download-section {
-  margin-top: 20px;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.download-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text-mute);
+  margin-bottom: 0.6rem;
 }
 
 .download-buttons {
@@ -511,12 +707,11 @@ async function handleDownload(type: string): Promise<void> {
   flex-wrap: wrap;
 }
 
-/* Download button — fire gradient primary, matches .primary-button pattern */
+/* Download button — fire gradient primary */
 .download-button {
   padding: 0.4rem 0.8rem;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 600;
-  margin-top: 0;
   background: var(--gradient-fire);
   color: #fff;
   border: none;
