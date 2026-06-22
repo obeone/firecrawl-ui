@@ -53,17 +53,33 @@ export default defineComponent({
   margin-top: 2rem;
 }
 
+/* Primary CTA button — fire gradient matching .primary-button in main.css */
 .primary {
-  background-color: #0066cc;
-  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-fire);
+  color: #fff;
   padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
+  box-shadow: var(--box-shadow-button);
+  transition:
+    background var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .primary:hover {
-  background-color: #0052a3;
+  background: var(--gradient-fire-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px -6px rgba(250, 77, 18, 0.6);
+}
+
+.primary:active {
+  transform: translateY(0);
 }
 </style>

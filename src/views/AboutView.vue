@@ -62,15 +62,16 @@ export default defineComponent({
   text-align: center;
 }
 
+/* Hero banner uses the fire gradient instead of the old blue-purple-green mix. */
 .hero {
-  background: linear-gradient(135deg, #2563eb 0%, #9333ea 50%, #4fc08d 100%);
+  background: var(--gradient-fire);
   background-size: 400% 400%;
   animation: gradientFlow 15s ease infinite;
   padding: 4rem 2rem;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   color: #fff;
   margin-bottom: 2rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--box-shadow-button);
 }
 
 .tagline {
@@ -83,7 +84,7 @@ section {
 }
 
 section h2 {
-  color: #2563eb;
+  color: var(--brand-strong);
   font-size: 1.6rem;
   margin-bottom: 0.5rem;
 }
@@ -93,7 +94,7 @@ section p {
 }
 
 a {
-  color: #4fc08d;
+  color: var(--color-link);
 }
 
 .feature-list {

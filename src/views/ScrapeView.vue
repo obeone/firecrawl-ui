@@ -855,9 +855,10 @@ export default defineComponent({
   margin-bottom: 20px; /* Increased margin */
 }
 .options-fieldset {
-  border: 1px solid #ccc;
+  /* Card-like surface consistent with the Ember design system */
+  border: 1px solid var(--color-border);
   padding: 15px;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   margin-bottom: 20px;
 }
 .options-fieldset legend {
@@ -879,7 +880,7 @@ export default defineComponent({
   /* Style for help text */
   display: block;
   font-size: 0.8em;
-  color: #666;
+  color: var(--color-text-mute);
   margin-top: 3px;
 }
 .status {
@@ -887,30 +888,34 @@ export default defineComponent({
   align-items: center;
   gap: 10px;
   padding: 15px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   margin: 20px 0;
 }
 
+/* Loading state: soft info tint */
 .loading {
-  background: #f0f7ff;
-  color: #0066cc;
+  background: var(--hue-info-soft);
+  color: var(--hue-info);
 }
 
+/* Error state: soft danger tint */
 .error {
-  background: #fff0f0;
-  color: #cc0000;
+  background: var(--hue-danger-soft);
+  color: var(--hue-danger);
 }
 
 .collapsible-header {
   cursor: pointer;
 }
 
+/* Result panel as a subtle card surface */
 .result {
   margin-top: 20px;
   padding: 15px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: #f9f9f9;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background-soft);
+  box-shadow: var(--box-shadow-card);
 }
 
 .result-header {
@@ -924,40 +929,50 @@ export default defineComponent({
   margin: 0;
 }
 
+/* Download buttons use the fire gradient primary style */
 .download-options button {
   margin-left: 10px;
   padding: 5px 10px;
-  background-color: #007bff;
-  color: white;
+  background: var(--gradient-fire);
+  color: #fff;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  box-shadow: var(--box-shadow-button);
+  transition:
+    background var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .download-options button:hover {
-  background-color: #0056b3;
+  background: var(--gradient-fire-hover);
+  transform: translateY(-1px);
 }
 
+/* Pre block: muted background, heading-weight text */
 .result pre {
   white-space: pre-wrap;
   word-wrap: break-word;
-  background: #eee;
-  color: #333;
+  background: var(--color-background-mute);
+  color: var(--color-heading);
   padding: 10px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   max-height: 400px;
   overflow-y: auto;
 }
 
+/* Inline validation error text */
 .error-message {
-  color: red;
+  color: var(--hue-danger);
   font-size: 0.9em;
   margin-top: 5px;
 }
 
+/* Spinner uses the brand ember accent color */
 .spinner {
-  border: 4px solid rgba(0, 0, 0, 0.1);
-  border-left-color: #0066cc;
+  border: 4px solid var(--color-border);
+  border-left-color: var(--brand);
   border-radius: 50%;
   width: 20px;
   height: 20px;

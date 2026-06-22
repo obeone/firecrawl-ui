@@ -411,7 +411,7 @@ async function handleDownload(type: string): Promise<void> {
 .search-view {
   max-width: 600px;
   margin: 0 auto;
-  font-family: Arial, sans-serif;
+  font-family: var(--font-sans);
 }
 
 .search-form {
@@ -421,14 +421,16 @@ async function handleDownload(type: string): Promise<void> {
   margin-bottom: 1rem;
 }
 
+/* Advanced options fieldset uses the design-system border token */
 .advanced-options {
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   padding: 0.5rem;
   margin-top: 0.5rem;
 }
 
+/* Results section separator uses the border token */
 .results {
-  border-top: 1px solid #ccc;
+  border-top: 1px solid var(--color-border);
   padding-top: 1rem;
 }
 
@@ -443,8 +445,9 @@ async function handleDownload(type: string): Promise<void> {
   flex-wrap: wrap;
 }
 
+/* Result links use the themed link color (ember in light, lighter ember in dark) */
 .result-item a {
-  color: #4fc08d;
+  color: var(--color-link);
   text-decoration: none;
 }
 
@@ -452,23 +455,25 @@ async function handleDownload(type: string): Promise<void> {
   text-decoration: underline;
 }
 
+/* Muted metadata text */
 .metadata {
-  color: #666;
+  color: var(--color-text-mute);
   font-size: 0.85rem;
 }
 
+/* Source-type badge in muted text */
 .result-kind {
   display: inline-block;
   margin-left: 0.5rem;
   text-transform: uppercase;
-  color: #666;
+  color: var(--color-text-mute);
 }
 
 .result-image {
   display: block;
   max-width: 240px;
   margin-top: 0.75rem;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 .extract-button {
@@ -478,9 +483,10 @@ async function handleDownload(type: string): Promise<void> {
   cursor: pointer;
 }
 
+/* Extracted content panel: muted surface + brand accent left border */
 .extracted-content {
-  background-color: #f9f9f9;
-  border-left: 3px solid #007acc;
+  background-color: var(--color-background-mute);
+  border-left: 3px solid var(--color-link);
   padding: 0.5rem;
   margin-top: 0.5rem;
 }
@@ -490,8 +496,9 @@ async function handleDownload(type: string): Promise<void> {
   font-size: 0.9rem;
 }
 
+/* Error state uses the semantic danger token */
 .status.error {
-  color: #a94442;
+  color: var(--hue-danger);
 }
 
 .download-section {
@@ -504,18 +511,27 @@ async function handleDownload(type: string): Promise<void> {
   flex-wrap: wrap;
 }
 
+/* Download button — fire gradient primary, matches .primary-button pattern */
 .download-button {
   padding: 0.4rem 0.8rem;
   font-size: 0.9rem;
+  font-weight: 600;
   margin-top: 0;
-  background-color: #007bff;
+  background: var(--gradient-fire);
   color: #fff;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  box-shadow: var(--box-shadow-button);
+  transition:
+    background var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .download-button:hover {
-  background-color: #0056b3;
+  background: var(--gradient-fire-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px -6px rgba(250, 77, 18, 0.6);
 }
 </style>

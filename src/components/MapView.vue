@@ -186,14 +186,17 @@ function downloadJson(): void {
 </script>
 
 <style scoped>
-/* Styles for the main container of the MapView component */
+/* Styles for the main container of the MapView component.
+   .page-container (from main.css) already provides the raised surface; these
+   rules add the component-specific width/spacing and replace the hardcoded
+   border/radius/font with design tokens. */
 .map-view {
   max-width: 600px;
   margin: 1rem auto;
   padding: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-family: Arial, sans-serif;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
 }
 
 /* Styles for the form that contains mapping options */
@@ -215,30 +218,41 @@ label {
   margin-bottom: 0.25rem;
 }
 
-/* Styles for URL input and textarea elements */
+/* URL and textarea inputs: themed border + radius token */
 input[type='url'],
 textarea {
   padding: 0.5rem;
   font-size: 1rem;
-  border: 1px solid #aaa;
-  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
 }
 
-/* Styles for all buttons within the component */
+/* All generic buttons in this component use the fire gradient.
+   The .primary-button class on the submit button already gets the global rule
+   from main.css; these rules cover the bare <button> elements (download, etc.)
+   and make them consistent. */
 button {
   align-self: flex-start;
   padding: 0.5rem 1rem;
   font-size: 1rem;
-  background-color: #007acc;
-  color: white;
+  font-weight: 600;
+  background: var(--gradient-fire);
+  color: #fff;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  box-shadow: var(--box-shadow-button);
+  transition:
+    background var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
-/* Hover state for buttons */
+/* Hover state for buttons — lighter fire gradient with subtle lift */
 button:hover {
-  background-color: #005fa3;
+  background: var(--gradient-fire-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px -6px rgba(250, 77, 18, 0.6);
 }
 
 /* Styles for the results section */
@@ -260,9 +274,9 @@ button:hover {
   gap: 0.5rem;
 }
 
-/* Styles for displaying error messages */
+/* Error message uses the semantic danger token */
 .error {
-  color: #d9534f; /* A shade of red for errors */
+  color: var(--hue-danger);
   margin-top: 0.5rem;
 }
 
@@ -271,20 +285,28 @@ button:hover {
   margin-top: 0.5rem;
 }
 
-/* Styles for the download JSON button */
+/* Download JSON button — fire gradient primary, same pattern as other CTAs */
 .download-button {
   padding: 0.4rem 0.8rem;
   font-size: 0.9rem;
+  font-weight: 600;
   margin-top: 0;
-  background-color: #007bff; /* A shade of blue */
+  background: var(--gradient-fire);
   color: #fff;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  box-shadow: var(--box-shadow-button);
+  transition:
+    background var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 /* Hover state for the download button */
 .download-button:hover {
-  background-color: #0056b3; /* Darker shade of blue on hover */
+  background: var(--gradient-fire-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px -6px rgba(250, 77, 18, 0.6);
 }
 </style>
