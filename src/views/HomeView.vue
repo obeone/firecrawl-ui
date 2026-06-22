@@ -1,134 +1,159 @@
+<script setup lang="ts">
+/**
+ * HomeView.vue
+ *
+ * Console landing for the Firecrawl UI playground. Presents a compact hero and
+ * a quick-launch grid of the available tools, each opening its request/response
+ * playground. Mirrors the top-bar tabs for a coherent navigation model.
+ */
+import { RouterLink } from 'vue-router';
+
+/**
+ * A quick-launch tool card.
+ *
+ * @property to - Router path the card opens.
+ * @property label - Tool name.
+ * @property desc - One-line description of what the tool does.
+ * @property paths - Lucide-style SVG path `d` strings for the icon (match the tabs).
+ */
+interface ToolCard {
+  to: string;
+  label: string;
+  desc: string;
+  paths: string[];
+}
+
+/** Tools surfaced on the landing, in the same order as the top-bar tabs. */
+const tools: ToolCard[] = [
+  {
+    to: '/scrape',
+    label: 'Scrape',
+    desc: 'Extract clean content from a single page as markdown, HTML or structured data.',
+    paths: [
+      'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z',
+      'M14 2v6h6',
+      'M9 13h6',
+      'M9 17h4',
+    ],
+  },
+  {
+    to: '/crawl',
+    label: 'Crawl',
+    desc: 'Traverse a whole site, follow links in depth and collect pages at scale.',
+    paths: [
+      'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z',
+      'M3.6 9h16.8',
+      'M3.6 15h16.8',
+      'M12 3a13 13 0 0 1 0 18',
+      'M12 3a13 13 0 0 0 0 18',
+    ],
+  },
+  {
+    to: '/extract',
+    label: 'Extract',
+    desc: 'Pull structured fields from URLs with a prompt or schema, powered by AI.',
+    paths: [
+      'M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z',
+      'M3.3 7 12 12l8.7-5',
+      'M12 22V12',
+    ],
+  },
+  {
+    to: '/map',
+    label: 'Map',
+    desc: 'List every reachable URL of a website to understand its structure fast.',
+    paths: [
+      'M9 4 3.5 6.2A1 1 0 0 0 3 7.1v12.2a1 1 0 0 0 1.4.9L9 18l6 3 5.1-2.2a1 1 0 0 0 .6-.9V5.7a1 1 0 0 0-1.4-.9L15 7z',
+      'M9 4v14',
+      'M15 7v14',
+    ],
+  },
+  {
+    to: '/search',
+    label: 'Search',
+    desc: 'Query the web and get ranked results with optional page content.',
+    paths: ['M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', 'm21 21-4.3-4.3'],
+  },
+];
+</script>
+
 <template>
   <div class="home">
+    <!-- Hero -->
     <section class="hero">
-      <span class="hero-eyebrow">Web data toolkit</span>
+      <span class="hero-eyebrow">Web data playground</span>
       <div class="hero-mark">
         <img src="@/assets/logo.png" alt="Firecrawl UI Logo" class="logo" />
       </div>
       <h1>Firecrawl <span class="accent">UI</span></h1>
       <p class="subtitle">
-        A modern interface for crawling, scraping and web data extraction.<br />
-        Centralize, explore, and extract your data with ease.
+        A request/response playground for the Firecrawl API. Build a call on the left, read the
+        response on the right. Everything runs locally.
       </p>
+      <div class="hero-cta">
+        <RouterLink to="/scrape" class="cta cta-primary">Start scraping</RouterLink>
+        <RouterLink to="/api-config" class="cta cta-secondary">Configure API key</RouterLink>
+      </div>
     </section>
-    <div class="features">
-      <div class="feature-card">
-        <IconDocumentation class="icon" />
-        <h2>Scrape</h2>
-        <p>Extract structured data from any web page.</p>
-        <router-link to="/scrape" class="feature-link">Access Scraping</router-link>
+
+    <!-- Quick-launch tool grid -->
+    <section class="launch">
+      <h2 class="launch-title">Tools</h2>
+      <div class="grid">
+        <RouterLink v-for="tool in tools" :key="tool.to" :to="tool.to" class="tool">
+          <span class="tool-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+              <path v-for="(d, i) in tool.paths" :key="i" :d="d" />
+            </svg>
+          </span>
+          <span class="tool-body">
+            <span class="tool-name">{{ tool.label }}</span>
+            <span class="tool-desc">{{ tool.desc }}</span>
+          </span>
+          <span class="tool-arrow" aria-hidden="true">→</span>
+        </RouterLink>
       </div>
-      <div class="feature-card">
-        <IconEcosystem class="icon" />
-        <h2>Crawl</h2>
-        <p>Explore websites in depth and collect data on a large scale.</p>
-        <router-link to="/crawl" class="feature-link">Access Crawling</router-link>
-      </div>
-      <div class="feature-card">
-        <IconTooling class="icon" />
-        <h2>Extract</h2>
-        <p>Extract content and metadata from URLs with advanced options.</p>
-        <router-link to="/extract" class="feature-link">Access Extraction</router-link>
-      </div>
-      <div class="feature-card">
-        <IconCommunity class="icon" />
-        <h2>Map</h2>
-        <p>Visualize and map the links and structures of a website.</p>
-        <router-link to="/map" class="feature-link">Access Map</router-link>
-      </div>
-      <div class="feature-card">
-        <IconSupport class="icon" />
-        <h2>Search</h2>
-        <p>Search and filter quickly in your crawl and scrape results.</p>
-        <router-link to="/search" class="feature-link">Access Search</router-link>
-      </div>
-      <div class="feature-card">
-        <IconSupport class="icon" />
-        <h2>API Configuration</h2>
-        <p>Configure your API keys and access points for custom workflows.</p>
-        <router-link to="/api-config" class="feature-link">Configure API</router-link>
-      </div>
-    </div>
-    <section class="about">
-      <h2>About Firecrawl UI</h2>
-      <p>
-        Firecrawl UI is a modern and intuitive interface for web data extraction, crawling and
-        analysis.<br />
-        <strong>Main Features:</strong>
-      </p>
-      <ul>
-        <li>Fast scraping and structured content extraction.</li>
-        <li>Multi-level crawling with visualization of the site structure.</li>
-        <li>Advanced search within collected results.</li>
-        <li>Flexible API configuration and key management.</li>
-        <li>Mapping interface to explore page relationships.</li>
-      </ul>
-      <p class="local-note">All features run locally; your data never leaves your machine.</p>
-      <p>
-        <a href="https://github.com/obeone/firecrawl-ui" target="_blank" class="about-link"
-          >Documentation & Support</a
-        >
-      </p>
     </section>
+
+    <!-- Footer strip -->
+    <footer class="home-foot">
+      <p class="local">
+        <span class="dot"></span>
+        Local-only — your API key and data never leave this browser.
+      </p>
+      <a
+        href="https://github.com/obeone/firecrawl-ui"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="repo"
+      >
+        Documentation &amp; source
+        <span aria-hidden="true">↗</span>
+      </a>
+    </footer>
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent } from 'vue';
-// Importing icons and components for a modern home page
-import IconDocumentation from '@/components/icons/IconDocumentation.vue';
-import IconEcosystem from '@/components/icons/IconEcosystem.vue';
-import IconTooling from '@/components/icons/IconTooling.vue';
-import IconCommunity from '@/components/icons/IconCommunity.vue';
-import IconSupport from '@/components/icons/IconSupport.vue';
-
-/**
- * @file HomeView.vue
- * @description This component serves as the main landing page for the Firecrawl UI application.
- * It provides an overview of the application's features, navigation links to different sections,
- * and general information about the project.
- *
- * @component HomeView
- * @example <HomeView />
- */
-export default defineComponent({
-  name: 'HomeView',
-  components: {
-    IconDocumentation,
-    IconEcosystem,
-    IconTooling,
-    IconCommunity,
-    IconSupport,
-  },
-});
-</script>
-
 <style scoped>
-/*
- * Root wrapper for the landing page. Centers content within a comfortable
- * reading width.
- */
 .home {
-  max-width: 1120px;
+  max-width: 1040px;
   margin: 0 auto;
-  padding: 1rem 0 3rem;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  gap: 2.5rem;
+  padding: 1rem 0 2rem;
 }
 
-/*
- * Hero: branded introduction with an ember glow behind the logo mark.
- */
+/* Hero */
 .hero {
   text-align: center;
-  margin-bottom: 3rem;
-  padding-top: 1.5rem;
+  padding-top: 1rem;
 }
 
 .hero-eyebrow {
   display: inline-block;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -139,33 +164,31 @@ export default defineComponent({
   margin-bottom: 1.5rem;
 }
 
-/* Logo sits on a glowing fire-gradient tile. */
 .hero-mark {
   display: grid;
   place-items: center;
-  width: 96px;
-  height: 96px;
-  margin: 0 auto 1.25rem;
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 1.1rem;
   border-radius: var(--radius-xl);
   background: var(--gradient-fire);
-  box-shadow: 0 18px 48px -14px rgba(250, 77, 18, 0.6);
+  box-shadow: 0 18px 44px -16px rgba(250, 77, 18, 0.6);
 }
 
 .logo {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   object-fit: contain;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
 }
 
 h1 {
-  font-size: clamp(2.4rem, 5vw, 3.4rem);
+  font-size: clamp(2.2rem, 4.5vw, 3rem);
   font-weight: 800;
-  margin-bottom: 0.75rem;
   letter-spacing: -0.03em;
+  margin-bottom: 0.6rem;
 }
 
-/* Brand accent applied to the "UI" wordmark fragment. */
 .accent {
   background: var(--gradient-fire);
   -webkit-background-clip: text;
@@ -175,209 +198,181 @@ h1 {
 }
 
 .subtitle {
-  font-size: 1.12rem;
+  font-size: 1.05rem;
   color: var(--color-text-soft);
-  max-width: 540px;
+  max-width: 560px;
   margin: 0 auto;
 }
 
-/*
- * Feature grid: responsive cards for each section of the app.
- */
-.features {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1.25rem;
-  width: 100%;
-  margin-bottom: 3rem;
+.hero-cta {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1.6rem;
+  flex-wrap: wrap;
 }
 
-/*
- * Feature card: raised surface that lifts and reveals an ember top edge on
- * hover.
- */
-.feature-card {
-  position: relative;
+.cta {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.7rem 1.4rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: 1px solid transparent;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.cta-primary {
+  background: var(--gradient-fire);
+  color: #fff;
+  box-shadow: var(--box-shadow-button);
+}
+
+.cta-primary:hover {
+  background: var(--gradient-fire-hover);
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+.cta-secondary {
+  background: var(--color-background-soft);
+  color: var(--color-heading);
+  border-color: var(--color-border);
+}
+
+.cta-secondary:hover {
+  border-color: var(--ember-500);
+  color: var(--brand-strong);
+  background: var(--brand-soft);
+}
+
+/* Launch grid */
+.launch-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-mute);
+  margin-bottom: 1rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.tool {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.2rem;
   background: var(--color-background-soft);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--box-shadow-card);
-  padding: 1.75rem 1.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  overflow: hidden;
+  color: var(--color-text);
   transition:
+    border-color var(--transition),
     box-shadow var(--transition),
-    transform var(--transition),
-    border-color var(--transition);
+    transform var(--transition);
+}
+
+.tool:hover {
+  border-color: var(--color-border-hover);
+  box-shadow: var(--box-shadow-container);
+  transform: translateY(-3px);
   color: var(--color-text);
 }
 
-/* Fire accent line revealed across the top edge on hover. */
-.feature-card::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 3px;
-  background: var(--gradient-fire);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform var(--transition);
-}
-
-.feature-card:hover {
-  box-shadow: var(--box-shadow-container);
-  transform: translateY(-4px);
-  border-color: var(--color-border-hover);
-}
-
-.feature-card:hover::before {
-  transform: scaleX(1);
-}
-
-/* Icon badge tinted with the brand. */
-.icon {
-  width: 28px;
-  height: 28px;
-  margin-bottom: 1rem;
-  padding: 0.55rem;
-  box-sizing: content-box;
+.tool-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
   border-radius: var(--radius-md);
   background: var(--brand-soft);
   color: var(--brand-strong);
 }
 
-.feature-card h2 {
-  font-size: 1.15rem;
-  margin-bottom: 0.4rem;
-  color: var(--color-heading);
+.tool-icon svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tool-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.tool-name {
   font-weight: 700;
-}
-
-.feature-card p {
-  font-size: 0.95rem;
-  color: var(--color-text-soft);
-  margin-bottom: 1.4rem;
-  text-align: left;
-  flex-grow: 1;
-}
-
-/*
- * In-card navigation link styled as a quiet secondary action that warms to the
- * brand on hover.
- */
-.feature-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
   color: var(--color-heading);
-  background: var(--color-background-mute);
-  border: 1px solid var(--color-border);
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius-sm);
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 0.9rem;
-  margin-top: auto;
+}
+
+.tool-desc {
+  font-size: 0.88rem;
+  color: var(--color-text-soft);
+  line-height: 1.45;
+}
+
+.tool-arrow {
+  margin-left: auto;
+  color: var(--color-text-mute);
+  font-size: 1.1rem;
   transition:
-    background var(--transition-fast),
-    border-color var(--transition-fast),
+    transform var(--transition-fast),
     color var(--transition-fast);
 }
 
-.feature-link::after {
-  content: '→';
-  transition: transform var(--transition-fast);
-}
-
-.feature-link:hover {
-  background: var(--brand-soft);
-  border-color: var(--ember-500);
+.tool:hover .tool-arrow {
   color: var(--brand-strong);
+  transform: translateX(4px);
 }
 
-.feature-link:hover::after {
-  transform: translateX(3px);
+/* Footer strip */
+.home-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border);
 }
 
-/*
- * About section: informational panel with a fire accent bar on the left.
- */
-.about {
-  position: relative;
-  width: 100%;
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
-  border-left: 4px solid var(--ember-500);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--box-shadow-card);
-  padding: 2rem 2.25rem;
-  color: var(--color-text);
-  line-height: 1.7;
+.local {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text-mute);
 }
 
-.about h2 {
-  font-size: 1.4rem;
-  color: var(--color-heading);
-  margin-bottom: 0.7rem;
-  font-weight: 700;
-}
-
-.about ul {
-  margin: 1rem 0 1.5rem 1.25rem;
-  padding: 0;
-  list-style: none;
-  color: var(--color-text);
-  font-size: 1rem;
-}
-
-.about li {
-  position: relative;
-  margin: 0.55rem 0;
-  padding-left: 1.4rem;
-}
-
-/* Ember bullet marker. */
-.about li::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.6em;
+.local .dot {
   width: 7px;
   height: 7px;
-  border-radius: 2px;
-  background: var(--gradient-fire);
+  border-radius: 50%;
+  background: var(--hue-success);
+  box-shadow: 0 0 0 3px var(--hue-success-soft);
 }
 
-.local-note {
-  color: var(--color-text-soft);
-  margin-bottom: 1.5rem;
-  font-size: 0.95rem;
-}
-
-/*
- * "Documentation & Support" call to action with the fire gradient.
- */
-.about-link {
+.repo {
   display: inline-flex;
   align-items: center;
-  color: #fff;
-  background: var(--gradient-fire);
-  padding: 0.6rem 1.3rem;
-  border-radius: var(--radius-sm);
-  text-decoration: none;
+  gap: 0.3rem;
+  font-size: 0.88rem;
   font-weight: 600;
-  font-size: 0.95rem;
-  box-shadow: var(--box-shadow-button);
-  transition:
-    background var(--transition-fast),
-    transform var(--transition-fast);
-}
-
-.about-link:hover {
-  background: var(--gradient-fire-hover);
-  color: #fff;
-  transform: translateY(-2px);
 }
 </style>
