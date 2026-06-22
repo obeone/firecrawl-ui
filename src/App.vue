@@ -1,8 +1,15 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
-import { RouterLink } from 'vue-router';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { RouterLink, useRoute } from 'vue-router';
+import CommandPalette from '@/components/CommandPalette.vue';
+import { navItems } from '@/config/navigation';
 
+const route = useRoute();
+
+/** Whether the mobile navigation drawer is open. */
 const isMenuOpen = ref(false);
+/** Whether the ⌘K command palette is visible. */
+const paletteOpen = ref(false);
 
 const storedTheme = localStorage.getItem('theme');
 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -15,96 +22,15 @@ watch(theme, (newTheme) => {
 });
 
 /**
- * A single navigation entry rendered in the sidebar.
- *
- * @property to - Router path the link points to.
- * @property label - Human-readable label shown next to the icon.
- * @property paths - SVG path `d` strings composing the lucide-style icon.
+ * Title of the current route, resolved from the shared navigation model.
  */
-interface NavItem {
-  to: string;
-  label: string;
-  paths: string[];
-}
+const currentTitle = computed<string>(() => {
+  const match = navItems.find((item) => item.to === route.path);
+  return match?.label ?? 'Firecrawl';
+});
 
 /**
- * Sidebar navigation model. Icons are stroke-based 24x24 lucide-style glyphs,
- * stored as raw path data so they render without an icon dependency.
- */
-const navItems: NavItem[] = [
-  {
-    to: '/',
-    label: 'Home',
-    paths: ['M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z'],
-  },
-  {
-    to: '/scrape',
-    label: 'Scrape',
-    paths: [
-      'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z',
-      'M14 2v6h6',
-      'M9 13h6',
-      'M9 17h4',
-    ],
-  },
-  {
-    to: '/crawl',
-    label: 'Crawl',
-    paths: [
-      'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z',
-      'M3.6 9h16.8',
-      'M3.6 15h16.8',
-      'M12 3a13 13 0 0 1 0 18',
-      'M12 3a13 13 0 0 0 0 18',
-    ],
-  },
-  {
-    to: '/extract',
-    label: 'Extract',
-    paths: [
-      'M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z',
-      'M3.3 7 12 12l8.7-5',
-      'M12 22V12',
-    ],
-  },
-  {
-    to: '/map',
-    label: 'Map',
-    paths: [
-      'M9 4 3.5 6.2A1 1 0 0 0 3 7.1v12.2a1 1 0 0 0 1.4.9L9 18l6 3 5.1-2.2a1 1 0 0 0 .6-.9V5.7a1 1 0 0 0-1.4-.9L15 7z',
-      'M9 4v14',
-      'M15 7v14',
-    ],
-  },
-  {
-    to: '/search',
-    label: 'Search',
-    paths: ['M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', 'm21 21-4.3-4.3'],
-  },
-  {
-    to: '/api-config',
-    label: 'API Config',
-    paths: [
-      'M4 21v-7',
-      'M4 10V3',
-      'M12 21v-9',
-      'M12 8V3',
-      'M20 21v-5',
-      'M20 12V3',
-      'M2 14h4',
-      'M10 8h4',
-      'M18 16h4',
-    ],
-  },
-  {
-    to: '/about',
-    label: 'About',
-    paths: ['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z', 'M12 16v-4', 'M12 8h.01'],
-  },
-];
-
-/**
- * Toggles the visibility of the sidebar drawer on small screens.
+ * Toggles the mobile navigation drawer.
  */
 function toggleMenu(): void {
   isMenuOpen.value = !isMenuOpen.value;
@@ -123,56 +49,69 @@ function closeMenu(): void {
 function toggleTheme(): void {
   theme.value = theme.value === 'dark' ? 'light' : 'dark';
 }
+
+/**
+ * Opens the command palette.
+ */
+function openPalette(): void {
+  paletteOpen.value = true;
+}
+
+/**
+ * Global shortcut handler: ⌘K / Ctrl+K toggles the command palette.
+ *
+ * @param event - The keyboard event from the document listener.
+ */
+function onGlobalKeydown(event: KeyboardEvent): void {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault();
+    paletteOpen.value = !paletteOpen.value;
+  }
+}
+
+onMounted(() => document.addEventListener('keydown', onGlobalKeydown));
+onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKeydown));
 </script>
 
 <template>
-  <div class="app-layout" :class="{ 'menu-open': isMenuOpen }">
-    <!-- Mobile top bar: hamburger toggle, only shown on narrow screens -->
-    <button class="menu-button" @click="toggleMenu" aria-label="Toggle navigation">
-      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-        <path d="M4 6h16M4 12h16M4 18h16" />
-      </svg>
-    </button>
-
-    <!-- Dimmed backdrop behind the mobile drawer -->
+  <div class="app-shell">
+    <!-- Dimmed backdrop behind the mobile rail drawer -->
     <div class="scrim" :class="{ visible: isMenuOpen }" @click="closeMenu" aria-hidden="true"></div>
 
-    <aside class="sidebar" :class="{ open: isMenuOpen }">
-      <!-- Brand block -->
-      <RouterLink to="/" class="brand" @click="closeMenu">
-        <span class="brand-mark">
-          <img alt="" class="brand-logo" src="@/assets/logo.png" width="36" height="36" />
-        </span>
-        <span class="brand-text">
-          <span class="brand-name">Firecrawl</span>
-          <span class="brand-tag">UI</span>
-        </span>
+    <!-- Slim icon navigation rail -->
+    <aside class="rail" :class="{ open: isMenuOpen }">
+      <RouterLink to="/" class="rail-brand" @click="closeMenu" aria-label="Firecrawl UI home">
+        <img alt="" class="rail-logo" src="@/assets/logo.png" width="30" height="30" />
       </RouterLink>
 
-      <!-- Primary navigation -->
-      <nav class="nav">
+      <nav class="rail-nav">
         <RouterLink
           v-for="item in navItems"
           :key="item.to"
           :to="item.to"
-          class="nav-link"
+          class="rail-link"
+          :data-tip="item.label"
           @click="closeMenu"
         >
-          <svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <svg class="rail-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
             <path v-for="(d, i) in item.paths" :key="i" :d="d" />
           </svg>
-          <span class="nav-label">{{ item.label }}</span>
+          <span class="rail-link-label">{{ item.label }}</span>
         </RouterLink>
       </nav>
 
-      <!-- Sidebar footer: theme switch + local-only note -->
-      <div class="sidebar-footer">
-        <button class="theme-toggle" @click="toggleTheme" aria-label="Toggle color theme">
+      <div class="rail-footer">
+        <button
+          class="rail-link rail-action"
+          :data-tip="theme === 'dark' ? 'Light mode' : 'Dark mode'"
+          @click="toggleTheme"
+          aria-label="Toggle color theme"
+        >
           <svg
             v-if="theme === 'dark'"
             viewBox="0 0 24 24"
-            width="18"
-            height="18"
+            width="22"
+            height="22"
             aria-hidden="true"
           >
             <circle cx="12" cy="12" r="4" />
@@ -180,21 +119,44 @@ function toggleTheme(): void {
               d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"
             />
           </svg>
-          <svg v-else viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <svg v-else viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
             <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
           </svg>
-          <span>{{ theme === 'dark' ? 'Light mode' : 'Dark mode' }}</span>
         </button>
-        <p class="local-badge">
-          <span class="dot"></span>
-          Runs locally
-        </p>
       </div>
     </aside>
 
-    <main @click="closeMenu">
-      <router-view />
-    </main>
+    <!-- Content column: top bar + routed view -->
+    <div class="content">
+      <header class="topbar">
+        <button class="icon-btn topbar-menu" @click="toggleMenu" aria-label="Toggle navigation">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        <div class="topbar-title">
+          <span class="topbar-crumb">Firecrawl</span>
+          <span class="topbar-sep" aria-hidden="true">/</span>
+          <span class="topbar-current">{{ currentTitle }}</span>
+        </div>
+
+        <button class="cmdk" @click="openPalette" aria-label="Open command palette">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <span class="cmdk-label">Jump to…</span>
+          <kbd class="cmdk-keys">⌘K</kbd>
+        </button>
+      </header>
+
+      <main class="view" @click="closeMenu">
+        <router-view />
+      </main>
+    </div>
+
+    <CommandPalette v-model:open="paletteOpen" />
   </div>
 </template>
 
@@ -206,47 +168,33 @@ function toggleTheme(): void {
   -moz-osx-font-smoothing: grayscale;
 }
 
-.app-layout {
+.app-shell {
   display: flex;
   min-height: 100vh;
 }
 
 /* ---------------------------------------------------------------------------
- * Sidebar
+ * Icon rail
  * ------------------------------------------------------------------------- */
 
-.sidebar {
+.rail {
   position: sticky;
   top: 0;
   align-self: flex-start;
-  width: 248px;
   height: 100vh;
+  width: 72px;
   flex-shrink: 0;
-  background-color: var(--color-background-soft);
-  border-right: 1px solid var(--color-border);
-  padding: 1.25rem 0.9rem;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-}
-
-/* Brand block: logo mark + wordmark. */
-.brand {
-  display: flex;
   align-items: center;
-  gap: 0.7rem;
-  padding: 0.4rem 0.5rem;
-  border-radius: var(--radius-md);
-  color: var(--color-heading);
-  transition: background-color var(--transition-fast);
+  gap: 0.5rem;
+  padding: 0.85rem 0;
+  background-color: var(--color-background-soft);
+  border-right: 1px solid var(--color-border);
+  z-index: 900;
 }
 
-.brand:hover {
-  background-color: var(--color-background-mute);
-  color: var(--color-heading);
-}
-
-.brand-mark {
+.rail-brand {
   display: grid;
   place-items: center;
   width: 44px;
@@ -254,223 +202,307 @@ function toggleTheme(): void {
   border-radius: var(--radius-md);
   background: var(--gradient-fire);
   box-shadow: var(--box-shadow-button);
+  margin-bottom: 0.5rem;
 }
 
-.brand-logo {
-  width: 30px;
-  height: 30px;
+.rail-logo {
+  width: 26px;
+  height: 26px;
   object-fit: contain;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
 }
 
-.brand-text {
-  display: flex;
-  align-items: baseline;
-  gap: 0.35rem;
-}
-
-.brand-name {
-  font-size: 1.2rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  color: var(--color-heading);
-}
-
-.brand-tag {
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--brand-strong);
-  background: var(--brand-soft);
-  padding: 0.12rem 0.4rem;
-  border-radius: var(--radius-pill);
-}
-
-/* Navigation list. */
-.nav {
+.rail-nav {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.3rem;
   flex-grow: 1;
 }
 
-.nav-link {
+.rail-footer {
   display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.6rem;
+  width: 100%;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.62rem 0.75rem;
+}
+
+/* Rail link/button: icon tile with a hover tooltip. */
+.rail-link {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
   border-radius: var(--radius-md);
   color: var(--color-text-soft);
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 0.95rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
   transition:
     background-color var(--transition-fast),
     color var(--transition-fast);
 }
 
-.nav-icon {
-  flex-shrink: 0;
+.rail-icon {
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.85;
 }
 
-.nav-link:hover {
+.rail-action svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rail-link:hover {
   background-color: var(--color-background-mute);
   color: var(--color-heading);
 }
 
-/* Active route: ember accent bar + tinted background. */
-.nav-link.router-link-exact-active {
+.rail-link.router-link-exact-active {
   background: var(--brand-soft);
   color: var(--brand-strong);
-  font-weight: 600;
-  position: relative;
 }
 
-.nav-link.router-link-exact-active::before {
+/* Ember active indicator on the inner edge. */
+.rail-link.router-link-exact-active::after {
   content: '';
   position: absolute;
-  left: -0.9rem;
+  left: -0.85rem;
   top: 50%;
   transform: translateY(-50%);
   width: 3px;
-  height: 60%;
+  height: 22px;
   border-radius: var(--radius-pill);
   background: var(--gradient-fire);
 }
 
-.nav-link.router-link-exact-active .nav-icon {
-  opacity: 1;
+/* Label is hidden on desktop (icon-only) and revealed as a tooltip. */
+.rail-link-label {
+  display: none;
 }
 
-/* Sidebar footer area. */
-.sidebar-footer {
+.rail-link[data-tip]::before {
+  content: attr(data-tip);
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%) scale(0.96);
+  transform-origin: left center;
+  white-space: nowrap;
+  background: var(--color-heading);
+  color: var(--color-background);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.3rem 0.55rem;
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
+  z-index: 950;
+}
+
+.rail-link[data-tip]:hover::before {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+
+/* ---------------------------------------------------------------------------
+ * Content column
+ * ------------------------------------------------------------------------- */
+
+.content {
+  flex-grow: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  border-top: 1px solid var(--color-border);
-  padding-top: 1rem;
 }
 
-.theme-toggle {
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 800;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  width: 100%;
-  padding: 0.6rem 0.75rem;
-  background: var(--color-background-mute);
+  gap: 1rem;
+  height: 60px;
+  padding: 0 1.25rem;
+  background-color: color-mix(in srgb, var(--color-background) 80%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.topbar-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.topbar-crumb {
+  color: var(--color-text-mute);
+}
+
+.topbar-sep {
+  color: var(--color-text-mute);
+}
+
+.topbar-current {
+  font-weight: 700;
+  color: var(--color-heading);
+  letter-spacing: -0.01em;
+}
+
+/* ⌘K trigger button. */
+.cmdk {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-left: auto;
+  padding: 0.45rem 0.7rem;
+  background: var(--color-background-soft);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  color: var(--color-text);
-  font-size: 0.9rem;
-  font-weight: 500;
+  color: var(--color-text-mute);
+  font-size: 0.88rem;
   cursor: pointer;
   transition:
     border-color var(--transition-fast),
-    color var(--transition-fast),
-    background-color var(--transition-fast);
+    color var(--transition-fast);
 }
 
-.theme-toggle svg {
+.cmdk:hover {
+  border-color: var(--color-border-hover);
+  color: var(--color-text);
+}
+
+.cmdk svg {
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
-  color: var(--brand-strong);
 }
 
-.theme-toggle:hover {
-  border-color: var(--ember-500);
-  color: var(--color-heading);
-}
-
-/* Local-only reassurance badge. */
-.local-badge {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 0.78rem;
-  color: var(--color-text-mute);
-  padding: 0 0.25rem;
-}
-
-.local-badge .dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--hue-success);
-  box-shadow: 0 0 0 3px var(--hue-success-soft);
-}
-
-/* ---------------------------------------------------------------------------
- * Main content
- * ------------------------------------------------------------------------- */
-
-main {
-  flex-grow: 1;
-  min-width: 0;
-  padding: 2rem;
-  overflow-y: auto;
-  background-color: var(--color-background);
-}
-
-/* ---------------------------------------------------------------------------
- * Mobile controls
- * ------------------------------------------------------------------------- */
-
-.menu-button {
-  display: none;
-  background: var(--color-background-soft);
+.cmdk-keys {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  background: var(--color-background-mute);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 0.45rem;
-  cursor: pointer;
-  color: var(--color-heading);
+  border-radius: var(--radius-sm);
+  padding: 0.08rem 0.35rem;
 }
 
-.menu-button svg {
-  display: block;
+/* Generic icon button (mobile menu). */
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-background-soft);
+  color: var(--color-heading);
+  cursor: pointer;
+}
+
+.icon-btn svg {
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
   stroke-linecap: round;
 }
+
+.topbar-menu {
+  display: none;
+}
+
+/* Routed view area. */
+.view {
+  flex-grow: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+/* ---------------------------------------------------------------------------
+ * Mobile
+ * ------------------------------------------------------------------------- */
 
 .scrim {
   display: none;
 }
 
 @media (max-width: 768px) {
-  .menu-button {
-    display: block;
-    position: fixed;
-    top: 0.85rem;
-    left: 0.85rem;
-    z-index: 1100;
-    box-shadow: var(--box-shadow-card);
+  .topbar-menu {
+    display: grid;
   }
 
-  .sidebar {
+  .cmdk-label {
+    display: none;
+  }
+
+  .rail {
     position: fixed;
     top: 0;
     left: 0;
-    height: 100%;
-    width: 270px;
     transform: translateX(-100%);
     transition: transform var(--transition);
-    z-index: 1200;
     box-shadow: var(--box-shadow-container);
   }
 
-  .sidebar.open {
+  .rail.open {
     transform: translateX(0);
+  }
+
+  /* On mobile the drawer is wide enough to show labels next to icons. */
+  .rail {
+    width: 220px;
+    align-items: stretch;
+    padding: 0.85rem 0.7rem;
+  }
+
+  .rail-brand {
+    margin-left: 0.2rem;
+  }
+
+  .rail-link {
+    width: 100%;
+    grid-template-columns: 46px 1fr;
+    display: grid;
+    justify-items: start;
+    align-items: center;
+    padding-right: 0.5rem;
+  }
+
+  .rail-link .rail-icon {
+    justify-self: center;
+    grid-column: 1;
+  }
+
+  .rail-link-label {
+    display: block;
+    grid-column: 2;
+    font-size: 0.92rem;
+    font-weight: 500;
+  }
+
+  /* Tooltips are redundant when labels are visible. */
+  .rail-link[data-tip]::before {
+    display: none;
+  }
+
+  .rail-link.router-link-exact-active::after {
+    display: none;
   }
 
   .scrim {
@@ -481,7 +513,7 @@ main {
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--transition);
-    z-index: 1150;
+    z-index: 850;
   }
 
   .scrim.visible {
@@ -489,8 +521,8 @@ main {
     pointer-events: auto;
   }
 
-  main {
-    padding: 4rem 1.1rem 1.5rem;
+  .view {
+    padding: 1.25rem 1.1rem;
   }
 }
 </style>
