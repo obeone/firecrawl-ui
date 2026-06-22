@@ -1,478 +1,507 @@
 <template>
-  <div class="page-container">
-    <h1>Crawl Configuration</h1>
-    <form class="scrape-config-form" @submit.prevent="handleSubmit">
-      <!-- URL Section -->
-      <div class="form-group">
-        <label for="url">Base URL to Crawl:</label>
-        <input
-          id="url"
-          v-model="formData.url"
-          type="text"
-          required
-          placeholder="https://example.com"
-        />
-      </div>
+  <PlaygroundLayout
+    title="Crawl"
+    subtitle="Crawl an entire site and collect every page"
+    :tabs="responseTabs"
+    :running="loading"
+    :error="error || null"
+    :has-result="hasResult"
+    :status="statusLabel"
+    :status-type="statusType"
+    :duration="durationMs"
+    empty-hint="Configure a base URL and start a crawl to follow its progress here."
+  >
+    <!-- REQUEST: crawl configuration form + submit button -->
+    <template #request>
+      <form class="crawl-config-form" @submit.prevent="handleSubmit">
+        <!-- URL Section -->
+        <div class="form-group">
+          <label for="url">Base URL to Crawl:</label>
+          <input
+            id="url"
+            v-model="formData.url"
+            type="text"
+            required
+            placeholder="https://example.com"
+          />
+        </div>
 
-      <!-- Crawler Options Section -->
-      <fieldset class="form-group options-fieldset">
-        <legend
-          class="collapsible-header"
-          @click="isCrawlerOptionsCollapsed = !isCrawlerOptionsCollapsed"
-        >
-          {{ crawlerOptionsArrow }} Crawler Options
-        </legend>
-        <div v-show="!isCrawlerOptionsCollapsed">
-          <div class="grid-layout">
+        <!-- Crawler Options Section -->
+        <fieldset class="form-group options-fieldset">
+          <legend
+            class="collapsible-header"
+            @click="isCrawlerOptionsCollapsed = !isCrawlerOptionsCollapsed"
+          >
+            {{ crawlerOptionsArrow }} Crawler Options
+          </legend>
+          <div v-show="!isCrawlerOptionsCollapsed">
+            <div class="grid-layout">
+              <div class="form-group">
+                <label for="includes">Includes (Regex Patterns):</label>
+                <input
+                  id="includes"
+                  v-model="includesInput"
+                  type="text"
+                  placeholder="/blog/.*, /products/.*"
+                />
+                <div v-if="includesError" class="error-message">{{ includesError }}</div>
+                <small>Comma-separated regex patterns. Only matching URLs will be included.</small>
+              </div>
+              <div class="form-group">
+                <label for="excludes">Excludes (Regex Patterns):</label>
+                <input
+                  id="excludes"
+                  v-model="excludesInput"
+                  type="text"
+                  placeholder="/login, /private/.*"
+                />
+                <div v-if="excludesError" class="error-message">{{ excludesError }}</div>
+                <small>Comma-separated regex patterns to exclude URLs.</small>
+              </div>
+              <div class="form-group">
+                <label for="maxDepth">Max Depth:</label>
+                <input
+                  id="maxDepth"
+                  v-model.number="formData.crawlerOptions.maxDepth"
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 3"
+                />
+                <small>Maximum depth relative to the base URL (path segments).</small>
+              </div>
+              <div class="form-group">
+                <label for="maxDiscoveryDepth">Max Discovery Depth:</label>
+                <input
+                  id="maxDiscoveryDepth"
+                  v-model.number="formData.crawlerOptions.maxDiscoveryDepth"
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 2"
+                />
+                <small>Maximum depth based on discovery order.</small>
+              </div>
+              <div class="form-group">
+                <label for="limit">Page Limit:</label>
+                <input
+                  id="limit"
+                  v-model.number="formData.crawlerOptions.limit"
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 100"
+                />
+                <small>Maximum number of pages to crawl (default: 10000).</small>
+              </div>
+              <div class="form-group">
+                <label for="delay">Delay (seconds):</label>
+                <input
+                  id="delay"
+                  v-model.number="formData.crawlerOptions.delay"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  placeholder="e.g. 1.5"
+                />
+                <small>Delay between pages to respect rate limits.</small>
+              </div>
+              <div class="form-group">
+                <label for="maxConcurrency">Max Concurrency:</label>
+                <input
+                  id="maxConcurrency"
+                  v-model.number="formData.crawlerOptions.maxConcurrency"
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 5"
+                />
+                <small>Maximum number of pages processed in parallel.</small>
+              </div>
+              <div class="form-group">
+                <label for="statusInterval">Status Check Interval (seconds):</label>
+                <input
+                  id="statusInterval"
+                  v-model.number="statusCheckInterval"
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 5"
+                />
+                <small>Time between status checks.</small>
+              </div>
+            </div>
+            <div class="grid-layout">
+              <div class="form-group">
+                <label for="sitemapMode">Sitemap Mode:</label>
+                <select id="sitemapMode" v-model="formData.crawlerOptions.sitemap">
+                  <option value="include">Include sitemap</option>
+                  <option value="skip">Skip sitemap</option>
+                  <option value="only">Only sitemap URLs</option>
+                </select>
+              </div>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="formData.crawlerOptions.ignoreQueryParameters" />
+                Ignore Query Parameters
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="formData.crawlerOptions.allowExternalLinks" />
+                Allow External Links
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="formData.crawlerOptions.allowSubdomains" />
+                Allow Subdomains
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="formData.crawlerOptions.navigateBacklinks" />
+                Navigate Backlinks
+              </label>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- Scrape Options Section -->
+        <fieldset class="form-group options-fieldset">
+          <legend
+            class="collapsible-header"
+            @click="isScrapeOptionsCollapsed = !isScrapeOptionsCollapsed"
+          >
+            {{ scrapeOptionsArrow }} Scrape Options
+          </legend>
+          <div v-show="!isScrapeOptionsCollapsed">
             <div class="form-group">
-              <label for="includes">Includes (Regex Patterns):</label>
+              <label for="formats">Output Formats:</label>
+              <select id="formats" v-model="formData.scrapeOptions.formats" multiple>
+                <option value="markdown">Markdown</option>
+                <option value="html">HTML</option>
+                <option value="rawHtml">Raw HTML</option>
+                <option value="links">Links</option>
+                <option value="images">Images</option>
+                <option value="summary">Summary</option>
+                <option value="screenshot">Screenshot (Viewport)</option>
+                <option value="screenshot@fullPage">Screenshot (Full Page)</option>
+                <option value="json">JSON</option>
+                <option value="attributes">Attributes</option>
+                <option value="branding">Branding</option>
+                <option value="changeTracking">Change Tracking</option>
+              </select>
+              <small>Select one or more formats.</small>
+            </div>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="formData.scrapeOptions.onlyMainContent" />
+              Only Main Content (exclude headers, footers, etc.)
+            </label>
+            <div class="form-group">
+              <label for="includeTags">Include Tags (CSS Selectors):</label>
               <input
-                id="includes"
-                v-model="includesInput"
+                id="includeTags"
+                v-model="includeTagsInput"
                 type="text"
-                placeholder="/blog/.*, /products/.*"
+                placeholder="article, .main-content"
+                @blur="parseIncludeTags"
               />
-              <div v-if="includesError" class="error-message">{{ includesError }}</div>
-              <small>Comma-separated regex patterns. Only matching URLs will be included.</small>
+              <small
+                >Comma-separated CSS selectors. Only content within these tags will be
+                included.</small
+              >
             </div>
             <div class="form-group">
-              <label for="excludes">Excludes (Regex Patterns):</label>
+              <label for="excludeTags">Exclude Tags (CSS Selectors):</label>
               <input
-                id="excludes"
-                v-model="excludesInput"
+                id="excludeTags"
+                v-model="excludeTagsInput"
                 type="text"
-                placeholder="/login, /private/.*"
+                placeholder="footer, .sidebar"
+                @blur="parseExcludeTags"
               />
-              <div v-if="excludesError" class="error-message">{{ excludesError }}</div>
-              <small>Comma-separated regex patterns to exclude URLs.</small>
+              <small>Comma-separated CSS selectors to exclude content within these tags.</small>
             </div>
             <div class="form-group">
-              <label for="maxDepth">Max Depth:</label>
+              <label for="timeout">Timeout (ms):</label>
               <input
-                id="maxDepth"
-                v-model.number="formData.crawlerOptions.maxDepth"
-                type="number"
-                min="1"
-                placeholder="e.g. 3"
-              />
-              <small>Maximum depth relative to the base URL (path segments).</small>
-            </div>
-            <div class="form-group">
-              <label for="maxDiscoveryDepth">Max Discovery Depth:</label>
-              <input
-                id="maxDiscoveryDepth"
-                v-model.number="formData.crawlerOptions.maxDiscoveryDepth"
-                type="number"
-                min="1"
-                placeholder="e.g. 2"
-              />
-              <small>Maximum depth based on discovery order.</small>
-            </div>
-            <div class="form-group">
-              <label for="limit">Page Limit:</label>
-              <input
-                id="limit"
-                v-model.number="formData.crawlerOptions.limit"
-                type="number"
-                min="1"
-                placeholder="e.g. 100"
-              />
-              <small>Maximum number of pages to crawl (default: 10000).</small>
-            </div>
-            <div class="form-group">
-              <label for="delay">Delay (seconds):</label>
-              <input
-                id="delay"
-                v-model.number="formData.crawlerOptions.delay"
+                id="timeout"
+                v-model.number="formData.scrapeOptions.timeout"
                 type="number"
                 min="0"
-                step="0.1"
-                placeholder="e.g. 1.5"
               />
-              <small>Delay between pages to respect rate limits.</small>
             </div>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="formData.scrapeOptions.skipTlsVerification" />
+              Skip TLS Verification
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="formData.scrapeOptions.blockAds" />
+              Block Ads
+            </label>
             <div class="form-group">
-              <label for="maxConcurrency">Max Concurrency:</label>
-              <input
-                id="maxConcurrency"
-                v-model.number="formData.crawlerOptions.maxConcurrency"
-                type="number"
-                min="1"
-                placeholder="e.g. 5"
-              />
-              <small>Maximum number of pages processed in parallel.</small>
-            </div>
-            <div class="form-group">
-              <label for="statusInterval">Status Check Interval (seconds):</label>
-              <input
-                id="statusInterval"
-                v-model.number="statusCheckInterval"
-                type="number"
-                min="1"
-                placeholder="e.g. 5"
-              />
-              <small>Time between status checks.</small>
-            </div>
-          </div>
-          <div class="grid-layout">
-            <div class="form-group">
-              <label for="sitemapMode">Sitemap Mode:</label>
-              <select id="sitemapMode" v-model="formData.crawlerOptions.sitemap">
-                <option value="include">Include sitemap</option>
-                <option value="skip">Skip sitemap</option>
-                <option value="only">Only sitemap URLs</option>
+              <label for="proxy">Proxy:</label>
+              <select id="proxy" v-model="formData.scrapeOptions.proxy">
+                <option value="">Default</option>
+                <option value="auto">Auto</option>
+                <option value="basic">Basic</option>
+                <option value="stealth">Stealth</option>
+                <option value="enhanced">Enhanced</option>
               </select>
             </div>
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="formData.crawlerOptions.ignoreQueryParameters" />
-              Ignore Query Parameters
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="formData.crawlerOptions.allowExternalLinks" />
-              Allow External Links
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="formData.crawlerOptions.allowSubdomains" />
-              Allow Subdomains
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="formData.crawlerOptions.navigateBacklinks" />
-              Navigate Backlinks
-            </label>
-          </div>
-        </div>
-      </fieldset>
-
-      <!-- Scrape Options Section -->
-      <fieldset class="form-group options-fieldset">
-        <legend
-          class="collapsible-header"
-          @click="isScrapeOptionsCollapsed = !isScrapeOptionsCollapsed"
-        >
-          {{ scrapeOptionsArrow }} Scrape Options
-        </legend>
-        <div v-show="!isScrapeOptionsCollapsed">
-          <div class="form-group">
-            <label for="formats">Output Formats:</label>
-            <select id="formats" v-model="formData.scrapeOptions.formats" multiple>
-              <option value="markdown">Markdown</option>
-              <option value="html">HTML</option>
-              <option value="rawHtml">Raw HTML</option>
-              <option value="links">Links</option>
-              <option value="images">Images</option>
-              <option value="summary">Summary</option>
-              <option value="screenshot">Screenshot (Viewport)</option>
-              <option value="screenshot@fullPage">Screenshot (Full Page)</option>
-              <option value="json">JSON</option>
-              <option value="attributes">Attributes</option>
-              <option value="branding">Branding</option>
-              <option value="changeTracking">Change Tracking</option>
-            </select>
-            <small>Select one or more formats.</small>
-          </div>
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="formData.scrapeOptions.onlyMainContent" />
-            Only Main Content (exclude headers, footers, etc.)
-          </label>
-          <div class="form-group">
-            <label for="includeTags">Include Tags (CSS Selectors):</label>
-            <input
-              id="includeTags"
-              v-model="includeTagsInput"
-              type="text"
-              placeholder="article, .main-content"
-              @blur="parseIncludeTags"
-            />
-            <small
-              >Comma-separated CSS selectors. Only content within these tags will be
-              included.</small
-            >
-          </div>
-          <div class="form-group">
-            <label for="excludeTags">Exclude Tags (CSS Selectors):</label>
-            <input
-              id="excludeTags"
-              v-model="excludeTagsInput"
-              type="text"
-              placeholder="footer, .sidebar"
-              @blur="parseExcludeTags"
-            />
-            <small>Comma-separated CSS selectors to exclude content within these tags.</small>
-          </div>
-          <div class="form-group">
-            <label for="timeout">Timeout (ms):</label>
-            <input
-              id="timeout"
-              v-model.number="formData.scrapeOptions.timeout"
-              type="number"
-              min="0"
-            />
-          </div>
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="formData.scrapeOptions.skipTlsVerification" />
-            Skip TLS Verification
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="formData.scrapeOptions.blockAds" />
-            Block Ads
-          </label>
-          <div class="form-group">
-            <label for="proxy">Proxy:</label>
-            <select id="proxy" v-model="formData.scrapeOptions.proxy">
-              <option value="">Default</option>
-              <option value="auto">Auto</option>
-              <option value="basic">Basic</option>
-              <option value="stealth">Stealth</option>
-              <option value="enhanced">Enhanced</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="locationCountry">Location Country:</label>
-            <input
-              id="locationCountry"
-              v-model="formData.scrapeOptions.location.country"
-              type="text"
-              placeholder="US"
-            />
-          </div>
-          <div class="form-group">
-            <label for="locationLanguages">Location Languages:</label>
-            <input
-              id="locationLanguages"
-              v-model="locationLanguagesInput"
-              type="text"
-              placeholder="en-US, fr"
-              @blur="parseLocationLanguages"
-            />
-          </div>
-          <div class="form-group">
-            <label for="jsonSchema">JSON Options Schema (JSON):</label>
-            <textarea id="jsonSchema" v-model="jsonOptionsSchemaInput"></textarea>
-            <div v-if="jsonOptionsSchemaError" class="error-message">
-              {{ jsonOptionsSchemaError }}
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="jsonSystemPrompt">JSON System Prompt:</label>
-            <textarea
-              id="jsonSystemPrompt"
-              v-model="formData.scrapeOptions.jsonOptions.systemPrompt"
-            ></textarea>
-          </div>
-          <div class="form-group">
-            <label for="jsonPrompt">JSON Prompt:</label>
-            <textarea
-              id="jsonPrompt"
-              v-model="formData.scrapeOptions.jsonOptions.prompt"
-            ></textarea>
-          </div>
-          <div class="form-group">
-            <label for="changeModes">Change Tracking Modes:</label>
-            <input
-              id="changeModes"
-              v-model="changeTrackingModesInput"
-              type="text"
-              placeholder="git-diff, json"
-              @blur="parseChangeTrackingModes"
-            />
-          </div>
-          <div class="form-group">
-            <label for="changeSchema">Change Tracking Schema (JSON):</label>
-            <textarea id="changeSchema" v-model="changeTrackingSchemaInput"></textarea>
-            <div v-if="changeTrackingSchemaError" class="error-message">
-              {{ changeTrackingSchemaError }}
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="changePrompt">Change Tracking Prompt:</label>
-            <textarea
-              id="changePrompt"
-              v-model="formData.scrapeOptions.changeTrackingOptions.prompt"
-            ></textarea>
-          </div>
-        </div>
-      </fieldset>
-
-      <!-- Webhook Options Section -->
-      <fieldset class="form-group options-fieldset">
-        <legend
-          class="collapsible-header"
-          @click="isWebhookOptionsCollapsed = !isWebhookOptionsCollapsed"
-        >
-          {{ webhookOptionsArrow }} Webhook Options (Optional)
-        </legend>
-        <div v-show="!isWebhookOptionsCollapsed">
-          <div class="grid-layout">
             <div class="form-group">
-              <label for="webhookUrl">Webhook URL:</label>
+              <label for="locationCountry">Location Country:</label>
               <input
-                id="webhookUrl"
-                v-model="formData.webhookOptions.url"
+                id="locationCountry"
+                v-model="formData.scrapeOptions.location.country"
                 type="text"
-                placeholder="https://your-service.com/webhook"
+                placeholder="US"
               />
             </div>
             <div class="form-group">
-              <label for="webhookHeaders">Webhook Headers (JSON):</label>
-              <textarea
-                id="webhookHeaders"
-                v-model="webhookHeadersInput"
-                placeholder='{"Authorization": "token"}'
-              ></textarea>
-              <div v-if="webhookHeadersError" class="error-message">
-                {{ webhookHeadersError }}
+              <label for="locationLanguages">Location Languages:</label>
+              <input
+                id="locationLanguages"
+                v-model="locationLanguagesInput"
+                type="text"
+                placeholder="en-US, fr"
+                @blur="parseLocationLanguages"
+              />
+            </div>
+            <div class="form-group">
+              <label for="jsonSchema">JSON Options Schema (JSON):</label>
+              <textarea id="jsonSchema" v-model="jsonOptionsSchemaInput"></textarea>
+              <div v-if="jsonOptionsSchemaError" class="error-message">
+                {{ jsonOptionsSchemaError }}
               </div>
             </div>
             <div class="form-group">
-              <label for="webhookMetadata">Webhook Metadata (JSON):</label>
+              <label for="jsonSystemPrompt">JSON System Prompt:</label>
               <textarea
-                id="webhookMetadata"
-                v-model="webhookMetadataInput"
-                placeholder='{"source": "ui"}'
+                id="jsonSystemPrompt"
+                v-model="formData.scrapeOptions.jsonOptions.systemPrompt"
               ></textarea>
-              <div v-if="webhookMetadataError" class="error-message">
-                {{ webhookMetadataError }}
+            </div>
+            <div class="form-group">
+              <label for="jsonPrompt">JSON Prompt:</label>
+              <textarea
+                id="jsonPrompt"
+                v-model="formData.scrapeOptions.jsonOptions.prompt"
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <label for="changeModes">Change Tracking Modes:</label>
+              <input
+                id="changeModes"
+                v-model="changeTrackingModesInput"
+                type="text"
+                placeholder="git-diff, json"
+                @blur="parseChangeTrackingModes"
+              />
+            </div>
+            <div class="form-group">
+              <label for="changeSchema">Change Tracking Schema (JSON):</label>
+              <textarea id="changeSchema" v-model="changeTrackingSchemaInput"></textarea>
+              <div v-if="changeTrackingSchemaError" class="error-message">
+                {{ changeTrackingSchemaError }}
               </div>
             </div>
             <div class="form-group">
-              <label for="webhookEvents">Webhook Events:</label>
-              <select id="webhookEvents" v-model="formData.webhookOptions.events" multiple>
-                <option value="completed">Completed</option>
-                <option value="page">Page</option>
-                <option value="failed">Failed</option>
-                <option value="started">Started</option>
-              </select>
+              <label for="changePrompt">Change Tracking Prompt:</label>
+              <textarea
+                id="changePrompt"
+                v-model="formData.scrapeOptions.changeTrackingOptions.prompt"
+              ></textarea>
             </div>
           </div>
-        </div>
-      </fieldset>
+        </fieldset>
 
-      <button type="submit" class="primary-button">Submit Crawl</button>
-    </form>
-
-    <div v-if="loading" class="status loading">
-      <div class="spinner"></div>
-      <span>Processing your request...</span>
-    </div>
-
-    <div v-if="error" class="status error">
-      <div class="error-icon">!</div>
-      <div>
-        <h3>Error occurred</h3>
-        <p>{{ error }}</p>
-        <button class="primary-button" @click="error = ''">Try again</button>
-      </div>
-    </div>
-
-    <!-- Section for active crawl status -->
-    <div v-if="crawling" class="crawl-status-section">
-      <h2>Crawl Status</h2>
-      <p>Status: {{ crawlStatus }}</p>
-      <div class="progress-container">
-        <div class="progress-bar" :style="{ width: progress + '%' }"></div>
-      </div>
-      <p>{{ progress }}% Completed</p>
-      <p>{{ pagesCompleted }} / {{ totalPages }} pages processed</p>
-      <button class="primary-button" type="button" @click="cancelCurrentCrawl">Cancel Crawl</button>
-    </div>
-
-    <!-- Section for download options after crawl completion -->
-    <div v-if="progress === 100 && crawlStatus === 'completed'" class="download-section">
-      <h2>Download Results</h2>
-      <div class="download-buttons">
-        <label class="checkbox-label">
-          <input type="checkbox" v-model="useSubfolders" />
-          Use subfolders
-        </label>
-        <template v-for="fmt in activeFormats" :key="fmt">
-          <button class="download-button" @click="handleDownload(fmt)">
-            Download {{ fmt }} Archive
-          </button>
-          <button
-            v-if="fmt === 'markdown'"
-            class="download-button"
-            @click="handleDownloadCompiledMarkdown()"
+        <!-- Webhook Options Section -->
+        <fieldset class="form-group options-fieldset">
+          <legend
+            class="collapsible-header"
+            @click="isWebhookOptionsCollapsed = !isWebhookOptionsCollapsed"
           >
-            Download compiled Markdown
-          </button>
-        </template>
-        <button class="download-button" @click="handleDownload('Full JSON')">
-          Download Full JSON
-        </button>
-      </div>
-    </div>
+            {{ webhookOptionsArrow }} Webhook Options (Optional)
+          </legend>
+          <div v-show="!isWebhookOptionsCollapsed">
+            <div class="grid-layout">
+              <div class="form-group">
+                <label for="webhookUrl">Webhook URL:</label>
+                <input
+                  id="webhookUrl"
+                  v-model="formData.webhookOptions.url"
+                  type="text"
+                  placeholder="https://your-service.com/webhook"
+                />
+              </div>
+              <div class="form-group">
+                <label for="webhookHeaders">Webhook Headers (JSON):</label>
+                <textarea
+                  id="webhookHeaders"
+                  v-model="webhookHeadersInput"
+                  placeholder='{"Authorization": "token"}'
+                ></textarea>
+                <div v-if="webhookHeadersError" class="error-message">
+                  {{ webhookHeadersError }}
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="webhookMetadata">Webhook Metadata (JSON):</label>
+                <textarea
+                  id="webhookMetadata"
+                  v-model="webhookMetadataInput"
+                  placeholder='{"source": "ui"}'
+                ></textarea>
+                <div v-if="webhookMetadataError" class="error-message">
+                  {{ webhookMetadataError }}
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="webhookEvents">Webhook Events:</label>
+                <select id="webhookEvents" v-model="formData.webhookOptions.events" multiple>
+                  <option value="completed">Completed</option>
+                  <option value="page">Page</option>
+                  <option value="failed">Failed</option>
+                  <option value="started">Started</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </fieldset>
 
-    <!-- Section for selected crawl details -->
-    <div v-if="selectedCrawl" class="selected-crawl-details-section">
-      <h2>Details for Crawl ID: {{ selectedCrawl.id }}</h2>
-      <p><strong>URL:</strong> {{ selectedCrawl.url }}</p>
-      <p>
-        <strong>Date:</strong>
-        {{ new Date(selectedCrawl.createdAt).toLocaleString() }}
-      </p>
-      <p><strong>Status:</strong> {{ selectedCrawl.status }}</p>
+        <button type="submit" class="primary-button">Submit Crawl</button>
+      </form>
+    </template>
 
-      <h3>Files</h3>
-      <ul>
-        <li v-for="file in simulatedFiles" :key="file">{{ file }}</li>
-      </ul>
-
-      <div class="download-section">
-        <h3>Download Results</h3>
-        <div class="download-buttons">
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="useSubfolders" />
-            Use subfolders
-          </label>
-          <template v-for="fmt in selectedFormats" :key="fmt">
-            <button class="download-button" @click="handleDownload(fmt, selectedCrawl.id)">
-              Download {{ fmt }} Archive
-            </button>
-            <button
-              v-if="fmt === 'markdown'"
-              class="download-button"
-              @click="handleDownloadCompiledMarkdown(selectedCrawl.id)"
-            >
-              Download compiled Markdown
-            </button>
-          </template>
-          <button class="download-button" @click="handleDownload('Full JSON', selectedCrawl.id)">
-            Download Full JSON
+    <!-- RESPONSE: status / pages / json tabs -->
+    <template #response="{ activeTab }">
+      <!-- STATUS TAB: live job progress + download options -->
+      <div v-if="activeTab === 'status'" class="tab-pane">
+        <!-- Active crawl status with progress bar -->
+        <div v-if="crawling" class="crawl-status-section">
+          <h2>Crawl Status</h2>
+          <p>Status: {{ crawlStatus }}</p>
+          <div class="progress-container">
+            <div class="progress-bar" :style="{ width: progress + '%' }"></div>
+          </div>
+          <p>{{ progress }}% Completed</p>
+          <p>{{ pagesCompleted }} / {{ totalPages }} pages processed</p>
+          <button class="primary-button" type="button" @click="cancelCurrentCrawl">
+            Cancel Crawl
           </button>
         </div>
-      </div>
 
-      <button class="primary-button" @click="selectedCrawlId = null">Hide Details</button>
-    </div>
+        <!-- Completed crawl summary (when not actively crawling) -->
+        <div v-else-if="result" class="crawl-status-section">
+          <h2>Crawl Status</h2>
+          <p>Status: {{ crawlStatus || 'submitted' }}</p>
+          <div class="progress-container">
+            <div class="progress-bar" :style="{ width: progress + '%' }"></div>
+          </div>
+          <p>{{ progress }}% Completed</p>
+          <p>{{ pagesCompleted }} / {{ totalPages }} pages processed</p>
+        </div>
 
-    <!-- Section for crawl history -->
-    <div class="crawl-history-section">
-      <h2>Crawl History</h2>
-      <div v-if="crawlHistory.length > 0">
-        <ul class="history-list">
-          <li
-            v-for="crawl in crawlHistory"
-            :key="crawl.id"
-            :class="['history-item', { 'selected-crawl': selectedCrawlId === crawl.id }]"
-          >
-            <span class="history-info">
-              <strong>{{ crawl.url }}</strong>
-              – {{ new Date(crawl.createdAt).toLocaleString() }} – Status: {{ crawl.status }}
-            </span>
-            <button class="history-button" type="button" @click.prevent="selectCrawl(crawl.id)">
-              View
+        <!-- Download options after crawl completion -->
+        <div v-if="progress === 100 && crawlStatus === 'completed'" class="download-section">
+          <h2>Download Results</h2>
+          <div class="download-buttons">
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="useSubfolders" />
+              Use subfolders
+            </label>
+            <template v-for="fmt in activeFormats" :key="fmt">
+              <button class="download-button" @click="handleDownload(fmt)">
+                Download {{ fmt }} Archive
+              </button>
+              <button
+                v-if="fmt === 'markdown'"
+                class="download-button"
+                @click="handleDownloadCompiledMarkdown()"
+              >
+                Download compiled Markdown
+              </button>
+            </template>
+            <button class="download-button" @click="handleDownload('Full JSON')">
+              Download Full JSON
             </button>
-          </li>
-        </ul>
+          </div>
+        </div>
       </div>
-      <div v-else>
-        <p>No crawl history available.</p>
+
+      <!-- PAGES TAB: selected crawl files + crawl history -->
+      <div v-else-if="activeTab === 'pages'" class="tab-pane">
+        <!-- Selected crawl details -->
+        <div v-if="selectedCrawl" class="selected-crawl-details-section">
+          <h2>Details for Crawl ID: {{ selectedCrawl.id }}</h2>
+          <p><strong>URL:</strong> {{ selectedCrawl.url }}</p>
+          <p>
+            <strong>Date:</strong>
+            {{ new Date(selectedCrawl.createdAt).toLocaleString() }}
+          </p>
+          <p><strong>Status:</strong> {{ selectedCrawl.status }}</p>
+
+          <h3>Files</h3>
+          <ul>
+            <li v-for="file in simulatedFiles" :key="file">{{ file }}</li>
+          </ul>
+
+          <div class="download-section">
+            <h3>Download Results</h3>
+            <div class="download-buttons">
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="useSubfolders" />
+                Use subfolders
+              </label>
+              <template v-for="fmt in selectedFormats" :key="fmt">
+                <button class="download-button" @click="handleDownload(fmt, selectedCrawl.id)">
+                  Download {{ fmt }} Archive
+                </button>
+                <button
+                  v-if="fmt === 'markdown'"
+                  class="download-button"
+                  @click="handleDownloadCompiledMarkdown(selectedCrawl.id)"
+                >
+                  Download compiled Markdown
+                </button>
+              </template>
+              <button
+                class="download-button"
+                @click="handleDownload('Full JSON', selectedCrawl.id)"
+              >
+                Download Full JSON
+              </button>
+            </div>
+          </div>
+
+          <button class="primary-button" @click="selectedCrawlId = null">Hide Details</button>
+        </div>
+
+        <!-- Crawl history -->
+        <div class="crawl-history-section">
+          <h2>Crawl History</h2>
+          <div v-if="crawlHistory.length > 0">
+            <ul class="history-list">
+              <li
+                v-for="crawl in crawlHistory"
+                :key="crawl.id"
+                :class="['history-item', { 'selected-crawl': selectedCrawlId === crawl.id }]"
+              >
+                <span class="history-info">
+                  <strong>{{ crawl.url }}</strong>
+                  – {{ new Date(crawl.createdAt).toLocaleString() }} – Status: {{ crawl.status }}
+                </span>
+                <button class="history-button" type="button" @click.prevent="selectCrawl(crawl.id)">
+                  View
+                </button>
+              </li>
+            </ul>
+          </div>
+          <div v-else>
+            <p>No crawl history available.</p>
+          </div>
+          <div class="clear-history-wrapper">
+            <button class="primary-button" type="button" @click="clearHistory">
+              Clear History
+            </button>
+          </div>
+        </div>
       </div>
-      <div class="clear-history-wrapper">
-        <button class="primary-button" type="button" @click="clearHistory">Clear History</button>
-      </div>
-    </div>
-  </div>
+
+      <!-- JSON TAB: raw crawl job response -->
+      <CodeBlock v-else-if="activeTab === 'json'" :json="result" label="JSON" />
+    </template>
+  </PlaygroundLayout>
 </template>
 
 <script lang="ts">
@@ -481,6 +510,8 @@ import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
+import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
+import CodeBlock from '../components/playground/CodeBlock.vue';
 import {
   type FirecrawlCrawlingApi,
   type FirecrawlExtractionApi,
@@ -568,6 +599,7 @@ interface FormData {
  */
 export default defineComponent({
   name: 'CrawlView',
+  components: { PlaygroundLayout, CodeBlock },
   setup() {
     const router = useRouter();
     // Define the type of the injected api object based on the structure provided in src/plugins/api.ts
@@ -826,6 +858,9 @@ export default defineComponent({
     const currentCrawlId = ref<string | null>(null);
     const crawlHistory = ref<any[]>([]); // Initialize with empty array
 
+    // Duration (ms) of the crawl-submission request, surfaced in the playground status bar.
+    const durationMs = ref<number | null>(null);
+
     // State for selected crawl history item
     const selectedCrawlId = ref<string | null>(null);
     const simulatedFiles = ref<string[]>([]);
@@ -860,6 +895,59 @@ export default defineComponent({
         return selectedCrawl.value.scrapeOptions?.formats || [];
       }
       return [];
+    });
+
+    /**
+     * Response tabs presented by the playground layout.
+     * @returns {{ key: string; label: string }[]} Tab descriptors.
+     */
+    const responseTabs = computed(() => [
+      { key: 'status', label: 'Status' },
+      { key: 'pages', label: 'Pages' },
+      { key: 'json', label: 'JSON' },
+    ]);
+
+    /**
+     * Whether the response pane has something to show: an active or finished
+     * crawl job, or existing crawl history.
+     * @returns {boolean} True when results/history are available.
+     */
+    const hasResult = computed((): boolean => {
+      return crawling.value || !!result.value || crawlHistory.value.length > 0;
+    });
+
+    /**
+     * Human-readable status label for the playground status bar.
+     * @returns {string | null} The current job status, or null when idle.
+     */
+    const statusLabel = computed((): string | null => {
+      if (crawling.value) {
+        return crawlStatus.value ? `${crawlStatus.value} (${progress.value}%)` : 'Running';
+      }
+      if (crawlStatus.value) {
+        return crawlStatus.value;
+      }
+      if (result.value) {
+        return 'Submitted';
+      }
+      return null;
+    });
+
+    /**
+     * Status semantic for the playground status dot.
+     * @returns {'success' | 'error' | 'info' | 'idle'} The status type.
+     */
+    const statusType = computed((): 'success' | 'error' | 'info' | 'idle' => {
+      if (crawling.value) {
+        return 'info';
+      }
+      if (crawlStatus.value === 'completed') {
+        return 'success';
+      }
+      if (crawlStatus.value === 'failed' || crawlStatus.value === 'cancelled') {
+        return 'error';
+      }
+      return 'idle';
     });
 
     /**
@@ -1363,9 +1451,12 @@ export default defineComponent({
         error.value = '';
         result.value = null;
         currentCrawlId.value = null;
+        durationMs.value = null;
 
         // Call the crawling API to submit the crawl job
+        const startedAt = performance.now();
         const response = await api.crawling.crawlUrls(payload);
+        durationMs.value = performance.now() - startedAt;
         result.value = response.data;
 
         // Add the submitted job to history
@@ -1622,6 +1713,11 @@ export default defineComponent({
       crawlStatus,
       error,
       result,
+      durationMs,
+      responseTabs,
+      hasResult,
+      statusLabel,
+      statusType,
       handleSubmit,
       cancelCurrentCrawl,
       isCrawlerOptionsCollapsed,
@@ -1650,125 +1746,159 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.crawl-view {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
+/* Request form: fills the request pane, fields stack naturally. */
+.crawl-config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
+
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
+
+.form-group > label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.crawl-config-form input,
+.crawl-config-form select,
+.crawl-config-form textarea {
+  width: 100%;
+}
+
 .options-fieldset {
   border: 1px solid var(--color-border);
-  padding: 15px;
-  border-radius: var(--radius-sm);
-  margin-bottom: 20px;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 0;
 }
+
 .options-fieldset legend {
-  font-weight: bold;
-  padding: 0 5px;
+  font-weight: 700;
+  padding: 0 0.4rem;
 }
+
 .grid-layout {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
 }
+
 .checkbox-label {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 0.4rem;
 }
+
+.checkbox-label input {
+  width: auto;
+}
+
 .form-group small {
   display: block;
   font-size: 0.8em;
   color: var(--color-text-mute);
-  margin-top: 3px;
+  margin-top: 0.2rem;
 }
+
 .error-message {
   color: var(--hue-danger);
   font-size: 0.9em;
-  margin-top: 5px;
-}
-.status {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 15px;
-  border-radius: var(--radius-sm);
-  margin: 20px 0;
-}
-.loading {
-  background: var(--color-background-mute);
-  color: var(--color-link);
+  margin-top: 0.3rem;
 }
 
-/* Progress bar container */
+.collapsible-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Response panes: scroll within the response area. */
+.tab-pane {
+  padding: 1.25rem;
+}
+
+.tab-pane h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.6rem;
+}
+
+.tab-pane h3 {
+  font-size: 0.95rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.crawl-status-section p {
+  margin-bottom: 0.25rem;
+}
+
+/* Progress bar container. */
 .progress-container {
   width: 100%;
-  background-color: var(--color-border);
-  border-radius: var(--radius-sm);
-  margin-top: 10px;
-  overflow: hidden; /* Ensure the inner bar stays within bounds */
+  background-color: var(--color-background-mute);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  margin: 0.5rem 0;
+  overflow: hidden;
 }
 
-/* Inner progress bar */
+/* Inner progress bar, fire gradient. */
 .progress-bar {
-  height: 20px;
-  background-color: var(--hue-success); /* Success green */
-  text-align: center;
-  line-height: 20px; /* Center text vertically */
-  color: #fff;
-  transition: width 0.5s ease; /* Smooth transition for progress updates */
-}
-
-.error {
-  background: var(--hue-danger-soft);
-  color: var(--hue-danger);
-}
-.spinner {
-  width: 20px;
-  height: 20px;
-  border: 3px solid var(--brand-soft);
-  border-radius: 50%;
-  border-top-color: var(--brand);
-  animation: spin 1s ease-in-out infinite;
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  height: 14px;
+  background: var(--gradient-fire);
+  transition: width 0.5s var(--ease);
 }
 
 .download-section {
-  margin-top: 20px;
+  margin-top: 1.25rem;
 }
 
 .download-buttons {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+  align-items: center;
 }
 
-.crawl-history-section li {
-  cursor: pointer;
-  margin-bottom: 8px;
+.selected-crawl-details-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.selected-crawl-details-section ul {
+  margin: 0 0 0.5rem 1.2rem;
+  font-size: 0.88rem;
+  color: var(--color-text-soft);
 }
 
 .history-list {
   list-style: none;
   padding: 0;
+  margin: 0;
 }
 
 .history-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.4rem;
+}
+
+.history-info {
+  font-size: 0.88rem;
+  color: var(--color-text-soft);
 }
 
 .history-button {
-  margin-left: 10px;
-  padding: 5px 10px;
+  flex-shrink: 0;
+  padding: 0.35rem 0.7rem;
   background: var(--gradient-fire);
   color: #fff;
   border: none;
@@ -1787,7 +1917,6 @@ export default defineComponent({
 .download-button {
   padding: 0.4rem 0.8rem;
   font-size: 0.9rem;
-  margin-top: 0;
   background: var(--gradient-fire);
   color: #fff;
   border: none;
@@ -1806,20 +1935,10 @@ export default defineComponent({
 .clear-history-wrapper {
   display: flex;
   justify-content: flex-end;
-  margin-top: 0.5rem;
+  margin-top: 0.6rem;
 }
 
 .selected-crawl {
   background-color: var(--color-background-mute);
-}
-
-.collapsible-header {
-  cursor: pointer;
-  user-select: none;
-}
-
-.error-icon {
-  width: 20px;
-  height: 20px;
 }
 </style>
