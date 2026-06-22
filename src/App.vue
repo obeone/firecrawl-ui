@@ -1,15 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { RouterLink, useRoute } from 'vue-router';
-import CommandPalette from '@/components/CommandPalette.vue';
-import { navItems } from '@/config/navigation';
-
-const route = useRoute();
-
-/** Whether the mobile navigation drawer is open. */
-const isMenuOpen = ref(false);
-/** Whether the ⌘K command palette is visible. */
-const paletteOpen = ref(false);
+import { ref, watch } from 'vue';
+import { RouterLink } from 'vue-router';
 
 const storedTheme = localStorage.getItem('theme');
 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -22,26 +13,68 @@ watch(theme, (newTheme) => {
 });
 
 /**
- * Title of the current route, resolved from the shared navigation model.
+ * A primary tool tab rendered in the top bar.
+ *
+ * @property to - Router path the tab points to.
+ * @property label - Visible tab label.
+ * @property paths - Lucide-style SVG path `d` strings for the tab icon.
  */
-const currentTitle = computed<string>(() => {
-  const match = navItems.find((item) => item.to === route.path);
-  return match?.label ?? 'Firecrawl';
-});
-
-/**
- * Toggles the mobile navigation drawer.
- */
-function toggleMenu(): void {
-  isMenuOpen.value = !isMenuOpen.value;
+interface ToolTab {
+  to: string;
+  label: string;
+  paths: string[];
 }
 
 /**
- * Closes the mobile navigation drawer.
+ * Top-bar tool tabs. These are the playground tools; secondary destinations
+ * (API config, about) live as actions on the right of the bar.
  */
-function closeMenu(): void {
-  isMenuOpen.value = false;
-}
+const tools: ToolTab[] = [
+  {
+    to: '/scrape',
+    label: 'Scrape',
+    paths: [
+      'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z',
+      'M14 2v6h6',
+      'M9 13h6',
+      'M9 17h4',
+    ],
+  },
+  {
+    to: '/crawl',
+    label: 'Crawl',
+    paths: [
+      'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z',
+      'M3.6 9h16.8',
+      'M3.6 15h16.8',
+      'M12 3a13 13 0 0 1 0 18',
+      'M12 3a13 13 0 0 0 0 18',
+    ],
+  },
+  {
+    to: '/extract',
+    label: 'Extract',
+    paths: [
+      'M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z',
+      'M3.3 7 12 12l8.7-5',
+      'M12 22V12',
+    ],
+  },
+  {
+    to: '/map',
+    label: 'Map',
+    paths: [
+      'M9 4 3.5 6.2A1 1 0 0 0 3 7.1v12.2a1 1 0 0 0 1.4.9L9 18l6 3 5.1-2.2a1 1 0 0 0 .6-.9V5.7a1 1 0 0 0-1.4-.9L15 7z',
+      'M9 4v14',
+      'M15 7v14',
+    ],
+  },
+  {
+    to: '/search',
+    label: 'Search',
+    paths: ['M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', 'm21 21-4.3-4.3'],
+  },
+];
 
 /**
  * Switches between light and dark themes and persists the choice.
@@ -49,119 +82,69 @@ function closeMenu(): void {
 function toggleTheme(): void {
   theme.value = theme.value === 'dark' ? 'light' : 'dark';
 }
-
-/**
- * Opens the command palette.
- */
-function openPalette(): void {
-  paletteOpen.value = true;
-}
-
-/**
- * Global shortcut handler: ⌘K / Ctrl+K toggles the command palette.
- *
- * @param event - The keyboard event from the document listener.
- */
-function onGlobalKeydown(event: KeyboardEvent): void {
-  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-    event.preventDefault();
-    paletteOpen.value = !paletteOpen.value;
-  }
-}
-
-onMounted(() => document.addEventListener('keydown', onGlobalKeydown));
-onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKeydown));
 </script>
 
 <template>
   <div class="app-shell">
-    <!-- Dimmed backdrop behind the mobile rail drawer -->
-    <div class="scrim" :class="{ visible: isMenuOpen }" @click="closeMenu" aria-hidden="true"></div>
-
-    <!-- Slim icon navigation rail -->
-    <aside class="rail" :class="{ open: isMenuOpen }">
-      <RouterLink to="/" class="rail-brand" @click="closeMenu" aria-label="Firecrawl UI home">
-        <img alt="" class="rail-logo" src="@/assets/logo.png" width="30" height="30" />
-      </RouterLink>
-
-      <nav class="rail-nav">
-        <RouterLink
-          v-for="item in navItems"
-          :key="item.to"
-          :to="item.to"
-          class="rail-link"
-          :data-tip="item.label"
-          @click="closeMenu"
-        >
-          <svg class="rail-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-            <path v-for="(d, i) in item.paths" :key="i" :d="d" />
-          </svg>
-          <span class="rail-link-label">{{ item.label }}</span>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <!-- Brand -->
+        <RouterLink to="/" class="brand" aria-label="Firecrawl UI home">
+          <span class="brand-mark">
+            <img alt="" class="brand-logo" src="@/assets/logo.png" width="28" height="28" />
+          </span>
+          <span class="brand-name">Firecrawl</span>
+          <span class="brand-tag">UI</span>
         </RouterLink>
-      </nav>
 
-      <div class="rail-footer">
-        <button
-          class="rail-link rail-action"
-          :data-tip="theme === 'dark' ? 'Light mode' : 'Dark mode'"
-          @click="toggleTheme"
-          aria-label="Toggle color theme"
-        >
-          <svg
-            v-if="theme === 'dark'"
-            viewBox="0 0 24 24"
-            width="22"
-            height="22"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="4" />
-            <path
-              d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"
-            />
-          </svg>
-          <svg v-else viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
-          </svg>
-        </button>
-      </div>
-    </aside>
+        <!-- Tool tabs -->
+        <nav class="tabs" aria-label="Tools">
+          <RouterLink v-for="tool in tools" :key="tool.to" :to="tool.to" class="tab">
+            <svg class="tab-icon" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
+              <path v-for="(d, i) in tool.paths" :key="i" :d="d" />
+            </svg>
+            <span>{{ tool.label }}</span>
+          </RouterLink>
+        </nav>
 
-    <!-- Content column: top bar + routed view -->
-    <div class="content">
-      <header class="topbar">
-        <button class="icon-btn topbar-menu" @click="toggleMenu" aria-label="Toggle navigation">
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-            <path d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-
-        <div class="topbar-title">
-          <span class="topbar-crumb">Firecrawl</span>
-          <span class="topbar-sep" aria-hidden="true">/</span>
-          <span class="topbar-current">{{ currentTitle }}</span>
+        <!-- Actions -->
+        <div class="actions">
+          <RouterLink to="/api-config" class="icon-btn" aria-label="API configuration" title="API configuration">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+              />
+            </svg>
+          </RouterLink>
+          <RouterLink to="/about" class="icon-btn" aria-label="About" title="About">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 16v-4M12 8h.01" />
+            </svg>
+          </RouterLink>
+          <button class="icon-btn" @click="toggleTheme" aria-label="Toggle color theme" title="Toggle theme">
+            <svg v-if="theme === 'dark'" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" />
+              <path
+                d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"
+              />
+            </svg>
+            <svg v-else viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+            </svg>
+          </button>
         </div>
+      </div>
+    </header>
 
-        <button class="cmdk" @click="openPalette" aria-label="Open command palette">
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-            <path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" />
-            <path d="m21 21-4.3-4.3" />
-          </svg>
-          <span class="cmdk-label">Jump to…</span>
-          <kbd class="cmdk-keys">⌘K</kbd>
-        </button>
-      </header>
-
-      <main class="view" @click="closeMenu">
-        <router-view />
-      </main>
-    </div>
-
-    <CommandPalette v-model:open="paletteOpen" />
+    <main class="app-main">
+      <router-view />
+    </main>
   </div>
 </template>
 
 <style>
-/* App identity uses the shared sans stack from the token layer. */
 #app {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -170,250 +153,156 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKeydown));
 
 .app-shell {
   display: flex;
+  flex-direction: column;
   min-height: 100vh;
-}
-
-/* ---------------------------------------------------------------------------
- * Icon rail
- * ------------------------------------------------------------------------- */
-
-.rail {
-  position: sticky;
-  top: 0;
-  align-self: flex-start;
   height: 100vh;
-  width: 72px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.85rem 0;
-  background-color: var(--color-background-soft);
-  border-right: 1px solid var(--color-border);
-  z-index: 900;
-}
-
-.rail-brand {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-md);
-  background: var(--gradient-fire);
-  box-shadow: var(--box-shadow-button);
-  margin-bottom: 0.5rem;
-}
-
-.rail-logo {
-  width: 26px;
-  height: 26px;
-  object-fit: contain;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
-}
-
-.rail-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  flex-grow: 1;
-}
-
-.rail-footer {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  border-top: 1px solid var(--color-border);
-  padding-top: 0.6rem;
-  width: 100%;
-  align-items: center;
-}
-
-/* Rail link/button: icon tile with a hover tooltip. */
-.rail-link {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  border-radius: var(--radius-md);
-  color: var(--color-text-soft);
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  transition:
-    background-color var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.rail-icon {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.rail-action svg {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.rail-link:hover {
-  background-color: var(--color-background-mute);
-  color: var(--color-heading);
-}
-
-.rail-link.router-link-exact-active {
-  background: var(--brand-soft);
-  color: var(--brand-strong);
-}
-
-/* Ember active indicator on the inner edge. */
-.rail-link.router-link-exact-active::after {
-  content: '';
-  position: absolute;
-  left: -0.85rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 22px;
-  border-radius: var(--radius-pill);
-  background: var(--gradient-fire);
-}
-
-/* Label is hidden on desktop (icon-only) and revealed as a tooltip. */
-.rail-link-label {
-  display: none;
-}
-
-.rail-link[data-tip]::before {
-  content: attr(data-tip);
-  position: absolute;
-  left: calc(100% + 12px);
-  top: 50%;
-  transform: translateY(-50%) scale(0.96);
-  transform-origin: left center;
-  white-space: nowrap;
-  background: var(--color-heading);
-  color: var(--color-background);
-  font-size: 0.78rem;
-  font-weight: 600;
-  padding: 0.3rem 0.55rem;
-  border-radius: var(--radius-sm);
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    opacity var(--transition-fast),
-    transform var(--transition-fast);
-  z-index: 950;
-}
-
-.rail-link[data-tip]:hover::before {
-  opacity: 1;
-  transform: translateY(-50%) scale(1);
 }
 
 /* ---------------------------------------------------------------------------
- * Content column
+ * Top bar
  * ------------------------------------------------------------------------- */
-
-.content {
-  flex-grow: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
 
 .topbar {
   position: sticky;
   top: 0;
-  z-index: 800;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  height: 60px;
-  padding: 0 1.25rem;
-  background-color: color-mix(in srgb, var(--color-background) 80%, transparent);
-  backdrop-filter: blur(10px);
+  z-index: 100;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--color-background-soft) 88%, transparent);
+  backdrop-filter: saturate(140%) blur(10px);
   border-bottom: 1px solid var(--color-border);
 }
 
-.topbar-title {
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  height: 60px;
+  padding: 0 1.25rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Brand */
+.brand {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.95rem;
-}
-
-.topbar-crumb {
-  color: var(--color-text-mute);
-}
-
-.topbar-sep {
-  color: var(--color-text-mute);
-}
-
-.topbar-current {
-  font-weight: 700;
+  flex-shrink: 0;
   color: var(--color-heading);
-  letter-spacing: -0.01em;
 }
 
-/* ⌘K trigger button. */
-.cmdk {
+.brand:hover {
+  color: var(--color-heading);
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  background: var(--gradient-fire);
+  box-shadow: var(--box-shadow-button);
+}
+
+.brand-logo {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+}
+
+.brand-name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.brand-tag {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brand-strong);
+  background: var(--brand-soft);
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-pill);
+}
+
+/* Tool tabs */
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
-  margin-left: auto;
-  padding: 0.45rem 0.7rem;
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-text-mute);
-  font-size: 0.88rem;
-  cursor: pointer;
+  gap: 0.45rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-soft);
+  font-size: 0.92rem;
+  font-weight: 600;
+  white-space: nowrap;
   transition:
-    border-color var(--transition-fast),
-    color var(--transition-fast);
+    color var(--transition-fast),
+    background var(--transition-fast);
 }
 
-.cmdk:hover {
-  border-color: var(--color-border-hover);
-  color: var(--color-text);
-}
-
-.cmdk svg {
+.tab-icon {
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+  opacity: 0.8;
 }
 
-.cmdk-keys {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
+.tab:hover {
+  color: var(--color-heading);
   background: var(--color-background-mute);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: 0.08rem 0.35rem;
 }
 
-/* Generic icon button (mobile menu). */
+.tab.router-link-active {
+  color: var(--brand-strong);
+  background: var(--brand-soft);
+}
+
+.tab.router-link-active .tab-icon {
+  opacity: 1;
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
 .icon-btn {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-background-soft);
-  color: var(--color-heading);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: none;
+  color: var(--color-text-soft);
   cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
 .icon-btn svg {
@@ -421,108 +310,59 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onGlobalKeydown));
   stroke: currentColor;
   stroke-width: 2;
   stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.topbar-menu {
-  display: none;
+.icon-btn:hover {
+  color: var(--color-heading);
+  background: var(--color-background-mute);
 }
 
-/* Routed view area. */
-.view {
-  flex-grow: 1;
-  padding: 2rem;
-  overflow-y: auto;
+.icon-btn.router-link-active {
+  color: var(--brand-strong);
+  background: var(--brand-soft);
 }
 
 /* ---------------------------------------------------------------------------
- * Mobile
+ * Main content
  * ------------------------------------------------------------------------- */
 
-.scrim {
-  display: none;
+.app-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 1.75rem 1.5rem;
 }
 
-@media (max-width: 768px) {
-  .topbar-menu {
-    display: grid;
+/* Stretch a direct child (playground / page) to fill the main area. */
+.app-main > * {
+  flex: 1;
+  min-height: 0;
+}
+
+@media (max-width: 640px) {
+  .topbar-inner {
+    gap: 0.75rem;
+    padding: 0 0.75rem;
   }
 
-  .cmdk-label {
+  .brand-name,
+  .brand-tag {
     display: none;
   }
 
-  .rail {
-    position: fixed;
-    top: 0;
-    left: 0;
-    transform: translateX(-100%);
-    transition: transform var(--transition);
-    box-shadow: var(--box-shadow-container);
-  }
-
-  .rail.open {
-    transform: translateX(0);
-  }
-
-  /* On mobile the drawer is wide enough to show labels next to icons. */
-  .rail {
-    width: 220px;
-    align-items: stretch;
-    padding: 0.85rem 0.7rem;
-  }
-
-  .rail-brand {
-    margin-left: 0.2rem;
-  }
-
-  .rail-link {
-    width: 100%;
-    grid-template-columns: 46px 1fr;
-    display: grid;
-    justify-items: start;
-    align-items: center;
-    padding-right: 0.5rem;
-  }
-
-  .rail-link .rail-icon {
-    justify-self: center;
-    grid-column: 1;
-  }
-
-  .rail-link-label {
-    display: block;
-    grid-column: 2;
-    font-size: 0.92rem;
-    font-weight: 500;
-  }
-
-  /* Tooltips are redundant when labels are visible. */
-  .rail-link[data-tip]::before {
+  .tab span {
     display: none;
   }
 
-  .rail-link.router-link-exact-active::after {
-    display: none;
+  .tab {
+    padding: 0.5rem;
   }
 
-  .scrim {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity var(--transition);
-    z-index: 850;
-  }
-
-  .scrim.visible {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  .view {
-    padding: 1.25rem 1.1rem;
+  .app-main {
+    padding: 1rem 0.85rem;
   }
 }
 </style>
