@@ -1,162 +1,318 @@
 @import './base.css';
 
-/* CSS Custom Properties (Variables) */
-/* Defines reusable values for colors, gradients, and shadows across the stylesheet. */
-:root {
-  --color-primary-green: #4fc08d;
-  --color-secondary-teal: #2c7a7b;
-  --color-white: #fff;
-  --box-shadow-container: 0 4px 32px 0 rgba(0, 0, 0, 0.25);
-  --box-shadow-button: 0 2px 8px 0 rgba(79, 192, 141, 0.1);
-  --gradient-button: linear-gradient(
-    90deg,
-    var(--color-primary-green) 60%,
-    var(--color-secondary-teal) 100%
-  );
-  --gradient-button-hover: linear-gradient(
-    90deg,
-    var(--color-secondary-teal) 60%,
-    var(--color-primary-green) 100%
-  );
-}
+/*
+ * Firecrawl UI — Shared component layer.
+ *
+ * Reusable primitives and the page-level classes the views consume. Built on
+ * the Ember tokens from base.css. The legacy class names (.page-container,
+ * .scrape-config-container, .scrape-config-form, .primary-button) are kept and
+ * restyled so existing templates pick up the new look for free.
+ */
 
-/* General Page Container Style */
-/* Used across views for consistent layout and styling of main content areas. */
+/* ---------------------------------------------------------------------------
+ * Page containers
+ * ------------------------------------------------------------------------- */
+
+/*
+ * Centered content panel used across configuration views. A raised, rounded
+ * surface with a soft warm shadow and a faint fire glow at the top edge.
+ */
 .scrape-config-container,
 .page-container {
+  position: relative;
   background: var(--color-background-soft);
-  border-radius: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
   box-shadow: var(--box-shadow-container);
   padding: 2.5rem 3rem;
-  max-width: 600px;
+  max-width: 640px;
   margin: 2.5rem auto;
   color: var(--color-text);
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.75rem;
 }
 
-/* Heading styles within page containers */
+/* Subtle ember glow bleeding from the top of every panel. */
+.scrape-config-container::before,
+.page-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glow-fire);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Keep panel content above the decorative glow layer. */
+.scrape-config-container > *,
+.page-container > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Headings inside panels. */
 .scrape-config-container h1,
 .scrape-config-container h2,
 .page-container h1,
 .page-container h2 {
   color: var(--color-heading);
-  font-weight: 600;
-  margin-bottom: 1rem;
-  letter-spacing: 0.5px;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.02em;
 }
 
-/* Form specific styles within scrape-config-form */
+/* ---------------------------------------------------------------------------
+ * Generic surface card
+ * ------------------------------------------------------------------------- */
+
+/*
+ * Standalone card surface for grouping content (results, panels, items).
+ */
+.card {
+  background: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--box-shadow-card);
+  padding: 1.5rem;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition),
+    transform var(--transition);
+}
+
+/* Optional interactive lift for clickable cards. */
+.card--hover:hover {
+  border-color: var(--color-border-hover);
+  box-shadow: var(--box-shadow-container);
+  transform: translateY(-3px);
+}
+
+/* ---------------------------------------------------------------------------
+ * Forms
+ * ------------------------------------------------------------------------- */
+
+/* Field labels. */
 .scrape-config-form label {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
   color: var(--color-text);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
   display: block;
 }
 
+/* Text-like inputs inside config forms span the full width. */
 .scrape-config-form input[type='text'],
+.scrape-config-form input[type='url'],
+.scrape-config-form input[type='number'],
+.scrape-config-form input[type='password'],
 .scrape-config-form select,
 .scrape-config-form textarea {
   width: 100%;
-  padding: 0.7rem 1rem;
-  border-radius: 8px;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
   background: var(--color-background);
   color: var(--color-text);
   margin-bottom: 1.2rem;
-  font-size: 1rem;
-  transition: border 0.2s;
+  font-size: 0.95rem;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
-/* Focus states for form input elements */
+/* Focus state matches the global ember ring. */
 .scrape-config-form input[type='text']:focus,
+.scrape-config-form input[type='url']:focus,
+.scrape-config-form input[type='number']:focus,
+.scrape-config-form input[type='password']:focus,
 .scrape-config-form select:focus,
 .scrape-config-form textarea:focus {
-  border: 1.5px solid var(--color-primary-green);
+  border-color: var(--ember-500);
+  box-shadow: var(--shadow-ring);
   outline: none;
 }
 
-/* Styles for checkboxes within forms */
+/* Checkboxes pick up the brand accent. */
 .scrape-config-form input[type='checkbox'] {
-  accent-color: var(--color-primary-green);
+  accent-color: var(--ember-500);
   width: 1.1em;
   height: 1.1em;
   margin-right: 0.5em;
 }
 
-/* Section title styling within forms */
-.scrape-config-form .section-title {
-  font-size: 1.15rem;
-  color: var(--color-primary-green);
+/* Section sub-titles within forms, in the brand color. */
+.scrape-config-form .section-title,
+.section-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--brand-strong);
   margin: 1.5rem 0 0.7rem 0;
-  font-weight: 500;
-  letter-spacing: 0.2px;
+  font-weight: 700;
 }
 
-/* Helper text styling within forms */
-.scrape-config-form .helper-text {
-  color: var(--color-text);
-  opacity: 0.8;
-  font-size: 0.95rem;
+/* Muted helper text under fields. */
+.scrape-config-form .helper-text,
+.helper-text {
+  color: var(--color-text-soft);
+  font-size: 0.88rem;
   margin-bottom: 1.2rem;
 }
 
-/* Button styles for forms */
+/* ---------------------------------------------------------------------------
+ * Buttons
+ * ------------------------------------------------------------------------- */
+
+/*
+ * Shared button base. The .btn class plus a variant gives a complete button;
+ * the legacy selectors below reuse the same look.
+ */
+.btn,
+.primary-button,
 .scrape-config-form button,
 .scrape-config-form input[type='submit'] {
-  background: var(--gradient-button);
-  color: var(--color-white);
-  border: none;
-  border-radius: 8px;
-  padding: 0.8rem 2.2rem;
-  font-size: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: inherit;
+  font-size: 0.98rem;
   font-weight: 600;
+  line-height: 1;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1.5rem;
   cursor: pointer;
-  box-shadow: var(--box-shadow-button);
+  text-decoration: none;
   transition:
-    background 0.2s,
-    transform 0.1s;
-  margin-top: 1.5rem;
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast),
+    color var(--transition-fast);
 }
 
-/* Primary button styles, often used for main actions */
-.primary-button {
-  background: var(--gradient-button);
-  color: var(--color-white);
-  border: none;
-  border-radius: 8px;
-  padding: 0.8rem 2.2rem;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
+/* Primary / fire button — the main call to action. */
+.btn-primary,
+.primary-button,
+.scrape-config-form button,
+.scrape-config-form input[type='submit'] {
+  background: var(--gradient-fire);
+  color: #fff;
   box-shadow: var(--box-shadow-button);
-  transition:
-    background 0.2s,
-    transform 0.1s;
+}
+
+.btn-primary:hover,
+.primary-button:hover,
+.scrape-config-form button:hover,
+.scrape-config-form input[type='submit']:hover {
+  background: var(--gradient-fire-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px -6px rgba(250, 77, 18, 0.6);
+  color: #fff;
+}
+
+.btn-primary:active,
+.primary-button:active,
+.scrape-config-form button:active {
+  transform: translateY(0);
+}
+
+/* The legacy primary-button stays right-aligned as before. */
+.primary-button {
   display: block;
   margin-left: auto;
   margin-top: 1.5rem;
 }
 
-/* Hover states for primary button */
-.primary-button:hover {
-  background: var(--gradient-button-hover);
-  transform: translateY(-2px) scale(1.03);
+/* Secondary / ghost button — outlined, neutral. */
+.btn-secondary {
+  background: var(--color-background-soft);
+  color: var(--color-heading);
+  border-color: var(--color-border);
 }
 
-/* Hover states for form buttons */
-.scrape-config-form button:hover,
-.scrape-config-form input[type='submit']:hover {
-  background: var(--gradient-button-hover);
-  transform: translateY(-2px) scale(1.03);
+.btn-secondary:hover {
+  border-color: var(--ember-500);
+  color: var(--brand-strong);
+  background: var(--brand-soft);
 }
 
-/* Media queries for responsiveness */
+/* Danger button. */
+.btn-danger {
+  background: var(--hue-danger);
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background: #cf3b40;
+  transform: translateY(-2px);
+}
+
+/* Disabled state for all button variants. */
+.btn:disabled,
+.btn[disabled],
+.primary-button:disabled,
+.scrape-config-form button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Badges / status pills
+ * ------------------------------------------------------------------------- */
+
+/* Inline status pill; pair with a modifier for color. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-pill);
+  line-height: 1.4;
+}
+
+.badge--success {
+  color: var(--hue-success);
+  background: var(--hue-success-soft);
+}
+
+.badge--warning {
+  color: var(--hue-warning);
+  background: var(--hue-warning-soft);
+}
+
+.badge--danger {
+  color: var(--hue-danger);
+  background: var(--hue-danger-soft);
+}
+
+.badge--info {
+  color: var(--hue-info);
+  background: var(--hue-info-soft);
+}
+
+.badge--brand {
+  color: var(--brand-strong);
+  background: var(--brand-soft);
+}
+
+/* ---------------------------------------------------------------------------
+ * Responsive
+ * ------------------------------------------------------------------------- */
+
 @media (max-width: 700px) {
   .scrape-config-container,
   .page-container {
-    padding: 1.2rem 0.5rem;
-    max-width: 98vw;
+    padding: 1.5rem 1.1rem;
+    max-width: 100%;
+    margin: 1.25rem auto;
+    border-radius: var(--radius-lg);
   }
 }

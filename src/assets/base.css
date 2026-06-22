@@ -1,93 +1,184 @@
 /*
- * Color palette from https://github.com/vuejs/theme
- * Defines a set of CSS custom properties for a consistent color scheme.
+ * Firecrawl UI — Design tokens ("Ember" design language).
+ *
+ * Dark-first, developer-tool aesthetic built around a warm "fire" identity:
+ * an ember-orange brand ramp paired with amber accents and warm-tinted
+ * neutrals. All semantic role variables keep the names the views already
+ * consume (--color-background, --color-text, --gradient-button, ...) so the
+ * new look propagates without rewriting every template.
+ */
+
+/*
+ * Raw palette. These are the primitive, theme-agnostic color stops.
+ * Semantic variables below map them to roles per theme.
  */
 :root {
-  --vt-c-white: #ffffff;
-  --vt-c-white-soft: #f8f8f8;
-  --vt-c-white-mute: #f2f2f2;
+  /* Brand — ember orange (the fire) */
+  --ember-50: #fff4ed;
+  --ember-100: #ffe5d4;
+  --ember-200: #ffc6a8;
+  --ember-300: #ff9d6f;
+  --ember-400: #ff6f37;
+  --ember-500: #fa4d12;
+  --ember-600: #e23a06;
+  --ember-700: #bb2c08;
+  --ember-800: #94250f;
+  --ember-900: #781f0f;
 
-  --vt-c-black: #181818;
-  --vt-c-black-soft: #222222;
-  --vt-c-black-mute: #282828;
+  /* Accent — amber/ember glow used in fire gradients */
+  --amber-300: #ffce6b;
+  --amber-400: #ffb020;
+  --amber-500: #f59e0b;
 
-  --vt-c-indigo: #2c3e50;
+  /* Warm neutrals — light side (paper) */
+  --warm-0: #ffffff;
+  --warm-50: #faf8f5;
+  --warm-100: #f4f0ea;
+  --warm-200: #e9e3da;
+  --warm-300: #d8cfc2;
+  --warm-500: #8b8175;
+  --warm-600: #6b6157;
+  --warm-700: #4a4239;
+  --warm-800: #2a2520;
 
-  --vt-c-divider-light-1: rgba(60, 60, 60, 0.29);
-  --vt-c-divider-light-2: rgba(60, 60, 60, 0.12);
-  --vt-c-divider-dark-1: rgba(84, 84, 84, 0.65);
-  --vt-c-divider-dark-2: rgba(84, 84, 84, 0.48);
+  /* Warm neutrals — dark side (charcoal) */
+  --char-950: #141210;
+  --char-900: #1a1713;
+  --char-850: #211d18;
+  --char-800: #29241e;
+  --char-700: #342e26;
 
-  --vt-c-text-light-1: var(--vt-c-indigo);
-  --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
-  --vt-c-text-dark-1: var(--vt-c-white);
-  --vt-c-text-dark-2: rgba(235, 235, 235, 0.8); /* Increased opacity for better contrast */
+  /* Semantic feedback hues (shared by both themes) */
+  --hue-success: #1aa463;
+  --hue-success-soft: rgba(26, 164, 99, 0.14);
+  --hue-warning: #f59e0b;
+  --hue-warning-soft: rgba(245, 158, 11, 0.16);
+  --hue-danger: #e5484d;
+  --hue-danger-soft: rgba(229, 72, 77, 0.14);
+  --hue-info: #3b82f6;
+  --hue-info-soft: rgba(59, 130, 246, 0.14);
 }
 
 /*
- * Semantic color variables for this project.
- * These variables map the base color palette to semantic roles,
- * making it easier to manage theme-related styles.
+ * Theme-agnostic design tokens: typography, radii, gradients, motion.
+ * These do not change between light and dark.
  */
 :root {
-  --color-background: var(--vt-c-white);
-  --color-background-soft: var(--vt-c-white-soft);
-  --color-background-mute: var(--vt-c-white-mute);
+  /* Type families */
+  --font-sans:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+    'Helvetica Neue', sans-serif;
+  --font-mono:
+    ui-monospace, 'SF Mono', 'SFMono-Regular', 'JetBrains Mono', 'Fira Code', Menlo, Consolas,
+    monospace;
 
-  --color-border: var(--vt-c-divider-light-2);
-  --color-border-hover: var(--vt-c-divider-light-1);
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-pill: 999px;
 
-  --color-heading: var(--vt-c-text-light-1);
-  --color-text: var(--vt-c-text-light-1);
+  /* Brand gradient (fire) */
+  --gradient-fire: linear-gradient(
+    135deg,
+    var(--ember-400) 0%,
+    var(--ember-500) 55%,
+    var(--ember-600) 100%
+  );
+  --gradient-fire-hover: linear-gradient(
+    135deg,
+    var(--ember-300) 0%,
+    var(--ember-400) 55%,
+    var(--ember-500) 100%
+  );
+  --gradient-amber: linear-gradient(135deg, var(--amber-400) 0%, var(--ember-500) 100%);
 
-  --section-gap: 160px;
+  /* Legacy aliases kept so existing views/main.css keep resolving.
+     They now point at the ember identity instead of Vue green. */
+  --color-primary-green: var(--ember-500);
+  --color-secondary-teal: var(--ember-700);
+  --color-white: #ffffff;
+  --gradient-button: var(--gradient-fire);
+  --gradient-button-hover: var(--gradient-fire-hover);
+
+  /* Brand accessors used by new components */
+  --brand: var(--ember-500);
+  --brand-strong: var(--ember-600);
+  --brand-soft: rgba(250, 77, 18, 0.13);
+
+  --section-gap: 120px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-fast: 0.15s var(--ease);
+  --transition: 0.25s var(--ease);
 }
 
 /*
- * Dark theme overrides activated when the root element has `data-theme="dark"`.
+ * Light theme (default). Warm paper neutrals, ember brand, soft shadows.
+ */
+:root {
+  --color-background: var(--warm-50);
+  --color-background-soft: var(--warm-0);
+  --color-background-mute: var(--warm-100);
+  --color-surface-raised: var(--warm-0);
+
+  --color-border: rgba(42, 37, 32, 0.1);
+  --color-border-hover: rgba(42, 37, 32, 0.2);
+
+  --color-heading: var(--warm-800);
+  --color-text: var(--warm-700);
+  --color-text-soft: var(--warm-600);
+  --color-text-mute: var(--warm-500);
+
+  --color-link: var(--ember-600);
+  --color-link-hover: var(--ember-700);
+
+  --box-shadow-container:
+    0 1px 2px rgba(42, 37, 32, 0.04), 0 12px 32px -12px rgba(42, 37, 32, 0.14);
+  --box-shadow-card: 0 1px 2px rgba(42, 37, 32, 0.05), 0 6px 20px -10px rgba(42, 37, 32, 0.16);
+  --box-shadow-button: 0 6px 18px -6px rgba(250, 77, 18, 0.5);
+  --shadow-ring: 0 0 0 3px rgba(250, 77, 18, 0.18);
+
+  --glow-fire: radial-gradient(60% 80% at 50% 0%, rgba(250, 77, 18, 0.1) 0%, transparent 70%);
+
+  color-scheme: light;
+}
+
+/*
+ * Dark theme — the hero look. Activated by data-theme="dark" on <html>.
+ * Deep warm charcoal; ember brand pops against it.
  */
 :root[data-theme='dark'] {
-  --color-background: var(--vt-c-black);
-  --color-background-soft: var(--vt-c-black-soft);
-  --color-background-mute: var(--vt-c-black-mute);
+  --color-background: var(--char-950);
+  --color-background-soft: var(--char-900);
+  --color-background-mute: var(--char-850);
+  --color-surface-raised: var(--char-850);
 
-  --color-border: var(--vt-c-divider-dark-2);
-  --color-border-hover: var(--vt-c-divider-dark-1);
+  --color-border: rgba(255, 240, 225, 0.09);
+  --color-border-hover: rgba(255, 240, 225, 0.2);
 
-  --color-heading: var(--vt-c-text-dark-1);
-  --color-text: var(--vt-c-text-dark-2);
-}
+  --color-heading: #f3ede3;
+  --color-text: #d9d2c7;
+  --color-text-soft: #a8a094;
+  --color-text-mute: #7d756a;
 
-/* Styles for form elements in dark mode */
-:root[data-theme='dark'] input,
-:root[data-theme='dark'] textarea,
-:root[data-theme='dark'] select {
-  background-color: var(--color-background-soft);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  padding: 8px 12px;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-}
+  --color-link: var(--ember-300);
+  --color-link-hover: var(--ember-200);
 
-:root[data-theme='dark'] input::placeholder,
-:root[data-theme='dark'] textarea::placeholder {
-  color: var(--vt-c-text-dark-2);
-  opacity: 0.7;
-}
+  --box-shadow-container: 0 1px 2px rgba(0, 0, 0, 0.5), 0 18px 48px -16px rgba(0, 0, 0, 0.7);
+  --box-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -14px rgba(0, 0, 0, 0.65);
+  --box-shadow-button: 0 8px 22px -6px rgba(250, 77, 18, 0.55);
+  --shadow-ring: 0 0 0 3px rgba(255, 111, 55, 0.28);
 
-:root[data-theme='dark'] input:focus,
-:root[data-theme='dark'] textarea:focus,
-:root[data-theme='dark'] select:focus {
-  outline: none;
-  border-color: var(--color-border-hover);
-  box-shadow: 0 0 0 2px hsla(160, 100%, 37%, 0.2);
+  --glow-fire: radial-gradient(60% 80% at 50% 0%, rgba(250, 77, 18, 0.16) 0%, transparent 70%);
+
+  color-scheme: dark;
 }
 
 /*
- * Global reset for all elements.
- * Applies border-box sizing, removes default margins, and normalizes font weight
- * to ensure consistent rendering across browsers.
+ * Global reset. Border-box sizing, zeroed margins, normalized font weight.
  */
 *,
 *::before,
@@ -98,33 +189,130 @@
 }
 
 /*
- * Base styles for the body element.
- * Sets minimum height, text and background colors, smooth transitions for theme changes,
- * line height, font stack, font size, and text rendering optimizations.
+ * Document base. Warm background, smooth theme transition, sane defaults.
  */
 body {
   min-height: 100vh;
   color: var(--color-text);
   background: var(--color-background);
   transition:
-    color 0.5s,
-    background-color 0.5s;
+    color var(--transition),
+    background-color var(--transition);
   line-height: 1.6;
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    Oxygen,
-    Ubuntu,
-    Cantarell,
-    'Fira Sans',
-    'Droid Sans',
-    'Helvetica Neue',
-    sans-serif;
+  font-family: var(--font-sans);
   font-size: 15px;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/*
+ * Headings inherit the heading color and a tighter, more confident tracking.
+ */
+h1,
+h2,
+h3,
+h4 {
+  color: var(--color-heading);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+/* Links default to the brand link color with a quick hover. */
+a {
+  color: var(--color-link);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-link-hover);
+}
+
+/* Inline code / monospaced content reads as such everywhere. */
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--font-mono);
+}
+
+/*
+ * Global form control styling. Unified across both themes so every view's
+ * inputs share the same modern look without per-view rules.
+ */
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--color-text);
+  background-color: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.8rem;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-text-mute);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--ember-500);
+  box-shadow: var(--shadow-ring);
+}
+
+/* Checkboxes and radios adopt the brand accent. */
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--ember-500);
+}
+
+/* Buttons get a pointer and consistent typography by default. */
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* Visible, on-brand keyboard focus for accessibility. */
+:focus-visible {
+  outline: 2px solid var(--ember-500);
+  outline-offset: 2px;
+}
+
+/*
+ * Custom scrollbars tuned to the warm neutrals (WebKit + Firefox).
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-hover) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-hover);
+  border-radius: var(--radius-pill);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-text-mute);
 }
