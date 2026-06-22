@@ -1659,9 +1659,9 @@ export default defineComponent({
   margin-bottom: 20px;
 }
 .options-fieldset {
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   padding: 15px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   margin-bottom: 20px;
 }
 .options-fieldset legend {
@@ -1681,11 +1681,11 @@ export default defineComponent({
 .form-group small {
   display: block;
   font-size: 0.8em;
-  color: #666;
+  color: var(--color-text-mute);
   margin-top: 3px;
 }
 .error-message {
-  color: red;
+  color: var(--hue-danger);
   font-size: 0.9em;
   margin-top: 5px;
 }
@@ -1694,19 +1694,19 @@ export default defineComponent({
   align-items: center;
   gap: 10px;
   padding: 15px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   margin: 20px 0;
 }
 .loading {
-  background: #f0f7ff;
-  color: #0066cc;
+  background: var(--color-background-mute);
+  color: var(--color-link);
 }
 
 /* Progress bar container */
 .progress-container {
   width: 100%;
-  background-color: #e0e0e0;
-  border-radius: 5px;
+  background-color: var(--color-border);
+  border-radius: var(--radius-sm);
   margin-top: 10px;
   overflow: hidden; /* Ensure the inner bar stays within bounds */
 }
@@ -1714,23 +1714,23 @@ export default defineComponent({
 /* Inner progress bar */
 .progress-bar {
   height: 20px;
-  background-color: #4caf50; /* Green color */
+  background-color: var(--hue-success); /* Success green */
   text-align: center;
   line-height: 20px; /* Center text vertically */
-  color: white;
+  color: #fff;
   transition: width 0.5s ease; /* Smooth transition for progress updates */
 }
 
 .error {
-  background: #fff0f0;
-  color: #cc0000;
+  background: var(--hue-danger-soft);
+  color: var(--hue-danger);
 }
 .spinner {
   width: 20px;
   height: 20px;
-  border: 3px solid rgba(0, 102, 204, 0.3);
+  border: 3px solid var(--brand-soft);
   border-radius: 50%;
-  border-top-color: #0066cc;
+  border-top-color: var(--brand);
   animation: spin 1s ease-in-out infinite;
 }
 @keyframes spin {
@@ -1769,30 +1769,38 @@ export default defineComponent({
 .history-button {
   margin-left: 10px;
   padding: 5px 10px;
-  background-color: #007bff;
+  background: var(--gradient-fire);
   color: #fff;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .history-button:hover {
-  background-color: #0056b3;
+  background: var(--gradient-fire-hover);
+  transform: translateY(-1px);
 }
 
 .download-button {
   padding: 0.4rem 0.8rem;
   font-size: 0.9rem;
   margin-top: 0;
-  background-color: #007bff;
+  background: var(--gradient-fire);
   color: #fff;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .download-button:hover {
-  background-color: #0056b3;
+  background: var(--gradient-fire-hover);
+  transform: translateY(-1px);
 }
 
 .clear-history-wrapper {
@@ -1802,7 +1810,7 @@ export default defineComponent({
 }
 
 .selected-crawl {
-  background-color: #1f2d3d;
+  background-color: var(--color-background-mute);
 }
 
 .collapsible-header {

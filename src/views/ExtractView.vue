@@ -177,7 +177,7 @@ const downloadResult = (): void => {
   max-width: 900px;
   margin: 20px auto;
   padding: 20px;
-  font-family: sans-serif;
+  font-family: var(--font-sans);
 }
 
 .form-group {
@@ -193,26 +193,37 @@ label {
 textarea {
   width: 100%;
   padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-family: 'Courier New', Courier, monospace;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
 }
 
 .options {
   margin-bottom: 10px;
 }
 
-button {
-  padding: 10px 15px;
-  background-color: #5cb85c;
-  color: white;
-  border: none;
-  border-radius: 4px;
+/* The result download button is a secondary action — ghost style. */
+.result-header button {
+  padding: 6px 12px;
+  background: var(--color-background-soft);
+  color: var(--color-heading);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.result-header button:hover {
+  border-color: var(--ember-500);
+  color: var(--brand-strong);
+  background: var(--brand-soft);
 }
 
 button:disabled {
-  background-color: #aaa;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
@@ -221,14 +232,16 @@ button:disabled {
 }
 
 .status.error {
-  color: #a94442;
+  color: var(--hue-danger);
 }
 
 .result {
   margin-top: 20px;
-  border: 1px solid #eee;
-  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   padding: 10px;
+  background: var(--color-background-soft);
+  box-shadow: var(--box-shadow-card);
 }
 
 .result-header {
@@ -244,12 +257,12 @@ pre {
 }
 
 .schema-error {
-  color: #d9534f;
+  color: var(--hue-danger);
 }
 
 .hint {
   display: block;
   margin-top: 4px;
-  color: #666;
+  color: var(--color-text-mute);
 }
 </style>
