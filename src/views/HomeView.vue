@@ -85,7 +85,7 @@ const tools: ToolCard[] = [
       <div class="hero-mark">
         <img src="@/assets/logo.png" alt="Firecrawl UI Logo" class="logo" />
       </div>
-      <h1>Firecrawl <span class="accent">UI</span></h1>
+      <h1 class="hero-title">Firecrawl <span class="accent">UI</span></h1>
       <p class="subtitle">
         A request/response playground for the Firecrawl API. Build a call on the left, read the
         response on the right. Everything runs locally.
@@ -141,14 +141,17 @@ const tools: ToolCard[] = [
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 2.5rem;
-  padding: 1rem 0 2rem;
+  gap: 3rem;
+  padding: 2rem 0 2rem;
 }
 
-/* Hero */
+/* ---------------------------------------------------------------------------
+ * Hero — the showcase. Gradient-text title (sparingly, hero only), a glowing
+ * glass logo mark, and aurora-accented CTAs.
+ * ------------------------------------------------------------------------- */
 .hero {
   text-align: center;
-  padding-top: 1rem;
+  padding-top: 1.5rem;
 }
 
 .hero-eyebrow {
@@ -158,39 +161,49 @@ const tools: ToolCard[] = [
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--brand-strong);
-  background: var(--brand-soft);
-  padding: 0.3rem 0.85rem;
+  /* Glass chip with a hairline so it reads on the aurora. */
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid var(--glass-border);
+  padding: 0.35rem 0.95rem;
   border-radius: var(--radius-pill);
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.6rem;
 }
 
 .hero-mark {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 84px;
-  height: 84px;
-  margin: 0 auto 1.1rem;
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 1.3rem;
   border-radius: var(--radius-xl);
-  background: var(--gradient-fire);
-  box-shadow: 0 18px 44px -16px rgba(250, 77, 18, 0.6);
+  background: var(--gradient-aurora);
+  /* Violet/cyan glow radiating from the mark — the hero's focal light. */
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12) inset,
+    0 18px 50px -12px rgba(124, 92, 255, 0.7),
+    0 8px 30px -8px rgba(24, 194, 221, 0.5);
 }
 
 .logo {
   width: 56px;
   height: 56px;
   object-fit: contain;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
 }
 
-h1 {
-  font-size: clamp(2.2rem, 4.5vw, 3rem);
+.hero-title {
+  font-size: clamp(2.4rem, 5vw, 3.4rem);
   font-weight: 800;
-  letter-spacing: -0.03em;
-  margin-bottom: 0.6rem;
+  letter-spacing: -0.035em;
+  margin-bottom: 0.7rem;
 }
 
+/* Gradient text — only used on the hero accent to keep it special. */
 .accent {
-  background: var(--gradient-fire);
+  background: var(--gradient-aurora);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -198,9 +211,9 @@ h1 {
 }
 
 .subtitle {
-  font-size: 1.05rem;
+  font-size: 1.08rem;
   color: var(--color-text-soft);
-  max-width: 560px;
+  max-width: 580px;
   margin: 0 auto;
 }
 
@@ -208,14 +221,14 @@ h1 {
   display: flex;
   gap: 0.75rem;
   justify-content: center;
-  margin-top: 1.6rem;
+  margin-top: 1.8rem;
   flex-wrap: wrap;
 }
 
 .cta {
   display: inline-flex;
   align-items: center;
-  padding: 0.7rem 1.4rem;
+  padding: 0.75rem 1.5rem;
   border-radius: var(--radius-sm);
   font-weight: 600;
   font-size: 0.95rem;
@@ -224,34 +237,41 @@ h1 {
     background var(--transition-fast),
     border-color var(--transition-fast),
     color var(--transition-fast),
+    box-shadow var(--transition-fast),
     transform var(--transition-fast);
 }
 
 .cta-primary {
-  background: var(--gradient-fire);
+  background: var(--gradient-violet);
   color: #fff;
   box-shadow: var(--box-shadow-button);
 }
 
 .cta-primary:hover {
-  background: var(--gradient-fire-hover);
+  background: var(--gradient-violet-hover);
   color: #fff;
   transform: translateY(-2px);
+  box-shadow: 0 12px 32px -8px rgba(124, 92, 255, 0.7);
 }
 
+/* Secondary CTA — frosted glass pill. */
 .cta-secondary {
-  background: var(--color-background-soft);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   color: var(--color-heading);
-  border-color: var(--color-border);
+  border-color: var(--glass-border);
 }
 
 .cta-secondary:hover {
-  border-color: var(--ember-500);
+  border-color: var(--violet-500);
   color: var(--brand-strong);
   background: var(--brand-soft);
 }
 
-/* Launch grid */
+/* ---------------------------------------------------------------------------
+ * Launch grid — glass tool cards with hover-lift and a soft neon halo.
+ * ------------------------------------------------------------------------- */
 .launch-title {
   font-size: 0.78rem;
   font-weight: 700;
@@ -271,9 +291,12 @@ h1 {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1.1rem 1.2rem;
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
+  padding: 1.2rem 1.3rem;
+  /* Frosted card so the aurora glows softly through each tile. */
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--box-shadow-card);
   color: var(--color-text);
@@ -285,20 +308,36 @@ h1 {
 
 .tool:hover {
   border-color: var(--color-border-hover);
-  box-shadow: var(--box-shadow-container);
-  transform: translateY(-3px);
+  /* Lift + soft violet halo on hover. */
+  box-shadow:
+    var(--box-shadow-container),
+    0 0 0 1px rgba(124, 92, 255, 0.25),
+    0 10px 36px -10px rgba(124, 92, 255, 0.5);
+  transform: translateY(-4px);
   color: var(--color-text);
 }
 
 .tool-icon {
   display: grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
   border-radius: var(--radius-md);
   background: var(--brand-soft);
   color: var(--brand-strong);
+  border: 1px solid rgba(124, 92, 255, 0.22);
+  transition:
+    background var(--transition),
+    color var(--transition),
+    box-shadow var(--transition);
+}
+
+.tool:hover .tool-icon {
+  /* Icon tile lights up to the aurora gradient on hover. */
+  background: var(--gradient-violet);
+  color: #fff;
+  box-shadow: 0 6px 20px -6px rgba(124, 92, 255, 0.7);
 }
 
 .tool-icon svg {
@@ -341,14 +380,16 @@ h1 {
   transform: translateX(4px);
 }
 
-/* Footer strip */
+/* ---------------------------------------------------------------------------
+ * Footer strip
+ * ------------------------------------------------------------------------- */
 .home-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  padding-top: 0.5rem;
+  padding-top: 0.75rem;
   border-top: 1px solid var(--color-border);
 }
 
