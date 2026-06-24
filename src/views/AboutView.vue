@@ -58,67 +58,145 @@ export default defineComponent({
 </script>
 
 <style scoped>
+/* ---------------------------------------------------------------------------
+ * AboutView — informational glass content page.
+ *
+ * Follows the same "frosted panel floating over the aurora" aesthetic as
+ * HomeView: glass surfaces, violet/cyan accent, hover-lift on interactive
+ * elements. The old animated fire gradient hero is replaced with a static
+ * glass hero banner that shows the aurora shining through.
+ * ------------------------------------------------------------------------- */
+
 .about-view {
   text-align: center;
 }
 
-/* Hero banner uses the fire gradient instead of the old blue-purple-green mix. */
+/* Hero banner — glass surface with the aurora gradient as a decorative fill
+   instead of the old animated fire gradient. Gradient text for the title
+   mirrors the HomeView .accent pattern (used sparingly, hero only). */
 .hero {
-  background: var(--gradient-fire);
-  background-size: 400% 400%;
-  animation: gradientFlow 15s ease infinite;
+  position: relative;
+  /* Frosted glass so the page aurora glows through. */
+  background: var(--glass-fill-strong);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
   padding: 4rem 2rem;
-  border-radius: var(--radius-lg);
-  color: #fff;
   margin-bottom: 2rem;
-  box-shadow: var(--box-shadow-button);
+  box-shadow: var(--glass-shadow);
+  overflow: hidden;
+}
+
+/* Subtle aurora glow bleeding from the top — matches .page-container::before. */
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glow-aurora);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Keep text content above the glow layer. */
+.hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hero h1 {
+  /* Aurora gradient text — hero-only treatment matching HomeView .accent. */
+  background: var(--gradient-aurora);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.75rem;
 }
 
 .tagline {
-  font-size: 1.2rem;
-  opacity: 0.9;
+  font-size: 1.1rem;
+  color: var(--color-text-soft);
 }
 
+/* Content sections. Each is a glass card with airy padding and a hover-lift
+   matching the HomeView tool tiles (translateY + shadow on hover). */
 section {
-  margin-bottom: 2rem;
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--box-shadow-card);
+  padding: 2rem 2.5rem;
+  margin-bottom: 1.25rem;
+  text-align: left;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition),
+    transform var(--transition);
+}
+
+section:hover {
+  border-color: var(--color-border-hover);
+  /* Lift + soft violet halo — same pattern as HomeView .tool:hover. */
+  box-shadow:
+    var(--box-shadow-container),
+    0 0 0 1px rgba(124, 92, 255, 0.2),
+    0 10px 36px -10px rgba(124, 92, 255, 0.4);
+  transform: translateY(-3px);
 }
 
 section h2 {
   color: var(--brand-strong);
-  font-size: 1.6rem;
-  margin-bottom: 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.6rem;
 }
 
 section p {
   color: var(--color-text);
+  line-height: 1.7;
 }
 
+/* Links inherit the themed link color (violet in dark, deep violet in light). */
 a {
   color: var(--color-link);
+  transition: color var(--transition-fast);
 }
 
+a:hover {
+  color: var(--color-link-hover);
+}
+
+/* Capability bullet list — left-aligned, airy line height. */
 .feature-list {
-  list-style: disc;
-  margin: 0 auto 1rem auto;
-  padding-left: 1.5rem;
-  max-width: 600px;
-  text-align: left;
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   color: var(--color-text);
 }
 
+/* Each item gets a violet accent bullet via ::before. */
 .feature-list li {
-  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  line-height: 1.6;
 }
 
-@keyframes gradientFlow {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
+.feature-list li::before {
+  content: '→';
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  color: var(--brand-strong);
 }
 </style>

@@ -94,41 +94,74 @@ export default defineComponent({
 </script>
 
 <style scoped>
+/* ---------------------------------------------------------------------------
+ * ApiKeyInput — small reusable glass settings card.
+ *
+ * Subtle, not flashy: a frosted-glass panel, glassy inputs with violet focus
+ * halo, and a violet→cyan aurora gradient Save button. Replaces the old fire
+ * gradient and hardcoded orange rgba glow with cool palette tokens.
+ * ------------------------------------------------------------------------- */
+
+/* Frosted glass panel — sits coherently over the aurora. */
 .api-key-input {
   max-width: 500px;
   margin: 0 auto;
-  padding: 20px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-background-soft);
-  box-shadow: var(--box-shadow-card);
+  padding: 1.5rem;
+  /* Glass surface: translucent fill + heavy backdrop blur. */
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-shadow);
 }
 
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 1rem;
 }
 
+/* Field labels — consistent weight with other form components. */
 label {
   display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
+  margin-bottom: 0.35rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text-soft);
 }
 
+/* Inputs inherit global glassy input styles; override width + focus here. */
 input {
   width: 100%;
-  padding: 8px;
+  padding: 0.5rem 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
+  /* Semi-transparent so the aurora subtly tints the fields. */
+  background: var(--color-background-soft);
+  color: var(--color-text);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
-/* The Save button is a primary action — fire gradient to match .primary-button. */
+/* Focus: violet border + soft violet halo ring (cool, not orange). */
+input:focus {
+  outline: none;
+  border-color: var(--violet-500);
+  box-shadow: var(--shadow-ring);
+}
+
+/* The Save button is a primary action — violet→cyan aurora gradient.
+   Replaces the old fire gradient; glow is cool violet, not orange. */
 button {
-  background: var(--gradient-fire);
+  background: var(--gradient-violet);
   color: #fff;
-  padding: 10px 15px;
+  padding: 0.6rem 1.1rem;
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
+  font-size: 0.95rem;
   font-weight: 600;
   box-shadow: var(--box-shadow-button);
   transition:
@@ -138,28 +171,33 @@ button {
 }
 
 button:hover {
-  background: var(--gradient-fire-hover);
+  background: var(--gradient-violet-hover);
   transform: translateY(-2px);
-  box-shadow: 0 10px 26px -6px rgba(250, 77, 18, 0.6);
+  /* Cool violet glow on hover instead of the old orange. */
+  box-shadow: 0 10px 26px -6px rgba(124, 92, 255, 0.6);
 }
 
 button:active {
   transform: translateY(0);
 }
 
+/* Inline feedback messages — semantic danger / success tokens. */
 .error-message {
   color: var(--hue-danger);
-  margin-top: 10px;
+  font-size: 0.88rem;
+  margin-top: 0.75rem;
 }
 
 .success-message {
   color: var(--hue-success);
-  margin-top: 10px;
+  font-size: 0.88rem;
+  margin-top: 0.75rem;
 }
 
+/* Helper text under fields. */
 small {
   display: block;
-  margin-top: 5px;
+  margin-top: 0.3rem;
   font-size: 0.8em;
   color: var(--color-text-mute);
 }

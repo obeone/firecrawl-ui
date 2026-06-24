@@ -282,6 +282,14 @@ function downloadJson(): void {
 </script>
 
 <style scoped>
+/* ---------------------------------------------------------------------------
+ * MapView — request pane form and result link list.
+ *
+ * Follows the Glass / Aurora design language: glassy inputs with violet focus
+ * halo, aurora-gradient primary buttons, and result rows that lift on hover.
+ * Old "fire" gradient and ember orange references are replaced with cool tokens.
+ * ------------------------------------------------------------------------- */
+
 /* ── Request pane form ───────────────────────────────────────────────────── */
 
 .map-form {
@@ -303,7 +311,7 @@ function downloadJson(): void {
   color: var(--color-text-soft);
 }
 
-/* Text / number / url inputs */
+/* Text / number / url inputs — translucent fill, violet focus halo. */
 .form-group input[type='url'],
 .form-group input[type='text'],
 .form-group input[type='number'],
@@ -312,19 +320,26 @@ function downloadJson(): void {
   font-size: 0.93rem;
   font-family: var(--font-sans);
   color: var(--color-text);
-  background: var(--color-background);
+  /* Semi-transparent so the aurora subtly tints the fields. */
+  background: var(--color-background-soft);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   outline: none;
-  transition: border-color var(--transition-fast);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
+/* Focus: violet border + soft violet halo ring (cool, not orange). */
 .form-group input:focus,
 .form-group select:focus {
-  border-color: var(--ember-500);
+  border-color: var(--violet-500);
+  box-shadow: var(--shadow-ring);
 }
 
-/* Checkbox row */
+/* Checkbox row — label and checkbox share a horizontal line. */
 .form-group--checkbox {
   flex-direction: row;
   align-items: center;
@@ -340,7 +355,8 @@ function downloadJson(): void {
   cursor: pointer;
 }
 
-/* Submit button — fire gradient primary CTA */
+/* Submit button — violet→cyan aurora gradient primary CTA.
+   Replaces the old fire gradient; glow is cool violet, not orange. */
 .submit-btn {
   display: inline-flex;
   align-items: center;
@@ -351,7 +367,7 @@ function downloadJson(): void {
   font-size: 0.93rem;
   font-weight: 600;
   color: #fff;
-  background: var(--gradient-fire);
+  background: var(--gradient-violet);
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -363,9 +379,10 @@ function downloadJson(): void {
 }
 
 .submit-btn:hover:not(:disabled) {
-  background: var(--gradient-fire-hover);
+  background: var(--gradient-violet-hover);
   transform: translateY(-1px);
-  box-shadow: 0 10px 26px -6px rgba(250, 77, 18, 0.55);
+  /* Cool violet glow on hover instead of the old orange. */
+  box-shadow: 0 10px 26px -6px rgba(124, 92, 255, 0.6);
 }
 
 .submit-btn:disabled {
@@ -407,7 +424,8 @@ function downloadJson(): void {
   flex-direction: column;
 }
 
-/* Each URL row: text + action buttons side by side */
+/* Each URL row: text + action buttons side by side.
+   Hover-lift with a faint violet tint for the glass aesthetic. */
 .url-item {
   display: flex;
   align-items: center;
@@ -416,6 +434,15 @@ function downloadJson(): void {
   padding: 0.5rem 1rem;
   border-bottom: 1px solid var(--color-border);
   min-width: 0;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.url-item:hover {
+  /* Subtle glass highlight on hover — keeps monospace URLs readable. */
+  background: var(--glass-fill);
+  border-color: var(--color-border-hover);
 }
 
 .url-item:last-child {
@@ -440,7 +467,7 @@ function downloadJson(): void {
   flex-shrink: 0;
 }
 
-/* "Open" external link — styled as a secondary mini-button */
+/* "Open" external link — glass mini-button, violet accent on hover. */
 .open-link {
   display: inline-flex;
   align-items: center;
@@ -455,12 +482,14 @@ function downloadJson(): void {
   text-decoration: none;
   transition:
     color var(--transition-fast),
-    border-color var(--transition-fast);
+    border-color var(--transition-fast),
+    background var(--transition-fast);
 }
 
 .open-link:hover {
-  color: var(--color-heading);
-  border-color: var(--color-border-hover);
+  color: var(--brand-strong);
+  border-color: var(--violet-500);
+  background: var(--brand-soft);
 }
 
 .open-link svg {
@@ -473,23 +502,26 @@ function downloadJson(): void {
 
 /* ── Download button (lives in #response-actions slot) ───────────────────── */
 
+/* Compact violet→cyan aurora button matching the submit-btn style. */
 .download-btn {
   padding: 0.35rem 0.8rem;
   font-size: 0.8rem;
   font-weight: 600;
   color: #fff;
-  background: var(--gradient-fire);
+  background: var(--gradient-violet);
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
   box-shadow: var(--box-shadow-button);
   transition:
     background var(--transition-fast),
-    transform var(--transition-fast);
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .download-btn:hover {
-  background: var(--gradient-fire-hover);
+  background: var(--gradient-violet-hover);
   transform: translateY(-1px);
+  box-shadow: 0 8px 22px -6px rgba(124, 92, 255, 0.6);
 }
 </style>

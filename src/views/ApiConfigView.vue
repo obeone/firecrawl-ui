@@ -1,6 +1,6 @@
 <template>
   <div class="api-config-view">
-    <div class="settings-card">
+    <div class="settings-card glass">
       <div class="settings-head">
         <span class="settings-icon">
           <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -56,31 +56,66 @@ export default defineComponent({
 </script>
 
 <style scoped>
+/*
+ * Outer wrapper: centers the card on the aurora canvas with comfortable
+ * vertical breathing room so it reads as floating over the background.
+ */
 .api-config-view {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 2rem 1rem;
+  padding: 3rem 1rem;
 }
 
-/* Centered settings panel matching the playground surfaces. */
+/*
+ * Settings card: a frosted glass panel floating over the aurora. The .glass
+ * utility (base.css) provides backdrop-blur, translucent fill, top-lit
+ * hairline border, and depth shadow. We layer a subtle aurora glow from the
+ * top edge via ::before to match the page-container pattern in main.css.
+ */
 .settings-card {
+  position: relative;
   width: 100%;
   max-width: 560px;
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--box-shadow-container);
-  padding: 2rem;
+  border-radius: var(--radius-xl);
+  padding: 2.25rem 2.5rem;
+  /* Overflow hidden so the aurora glow pseudo-element stays clipped. */
+  overflow: hidden;
+  transition:
+    box-shadow var(--transition),
+    transform var(--transition);
 }
+
+/* Subtle aurora glow bleeding from the top of the card, same as page-container. */
+.settings-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glow-aurora);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Keep card content stacked above the decorative glow layer. */
+.settings-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Header row ──────────────────────────────────────────────── */
 
 .settings-head {
   display: flex;
   align-items: flex-start;
   gap: 0.9rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.75rem;
 }
 
+/*
+ * Icon tile: brand-soft fill with a violet hairline border, matches the
+ * tool-icon pattern from HomeView for visual coherence.
+ */
 .settings-icon {
   display: grid;
   place-items: center;
@@ -90,6 +125,11 @@ export default defineComponent({
   border-radius: var(--radius-md);
   background: var(--brand-soft);
   color: var(--brand-strong);
+  border: 1px solid rgba(124, 92, 255, 0.22);
+  /* Smooth transition so hover-light feels intentional, not jarring. */
+  transition:
+    background var(--transition),
+    box-shadow var(--transition);
 }
 
 .settings-icon svg {
@@ -112,17 +152,24 @@ export default defineComponent({
   margin-top: 0.15rem;
 }
 
+/* ── Actions row ─────────────────────────────────────────────── */
+
 .actions {
   margin-top: 1.75rem;
   text-align: right;
 }
 
-/* Primary CTA button — fire gradient matching .primary-button in main.css */
+/*
+ * Primary CTA button: violet→cyan aurora sweep, consistent with
+ * .cta-primary in HomeView and .btn-primary in main.css.
+ * Hover lifts by 2px and intensifies the violet glow — no more orange.
+ */
 .primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--gradient-fire);
+  /* Aurora gradient — violet→cyan sweep (replaces the old fire gradient). */
+  background: var(--gradient-violet);
   color: #fff;
   padding: 0.75rem 1.5rem;
   border: 1px solid transparent;
@@ -138,9 +185,10 @@ export default defineComponent({
 }
 
 .primary:hover {
-  background: var(--gradient-fire-hover);
+  background: var(--gradient-violet-hover);
   transform: translateY(-2px);
-  box-shadow: 0 10px 26px -6px rgba(250, 77, 18, 0.6);
+  /* Violet neon glow on hover — replaces the old rgba(250, 77, 18) orange. */
+  box-shadow: 0 10px 28px -6px rgba(124, 92, 255, 0.6);
 }
 
 .primary:active {

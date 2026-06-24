@@ -1746,7 +1746,9 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Request form: fills the request pane, fields stack naturally. */
+/* ---------------------------------------------------------------------------
+ * Request form — fields stack naturally within the request pane.
+ * --------------------------------------------------------------------------- */
 .crawl-config-form {
   display: flex;
   flex-direction: column;
@@ -1764,40 +1766,78 @@ export default defineComponent({
   font-size: 0.9rem;
 }
 
+/* All text-like inputs inside the crawl form span the full width. */
 .crawl-config-form input,
 .crawl-config-form select,
 .crawl-config-form textarea {
   width: 100%;
 }
 
+/* ---------------------------------------------------------------------------
+ * Collapsible option fieldsets — frosted glass cards that nest inside the
+ * request pane. Hover-lift makes the collapsed/expanded state feel tactile.
+ * --------------------------------------------------------------------------- */
 .options-fieldset {
-  border: 1px solid var(--color-border);
+  /* Glass surface: translucent fill + heavy blur so the aurora shows through. */
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
   padding: 1rem;
   border-radius: var(--radius-md);
   margin-bottom: 0;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition),
+    transform var(--transition);
+}
+
+.options-fieldset:hover {
+  /* Gentle lift on hover to indicate the fieldset is interactive. */
+  border-color: var(--color-border-hover);
+  box-shadow: var(--box-shadow-card);
+  transform: translateY(-2px);
 }
 
 .options-fieldset legend {
   font-weight: 700;
   padding: 0 0.4rem;
+  color: var(--color-heading);
 }
 
+/* ---------------------------------------------------------------------------
+ * Collapsible legend — pointer cursor + violet hover to signal click-to-toggle.
+ * --------------------------------------------------------------------------- */
+.collapsible-header {
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition-fast);
+}
+
+.collapsible-header:hover {
+  color: var(--brand-strong);
+}
+
+/* Responsive grid for compact option pairs (e.g. max depth / limit). */
 .grid-layout {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 1rem;
 }
 
+/* Checkbox rows: the checkbox and its label share one flex row. */
 .checkbox-label {
   display: flex;
   align-items: center;
   gap: 0.4rem;
 }
 
+/* Prevent the checkbox from stretching to 100% width. */
 .checkbox-label input {
   width: auto;
 }
 
+/* Helper text under form fields. */
 .form-group small {
   display: block;
   font-size: 0.8em;
@@ -1805,18 +1845,18 @@ export default defineComponent({
   margin-top: 0.2rem;
 }
 
+/* Inline validation error text — danger hue from the token set. */
 .error-message {
   color: var(--hue-danger);
   font-size: 0.9em;
   margin-top: 0.3rem;
 }
 
-.collapsible-header {
-  cursor: pointer;
-  user-select: none;
-}
+/* ---------------------------------------------------------------------------
+ * Response panes — content areas for the Status, Pages, and JSON tabs.
+ * --------------------------------------------------------------------------- */
 
-/* Response panes: scroll within the response area. */
+/* Common tab pane: constrained padding, headings scaled down from panel h2. */
 .tab-pane {
   padding: 1.25rem;
 }
@@ -1835,23 +1875,33 @@ export default defineComponent({
   margin-bottom: 0.25rem;
 }
 
-/* Progress bar container. */
+/* ---------------------------------------------------------------------------
+ * Progress bar — glass track with aurora gradient fill.
+ * --------------------------------------------------------------------------- */
+
+/* Track: glass surface so the aurora tints the empty portion of the bar. */
 .progress-container {
   width: 100%;
-  background-color: var(--color-background-mute);
-  border: 1px solid var(--color-border);
+  /* Glass fill rather than opaque background so the aurora shows through. */
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-pill);
   margin: 0.5rem 0;
   overflow: hidden;
 }
 
-/* Inner progress bar, fire gradient. */
+/* Fill: violet→cyan aurora sweep to match the brand gradient. */
 .progress-bar {
   height: 14px;
-  background: var(--gradient-fire);
+  background: var(--gradient-violet);
   transition: width 0.5s var(--ease);
 }
 
+/* ---------------------------------------------------------------------------
+ * Download section — appears after a completed crawl.
+ * --------------------------------------------------------------------------- */
 .download-section {
   margin-top: 1.25rem;
 }
@@ -1863,6 +1913,9 @@ export default defineComponent({
   align-items: center;
 }
 
+/* ---------------------------------------------------------------------------
+ * Selected crawl details — shown above history when a job is expanded.
+ * --------------------------------------------------------------------------- */
 .selected-crawl-details-section {
   margin-bottom: 1.5rem;
   padding-bottom: 1.25rem;
@@ -1875,10 +1928,17 @@ export default defineComponent({
   color: var(--color-text-soft);
 }
 
+/* ---------------------------------------------------------------------------
+ * Crawl history list — each item is a frosted glass row with hover-lift and
+ * a violet halo so it reads like the interactive cards in HomeView.
+ * --------------------------------------------------------------------------- */
 .history-list {
   list-style: none;
   padding: 0;
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
 .history-item {
@@ -1886,59 +1946,99 @@ export default defineComponent({
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.5rem 0.6rem;
+  padding: 0.6rem 0.8rem;
+  /* Frosted glass row: subtle fill + hairline border. */
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  margin-bottom: 0.4rem;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition),
+    transform var(--transition);
+}
+
+.history-item:hover {
+  /* Lift + soft violet halo matches the HomeView tool-card hover style. */
+  border-color: var(--color-border-hover);
+  box-shadow:
+    var(--box-shadow-card),
+    0 0 0 1px rgba(124, 92, 255, 0.2),
+    0 6px 24px -8px rgba(124, 92, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Highlight the currently selected history row with a brand-tinted background. */
+.selected-crawl {
+  background: var(--brand-soft);
+  border-color: rgba(124, 92, 255, 0.35);
 }
 
 .history-info {
   font-size: 0.88rem;
   color: var(--color-text-soft);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+/* ---------------------------------------------------------------------------
+ * History and download action buttons — violet→cyan aurora sweep, consistent
+ * with the primary-button style defined in main.css.
+ * --------------------------------------------------------------------------- */
 .history-button {
   flex-shrink: 0;
   padding: 0.35rem 0.7rem;
-  background: var(--gradient-fire);
+  /* Aurora gradient (violet→cyan) instead of the old fire/orange. */
+  background: var(--gradient-violet);
   color: #fff;
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: var(--box-shadow-button);
   transition:
     background var(--transition-fast),
+    box-shadow var(--transition-fast),
     transform var(--transition-fast);
 }
 
 .history-button:hover {
-  background: var(--gradient-fire-hover);
+  background: var(--gradient-violet-hover);
+  box-shadow: 0 6px 20px -6px rgba(124, 92, 255, 0.6);
   transform: translateY(-1px);
 }
 
 .download-button {
   padding: 0.4rem 0.8rem;
   font-size: 0.9rem;
-  background: var(--gradient-fire);
+  font-weight: 600;
+  /* Aurora gradient (violet→cyan) instead of the old fire/orange. */
+  background: var(--gradient-violet);
   color: #fff;
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
+  box-shadow: var(--box-shadow-button);
   transition:
     background var(--transition-fast),
+    box-shadow var(--transition-fast),
     transform var(--transition-fast);
 }
 
 .download-button:hover {
-  background: var(--gradient-fire-hover);
+  background: var(--gradient-violet-hover);
+  box-shadow: 0 6px 20px -6px rgba(124, 92, 255, 0.6);
   transform: translateY(-1px);
 }
 
+/* Clear-history button stays right-aligned. */
 .clear-history-wrapper {
   display: flex;
   justify-content: flex-end;
   margin-top: 0.6rem;
-}
-
-.selected-crawl {
-  background-color: var(--color-background-mute);
 }
 </style>
