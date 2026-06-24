@@ -4,9 +4,10 @@
  * Firecrawl UI — Shared component layer.
  *
  * Reusable primitives and the page-level classes the views consume. Built on
- * the Ember tokens from base.css. The legacy class names (.page-container,
- * .scrape-config-container, .scrape-config-form, .primary-button) are kept and
- * restyled so existing templates pick up the new look for free.
+ * the Glass / Aurora tokens from base.css. The legacy class names
+ * (.page-container, .scrape-config-container, .scrape-config-form,
+ * .primary-button) are kept and restyled as frosted-glass surfaces so existing
+ * templates pick up the new look for free.
  */
 
 /* ---------------------------------------------------------------------------
@@ -14,16 +15,20 @@
  * ------------------------------------------------------------------------- */
 
 /*
- * Centered content panel used across configuration views. A raised, rounded
- * surface with a soft warm shadow and a faint fire glow at the top edge.
+ * Centered content panel used across configuration views. A frosted-glass
+ * surface floating over the aurora: translucent fill, heavy backdrop blur,
+ * a top-lit hairline and a faint cool glow bleeding from the top edge.
  */
 .scrape-config-container,
 .page-container {
   position: relative;
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
+  background: var(--glass-fill);
+  /* Backdrop blur is what makes the aurora read as "frosted" behind content. */
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
-  box-shadow: var(--box-shadow-container);
+  box-shadow: var(--glass-shadow);
   padding: 2.5rem 3rem;
   max-width: 640px;
   margin: 2.5rem auto;
@@ -33,14 +38,14 @@
   gap: 1.75rem;
 }
 
-/* Subtle ember glow bleeding from the top of every panel. */
+/* Subtle cool aurora glow bleeding from the top of every panel. */
 .scrape-config-container::before,
 .page-container::before {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: var(--glow-fire);
+  background: var(--glow-aurora);
   pointer-events: none;
   z-index: 0;
 }
@@ -69,10 +74,13 @@
 
 /*
  * Standalone card surface for grouping content (results, panels, items).
+ * Glassy by default so it sits coherently over the aurora.
  */
 .card {
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--box-shadow-card);
   padding: 1.5rem;
@@ -113,10 +121,13 @@
   padding: 0.7rem 0.9rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
-  background: var(--color-background);
+  /* Translucent fill so the aurora subtly tints fields inside glass panels. */
+  background: var(--color-background-soft);
   color: var(--color-text);
   margin-bottom: 1.2rem;
   font-size: 0.95rem;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   transition:
     border-color var(--transition-fast),
     box-shadow var(--transition-fast);
@@ -194,12 +205,12 @@
     color var(--transition-fast);
 }
 
-/* Primary / fire button — the main call to action. */
+/* Primary / aurora button — the main call to action (violet→cyan sweep). */
 .btn-primary,
 .primary-button,
 .scrape-config-form button,
 .scrape-config-form input[type='submit'] {
-  background: var(--gradient-fire);
+  background: var(--gradient-violet);
   color: #fff;
   box-shadow: var(--box-shadow-button);
 }
@@ -208,9 +219,10 @@
 .primary-button:hover,
 .scrape-config-form button:hover,
 .scrape-config-form input[type='submit']:hover {
-  background: var(--gradient-fire-hover);
+  background: var(--gradient-violet-hover);
   transform: translateY(-2px);
-  box-shadow: 0 10px 26px -6px rgba(250, 77, 18, 0.6);
+  /* Soft violet glow on hover instead of the old orange one. */
+  box-shadow: 0 10px 28px -6px rgba(124, 92, 255, 0.6);
   color: #fff;
 }
 
@@ -227,15 +239,17 @@
   margin-top: 1.5rem;
 }
 
-/* Secondary / ghost button — outlined, neutral. */
+/* Secondary / ghost button — frosted glass, neutral until hovered. */
 .btn-secondary {
-  background: var(--color-background-soft);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   color: var(--color-heading);
-  border-color: var(--color-border);
+  border-color: var(--glass-border);
 }
 
 .btn-secondary:hover {
-  border-color: var(--ember-500);
+  border-color: var(--violet-500);
   color: var(--brand-strong);
   background: var(--brand-soft);
 }
