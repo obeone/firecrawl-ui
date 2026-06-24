@@ -86,6 +86,21 @@ function toggleTheme(): void {
 
 <template>
   <div class="app-shell">
+    <!--
+      Aurora background. A fixed, full-viewport layer painted BEHIND all content.
+      It holds 4 large, heavily-blurred radial-gradient blobs in the cool palette
+      (violet/indigo, magenta/pink, cyan/teal) drifting slowly via CSS keyframes.
+      aria-hidden + pointer-events:none so it is purely decorative.
+    -->
+    <div class="aurora" aria-hidden="true">
+      <span class="aurora-blob aurora-blob--violet"></span>
+      <span class="aurora-blob aurora-blob--magenta"></span>
+      <span class="aurora-blob aurora-blob--cyan"></span>
+      <span class="aurora-blob aurora-blob--indigo"></span>
+      <!-- Faint grain/vignette to keep the canvas from banding. -->
+      <span class="aurora-veil"></span>
+    </div>
+
     <header class="topbar">
       <div class="topbar-inner">
         <!-- Brand -->
@@ -175,7 +190,140 @@ function toggleTheme(): void {
 }
 
 /* ---------------------------------------------------------------------------
- * Top bar
+ * Aurora background
+ *
+ * Fixed, full-viewport, behind all content (z-index 0; content sits above via
+ * the natural stacking of later, positioned siblings). Built from large blurred
+ * radial-gradient blobs that drift with transform/opacity only, keeping it
+ * GPU-cheap. The base canvas is the near-black --color-background.
+ * ------------------------------------------------------------------------- */
+.aurora {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* Establish the near-black (or near-white) base behind the blobs. */
+  background: var(--color-background);
+}
+
+/*
+ * A single aurora blob. Each is a soft radial gradient fading to transparent,
+ * massively blurred so edges dissolve into light. will-change:transform hints
+ * the compositor; we keep it to transform/opacity to stay on the GPU.
+ */
+.aurora-blob {
+  position: absolute;
+  width: 60vw;
+  height: 60vw;
+  min-width: 520px;
+  min-height: 520px;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.55;
+  will-change: transform;
+  mix-blend-mode: screen; /* additive on dark canvas → luminous overlaps */
+}
+
+/* Violet/indigo blob, top-left, the dominant hero hue. */
+.aurora-blob--violet {
+  top: -18vw;
+  left: -10vw;
+  background: radial-gradient(circle at center, var(--violet-500) 0%, transparent 62%);
+  animation: aurora-drift-a 30s var(--ease) infinite alternate;
+}
+
+/* Magenta/pink blob, top-right. */
+.aurora-blob--magenta {
+  top: -12vw;
+  right: -14vw;
+  background: radial-gradient(circle at center, var(--magenta-500) 0%, transparent 62%);
+  animation: aurora-drift-b 34s var(--ease) infinite alternate;
+}
+
+/* Cyan/teal blob, bottom-right. */
+.aurora-blob--cyan {
+  bottom: -20vw;
+  right: -6vw;
+  background: radial-gradient(circle at center, var(--cyan-500) 0%, transparent 62%);
+  animation: aurora-drift-c 38s var(--ease) infinite alternate;
+}
+
+/* Deep indigo blob, bottom-left, anchors the composition. */
+.aurora-blob--indigo {
+  bottom: -22vw;
+  left: -8vw;
+  background: radial-gradient(circle at center, var(--violet-700) 0%, transparent 60%);
+  animation: aurora-drift-d 26s var(--ease) infinite alternate;
+}
+
+/* Light theme tones the blobs down so the near-white canvas stays readable. */
+:root[data-theme='light'] .aurora-blob {
+  opacity: 0.4;
+  mix-blend-mode: normal;
+  filter: blur(110px);
+}
+
+/*
+ * Veil: a faint radial vignette darkening the corners (or lightening them in
+ * light mode) so content stays legible and the blobs don't band.
+ */
+.aurora-veil {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 120% at 50% 0%, transparent 40%, rgba(7, 7, 13, 0.55) 100%);
+}
+
+:root[data-theme='light'] .aurora-veil {
+  background: radial-gradient(120% 120% at 50% 0%, transparent 30%, rgba(247, 248, 252, 0.6) 100%);
+}
+
+/* Drift keyframes — each blob translates + scales on its own slow loop. */
+@keyframes aurora-drift-a {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(8vw, 6vw, 0) scale(1.18);
+  }
+}
+
+@keyframes aurora-drift-b {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1.1);
+  }
+  100% {
+    transform: translate3d(-7vw, 8vw, 0) scale(0.92);
+  }
+}
+
+@keyframes aurora-drift-c {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.95);
+  }
+  100% {
+    transform: translate3d(-6vw, -9vw, 0) scale(1.2);
+  }
+}
+
+@keyframes aurora-drift-d {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1.05);
+  }
+  100% {
+    transform: translate3d(9vw, -7vw, 0) scale(0.9);
+  }
+}
+
+/* Respect reduced-motion: freeze the drift, keep the static composition. */
+@media (prefers-reduced-motion: reduce) {
+  .aurora-blob {
+    animation: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Top bar — frosted glass, floating over the aurora.
  * ------------------------------------------------------------------------- */
 
 .topbar {
@@ -183,9 +331,11 @@ function toggleTheme(): void {
   top: 0;
   z-index: 100;
   flex-shrink: 0;
-  background: color-mix(in srgb, var(--color-background-soft) 88%, transparent);
-  backdrop-filter: saturate(140%) blur(10px);
-  border-bottom: 1px solid var(--color-border);
+  /* Frosted bar: translucent fill + heavy blur so the aurora glows through. */
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: saturate(var(--glass-saturate)) blur(var(--glass-blur));
+  backdrop-filter: saturate(var(--glass-saturate)) blur(var(--glass-blur));
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .topbar-inner {
@@ -291,6 +441,10 @@ function toggleTheme(): void {
 .tab.router-link-active {
   color: var(--brand-strong);
   background: var(--brand-soft);
+  /* Soft violet halo marks the active tool without a hard border. */
+  box-shadow:
+    0 0 0 1px rgba(124, 92, 255, 0.3),
+    0 6px 18px -8px rgba(124, 92, 255, 0.55);
 }
 
 .tab.router-link-active .tab-icon {
@@ -344,6 +498,9 @@ function toggleTheme(): void {
  * ------------------------------------------------------------------------- */
 
 .app-main {
+  position: relative;
+  /* Lift above the fixed aurora (z-index 0) so content and scroll work. */
+  z-index: 1;
   flex: 1;
   min-height: 0;
   display: flex;
