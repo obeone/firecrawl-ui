@@ -271,6 +271,10 @@ const downloadResult = (): void => {
   color: var(--color-heading);
 }
 
+/*
+ * Textareas: translucent glass fill so the aurora tints the field subtly.
+ * Inherits global focus halo (--shadow-ring / violet-500) from base.css.
+ */
 .form-group textarea {
   width: 100%;
   padding: 0.55rem 0.75rem;
@@ -278,16 +282,23 @@ const downloadResult = (): void => {
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
   font-size: 0.84rem;
-  background: var(--color-background);
+  /* Semi-transparent so the aurora bleeds through subtly. */
+  background: var(--color-background-soft);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   color: var(--color-text);
   resize: vertical;
-  transition: border-color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
   box-sizing: border-box;
 }
 
+/* Soft violet focus halo matching the global ring system. */
 .form-group textarea:focus {
   outline: none;
-  border-color: var(--ember-500);
+  border-color: var(--violet-500);
+  box-shadow: var(--shadow-ring);
 }
 
 .hint {
@@ -317,29 +328,47 @@ const downloadResult = (): void => {
   cursor: pointer;
 }
 
+/* Checkbox accent in violet to match the aurora brand. */
 .options input[type='checkbox'] {
-  accent-color: var(--ember-500);
+  accent-color: var(--violet-500);
   width: 15px;
   height: 15px;
 }
 
 /* ── Run button ────────────────────────────────────────────────── */
 
+/*
+ * Primary action button: violet→cyan aurora sweep with a neon glow.
+ * Hover lifts the button (+translateY) and brightens the gradient, matching
+ * the HomeView CTA pattern for a consistent feel across views.
+ */
 .run-button {
   align-self: flex-start;
   padding: 0.55rem 1.4rem;
-  background: var(--gradient-fire);
+  /* Violet→cyan sweep — the aurora brand gradient. */
+  background: var(--gradient-violet);
   color: #fff;
-  border: none;
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
-  transition: opacity var(--transition-fast);
+  box-shadow: var(--box-shadow-button);
+  transition:
+    background var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .run-button:hover:not(:disabled) {
-  opacity: 0.88;
+  background: var(--gradient-violet-hover);
+  transform: translateY(-2px);
+  /* Soft violet glow on hover, matching HomeView CTA hover. */
+  box-shadow: 0 10px 28px -6px rgba(124, 92, 255, 0.6);
+}
+
+.run-button:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .run-button:disabled {
@@ -349,11 +378,18 @@ const downloadResult = (): void => {
 
 /* ── Response-actions Download button ─────────────────────────── */
 
+/*
+ * Secondary ghost button: frosted glass background with a violet border/glow
+ * on hover, consistent with the .btn-secondary pattern in main.css.
+ */
 .action-button {
   padding: 0.35rem 0.85rem;
-  background: var(--color-background-soft);
+  /* Translucent glass base so the aurora reads through. */
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   color: var(--color-heading);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   font-size: 0.82rem;
   font-weight: 600;
@@ -361,13 +397,16 @@ const downloadResult = (): void => {
   transition:
     border-color var(--transition-fast),
     color var(--transition-fast),
-    background var(--transition-fast);
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .action-button:hover {
-  border-color: var(--ember-500);
+  /* Violet accent halo matches the tool-card hover pattern from HomeView. */
+  border-color: var(--violet-500);
   color: var(--brand-strong);
   background: var(--brand-soft);
+  box-shadow: 0 0 0 1px rgba(124, 92, 255, 0.18);
 }
 
 /* ── Result tab: key/value view ───────────────────────────────── */
@@ -395,6 +434,7 @@ const downloadResult = (): void => {
 .result-key {
   font-size: 0.8rem;
   font-weight: 700;
+  /* Soft brand hint on the key label — subtle aurora identity. */
   color: var(--color-text-mute);
   text-transform: lowercase;
   letter-spacing: 0.03em;

@@ -503,6 +503,14 @@ async function handleDownload(type: string): Promise<void> {
 
 <!-- Scoped styles for the SearchView component -->
 <style scoped>
+/* ---------------------------------------------------------------------------
+ * SearchView — request form and result cards.
+ *
+ * Glass / Aurora design language: glassy inputs with violet focus halo,
+ * aurora-gradient primary buttons, result items with hover-lift.
+ * All "fire" gradient and ember/orange references replaced with cool tokens.
+ * ------------------------------------------------------------------------- */
+
 /* Form layout inside the request pane */
 .search-form {
   display: flex;
@@ -518,31 +526,43 @@ async function handleDownload(type: string): Promise<void> {
   margin-bottom: 0.15rem;
 }
 
+/* Text inputs — translucent fill, violet focus halo. */
 .field-input {
   width: 100%;
   padding: 0.45rem 0.65rem;
   font-size: 0.9rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: var(--color-background);
+  /* Semi-transparent so the aurora subtly tints fields. */
+  background: var(--color-background-soft);
   color: var(--color-text);
   box-sizing: border-box;
-  transition: border-color var(--transition-fast);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
+/* Focus: violet border + soft violet halo ring (cool, not orange). */
 .field-input:focus {
   outline: none;
-  border-color: var(--ember-500);
+  border-color: var(--violet-500);
+  box-shadow: var(--shadow-ring);
 }
 
 .field-input--short {
   width: 6rem;
 }
 
-/* Advanced options fieldset */
+/* Advanced options fieldset — glass surface so aurora shows through. */
 .advanced-options {
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
+  /* Frosted glass background for the options panel. */
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   padding: 0.75rem;
   display: flex;
   flex-direction: column;
@@ -584,13 +604,14 @@ async function handleDownload(type: string): Promise<void> {
   display: flex;
 }
 
-/* Submit button — fire gradient, matches other playground views */
+/* Submit button — violet→cyan aurora gradient CTA.
+   Replaces the old fire gradient; glow is cool violet, not orange. */
 .run-button {
   margin-top: 0.4rem;
   padding: 0.55rem 1.2rem;
   font-size: 0.92rem;
   font-weight: 700;
-  background: var(--gradient-fire);
+  background: var(--gradient-violet);
   color: #fff;
   border: none;
   border-radius: var(--radius-sm);
@@ -604,9 +625,10 @@ async function handleDownload(type: string): Promise<void> {
 }
 
 .run-button:hover:not(:disabled) {
-  background: var(--gradient-fire-hover);
+  background: var(--gradient-violet-hover);
   transform: translateY(-2px);
-  box-shadow: 0 10px 26px -6px rgba(250, 77, 18, 0.6);
+  /* Cool violet glow on hover instead of the old orange. */
+  box-shadow: 0 10px 26px -6px rgba(124, 92, 255, 0.6);
 }
 
 .run-button:disabled {
@@ -628,13 +650,30 @@ async function handleDownload(type: string): Promise<void> {
   gap: 1rem;
 }
 
+/* Result item — glass surface with airy spacing and hover-lift. */
 .result-item {
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--color-border);
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  /* Frosted glass so the aurora softly bleeds through. */
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--box-shadow-card);
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition),
+    transform var(--transition);
 }
 
-.result-item:last-child {
-  border-bottom: none;
+/* Hover-lift with a faint violet halo — mirrors the HomeView tool card hover. */
+.result-item:hover {
+  border-color: var(--color-border-hover);
+  box-shadow:
+    var(--box-shadow-container),
+    0 0 0 1px rgba(124, 92, 255, 0.2),
+    0 10px 36px -10px rgba(124, 92, 255, 0.4);
+  transform: translateY(-3px);
 }
 
 .result-header {
@@ -644,18 +683,20 @@ async function handleDownload(type: string): Promise<void> {
   flex-wrap: wrap;
 }
 
-/* Result links use the themed link color */
+/* Result links use the themed link color (violet → cyan on hover). */
 .result-title {
   font-weight: 600;
   color: var(--color-link);
   text-decoration: none;
+  transition: color var(--transition-fast);
 }
 
 .result-title:hover {
+  color: var(--color-link-hover);
   text-decoration: underline;
 }
 
-/* Source-type badge */
+/* Source-type badge — muted uppercase label. */
 .result-kind {
   text-transform: uppercase;
   font-size: 0.72rem;
@@ -707,12 +748,12 @@ async function handleDownload(type: string): Promise<void> {
   flex-wrap: wrap;
 }
 
-/* Download button — fire gradient primary */
+/* Download button — violet→cyan aurora gradient, matching run-button style. */
 .download-button {
   padding: 0.4rem 0.8rem;
   font-size: 0.88rem;
   font-weight: 600;
-  background: var(--gradient-fire);
+  background: var(--gradient-violet);
   color: #fff;
   border: none;
   border-radius: var(--radius-sm);
@@ -725,8 +766,8 @@ async function handleDownload(type: string): Promise<void> {
 }
 
 .download-button:hover {
-  background: var(--gradient-fire-hover);
+  background: var(--gradient-violet-hover);
   transform: translateY(-2px);
-  box-shadow: 0 10px 26px -6px rgba(250, 77, 18, 0.6);
+  box-shadow: 0 10px 26px -6px rgba(124, 92, 255, 0.6);
 }
 </style>

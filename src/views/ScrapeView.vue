@@ -1009,58 +1009,101 @@ export default defineComponent({
 </script>
 
 <style scoped>
+/* ---------------------------------------------------------------------------
+ * Form layout — spacing and field groups.
+ * --------------------------------------------------------------------------- */
 .form-group {
-  margin-bottom: 20px; /* Increased margin */
+  margin-bottom: 1.25rem;
 }
+
+/* ---------------------------------------------------------------------------
+ * Collapsible option fieldsets — frosted glass cards so they read as nested
+ * panels floating over the request pane aurora. Hover lifts the card gently.
+ * --------------------------------------------------------------------------- */
 .options-fieldset {
-  /* Card-like surface consistent with the Ember design system */
-  border: 1px solid var(--color-border);
-  padding: 15px;
+  /* Glass surface: translucent fill + heavy blur to show the aurora through. */
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  padding: 1rem;
   border-radius: var(--radius-md);
-  margin-bottom: 20px;
+  margin-bottom: 1.25rem;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition),
+    transform var(--transition);
 }
+
+.options-fieldset:hover {
+  /* Subtle lift so nested panels feel interactive, not static. */
+  border-color: var(--color-border-hover);
+  box-shadow: var(--box-shadow-card);
+  transform: translateY(-2px);
+}
+
 .options-fieldset legend {
-  font-weight: bold;
-  padding: 0 5px;
+  font-weight: 700;
+  padding: 0 0.4rem;
+  color: var(--color-heading);
 }
+
+/* ---------------------------------------------------------------------------
+ * Collapsible legend header — pointer + violet hover to signal interactivity.
+ * --------------------------------------------------------------------------- */
+.collapsible-header {
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition-fast);
+}
+
+.collapsible-header:hover {
+  color: var(--brand-strong);
+}
+
+/* ---------------------------------------------------------------------------
+ * Responsive grid inside option sections.
+ * --------------------------------------------------------------------------- */
 .grid-layout {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* Responsive grid */
-  gap: 15px; /* Gap between grid items */
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
 }
+
+/* Checkbox rows: flex so the box and label stay on one line. */
 .checkbox-label {
-  /* Style for labels containing checkboxes */
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 0.4rem;
 }
+
+/* Helper text under form fields. */
 .form-group small {
-  /* Style for help text */
   display: block;
   font-size: 0.8em;
   color: var(--color-text-mute);
-  margin-top: 3px;
+  margin-top: 0.2rem;
 }
 
-.collapsible-header {
-  cursor: pointer;
-}
-
-/* Inline validation error text */
+/* Inline validation error text — danger hue from the token set. */
 .error-message {
   color: var(--hue-danger);
   font-size: 0.9em;
-  margin-top: 5px;
+  margin-top: 0.35rem;
 }
 
+/* Action row: type selector + param inputs in a tight flex row. */
 .action-item {
   display: flex;
   align-items: center;
-  gap: 5px;
-  margin-bottom: 10px;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
 }
 
-/* Preview pane: wrapped monospace dump of the rendered content. */
+/* ---------------------------------------------------------------------------
+ * Preview pane — monospace dump of the scraped content.
+ * Glass fill keeps the aurora visible through the content area.
+ * --------------------------------------------------------------------------- */
 .preview-pane {
   height: 100%;
   overflow: auto;
@@ -1075,10 +1118,14 @@ export default defineComponent({
   font-size: 0.84rem;
   line-height: 1.6;
   color: var(--color-text);
-  background: var(--color-background);
+  /* Translucent so the aurora tints the code surface. */
+  background: var(--glass-fill);
 }
 
-/* Screenshot pane: centered, scrollable image surface. */
+/* ---------------------------------------------------------------------------
+ * Screenshot pane — centered, scrollable image surface.
+ * Same glass fill treatment as the preview pane for visual cohesion.
+ * --------------------------------------------------------------------------- */
 .screenshot-pane {
   height: 100%;
   overflow: auto;
@@ -1086,13 +1133,15 @@ export default defineComponent({
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  background: var(--color-background);
+  /* Glass fill keeps the aurora visible behind the screenshot. */
+  background: var(--glass-fill);
 }
 
 .screenshot-pane img {
   max-width: 100%;
   height: auto;
-  border: 1px solid var(--color-border);
+  /* Glass-bordered image frame matches the panel language. */
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
 }
 </style>
