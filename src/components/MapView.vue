@@ -108,7 +108,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject } from 'vue';
+import { ref, computed, inject, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import type { FirecrawlMappingApi } from '@/services/firecrawl';
 import PlaygroundLayout from './playground/PlaygroundLayout.vue';
 import CodeBlock from './playground/CodeBlock.vue';
@@ -139,6 +140,18 @@ if (!api?.mapping) {
  * @type {Ref<string>}
  */
 const baseUrl = ref('');
+
+const route = useRoute();
+
+// Pre-fill the URL field from the ?url= query parameter (passed by the
+// home-page launcher when the user picks a tool with a URL already typed).
+onMounted(() => {
+  const q = route.query.url;
+  const initialUrl = Array.isArray(q) ? q[0] : q;
+  if (initialUrl) {
+    baseUrl.value = String(initialUrl);
+  }
+});
 
 /**
  * Reactive variable for the optional search query used when mapping URLs.

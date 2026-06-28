@@ -325,7 +325,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, inject, watch, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import type { FirecrawlScrapingApi } from '../services/firecrawl';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
 import CodeBlock from '../components/playground/CodeBlock.vue';
@@ -451,6 +451,7 @@ export default defineComponent({
    */
   setup() {
     const router = useRouter();
+    const route = useRoute();
     // Inject the API client for scraping operations.
     const api = inject('api') as { scraping: FirecrawlScrapingApi };
 
@@ -491,6 +492,14 @@ export default defineComponent({
         frequency: 60,
       },
     });
+
+    // Pre-fill the URL field from the ?url= query parameter (passed by the
+    // home-page launcher when the user picks a tool with a URL already typed).
+    const _q = route.query.url;
+    const _initialUrl = Array.isArray(_q) ? _q[0] : _q;
+    if (_initialUrl) {
+      formData.value.url = String(_initialUrl);
+    }
 
     /**
      * Reactive state for collapsing/expanding scrape options section.

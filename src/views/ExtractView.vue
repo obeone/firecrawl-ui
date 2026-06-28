@@ -99,7 +99,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, ref, watch } from 'vue';
+import { computed, inject, onMounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import type { FirecrawlExtractResponse, FirecrawlExtractionApi } from '@/services/firecrawl';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
 import CodeBlock from '../components/playground/CodeBlock.vue';
@@ -114,6 +115,18 @@ if (!api?.extraction) {
 
 const urlInput = ref(''); // Stores the URLs entered by the user.
 const promptInput = ref(''); // Stores the prompt for data extraction.
+
+const route = useRoute();
+
+// Pre-fill the URL textarea from the ?url= query parameter (passed by the
+// home-page launcher when the user picks a tool with a URL already typed).
+onMounted(() => {
+  const q = route.query.url;
+  const initialUrl = Array.isArray(q) ? q[0] : q;
+  if (initialUrl) {
+    urlInput.value = String(initialUrl);
+  }
+});
 const schemaString = ref(''); // Stores the JSON schema string provided by the user.
 const options = ref({ enableWebSearch: false, showSources: false, allowExternalLinks: false }); // Stores extraction options.
 const loading = ref(false); // Indicates if an extraction request is in progress.
