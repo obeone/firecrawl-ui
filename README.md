@@ -1,135 +1,157 @@
+<div align="center">
+
+<img src="logo/logo.png" alt="Firecrawl UI" width="120" />
+
 # Firecrawl UI
 
-![Firecrawl UI Logo](logo/logo.png)
+![Vue](https://img.shields.io/badge/Vue-3-42b883?logo=vuedotjs&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)
+[![License](https://img.shields.io/github/license/obeone/firecrawl-ui)](LICENSE)
+[![CI](https://github.com/obeone/firecrawl-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/obeone/firecrawl-ui/actions/workflows/ci.yml)
 
-[![License](https://img.shields.io/github/license/obeone/firecrawl-ui)](https://github.com/obeone/firecrawl-ui/blob/main/LICENSE) [![Build Status](https://github.com/obeone/firecrawl-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/obeone/firecrawl-ui/actions/workflows/ci.yml)
+</div>
 
-Firecrawl UI is a Vue 3 application for interacting with the [Firecrawl API](https://firecrawl.dev/).
-It allows you to scrape pages, launch crawls and extract structured data through a simple web interface.
+---
 
-This project aims to provide a user-friendly way to leverage the power of Firecrawl for various web scraping and data extraction tasks.
+Firecrawl UI is a single-page Vue 3 app that puts the [Firecrawl API](https://firecrawl.dev/)
+tools behind a simple request/response interface. You don't need to write any
+integration code: open the app, drop in a URL, and read the scraped content,
+crawl results, or extracted data right in the browser. Your API key and data
+stay local, and you can point it at the hosted Firecrawl service or your own
+self-hosted instance.
 
-## Table of Contents
+## ✨ Features
 
-- [Firecrawl UI](#firecrawl-ui)
-  - [Table of Contents](#table-of-contents)
-  - [Features](#features)
-  - [Quick Start](#quick-start)
-  - [Environment Variables](#environment-variables)
-  - [Development](#development)
-  - [Production Build](#production-build)
-  - [Docker](#docker)
-  - [API Specification](#api-specification)
-  - [Contributing](#contributing)
-  - [Visuals](#visuals)
+|     | Feature          | Description                                                               |
+| :-: | :--------------- | :------------------------------------------------------------------------ |
+| 🔗  | **URL launcher** | Paste a URL on the home, pick an action, land in the tool pre-filled      |
+| 📄  | **Scrape**       | Turn a single page into clean markdown, HTML, links or structured data    |
+| 🕷️  | **Crawl**        | Traverse a whole site with depth, include/exclude rules and live progress |
+| 🧠  | **Extract**      | Pull structured fields from URLs with a prompt or schema (AI)             |
+| 🗺️  | **Map**          | List every reachable URL of a site to understand its structure            |
+| 🔍  | **Search**       | Query the web and get ranked results with optional page content           |
+| 🌗  | **Light / dark** | Glass + aurora theme, dark by default, remembered across sessions         |
+| 🔑  | **Local config** | API key and base URL stored in your browser, never sent anywhere else     |
+| 🏠  | **Self-hosting** | Point the base URL at your own Firecrawl instance (with or without a key) |
 
-## Features
+## 🚀 Demo
 
-- ✨ Scrape individual URLs
-- 🚀 Launch crawling jobs with custom depth
-- 🧠 Extract data using Firecrawl's AI tools
-- 🔑 Configure and store your API key locally
-- 📊 View or export results
+Try it now, no install needed: **<https://firecrawl-ui.obeone.cloud>**. Open the
+settings page and add your API key (or a self-hosted base URL) to get started.
 
-## Quick Start
+![Firecrawl UI home](screenshots/home.png)
 
-The easiest way to get started is by using the hosted version:
+## 📦 Installation
 
-Simply visit [https://firecrawl-ui.obeone.cloud](https://firecrawl-ui.obeone.cloud) in your browser.
+### Local
 
-Alternatively, you can run it using the prebuilt Docker image:
+```sh
+git clone https://github.com/obeone/firecrawl-ui.git
+cd firecrawl-ui
+npm install
+npm run dev
+```
 
-1. Run the container: `docker run -p 8080:8080 obeoneorg/firecrawl-ui`
-2. Open your browser to `http://localhost:8080/`.
-3. Configure your API key and base URL in the application settings page.
+Open the URL printed in your terminal (default <http://localhost:5173/>), then
+set your API key in the settings page.
 
-You can also run it locally:
+### 🐳 Docker
 
-1. Clone the repository.
-2. Install dependencies: `npm install`
-3. Run the development server: `npm run dev`
-4. Open your browser to `http://localhost:5173/` (or the address shown in your terminal).
-5. Configure your API key and base URL in the application settings page.
+```sh
+docker run -p 8080:8080 obeoneorg/firecrawl-ui
+```
 
-## Environment Variables
+Open <http://localhost:8080/>. Prebuilt images:
 
-Environment variables are an optional way to configure API access. Alternatively, you can configure the API key and base URL directly within the application's settings page after launching.
+- `docker.io/obeoneorg/firecrawl-ui`
+- `ghcr.io/obeone/firecrawl-ui`
 
-To use environment variables, set the following:
+## 🖼️ Screenshots
 
-- `VITE_FIRECRAWL_API_KEY` - your Firecrawl API key
-- `VITE_FIRECRAWL_API_BASE_URL` - base URL of the Firecrawl API
+|              Scrape               |              Crawl              |
+| :-------------------------------: | :-----------------------------: |
+| ![Scrape](screenshots/scrape.png) | ![Crawl](screenshots/crawl.png) |
 
-You can create a `.env` file in the project root with these variables:
+|               Extract               |
+| :---------------------------------: |
+| ![Extract](screenshots/extract.png) |
+
+Each tool is a two-pane playground: build the request on the left, read the
+response (preview, JSON, links, …) on the right.
+
+## ⚙️ Configuration
+
+You can configure access two ways. The app shows a setup prompt on the home
+until either an **API key** or a custom **API URL** (for a self-hosted
+instance) is set.
+
+**In the app:** open the settings page (gear icon) and enter your API key
+and/or base URL. Values are saved to `localStorage`.
+
+**Environment variables:** create a `.env` file in the project root. These are
+read by `src/config/api.ts`.
 
 ```sh
 VITE_FIRECRAWL_API_KEY=your_api_key
 VITE_FIRECRAWL_API_BASE_URL=https://api.firecrawl.dev
 ```
 
-These variables are read in `src/config/api.ts`.
+| Variable                      | Description            | Default                     |
+| :---------------------------- | :--------------------- | :-------------------------- |
+| `VITE_FIRECRAWL_API_KEY`      | Firecrawl API key      | _(empty)_                   |
+| `VITE_FIRECRAWL_API_BASE_URL` | Firecrawl service root | `https://api.firecrawl.dev` |
 
-## Development
+Precedence is `localStorage` > `VITE_*` env > default. Any trailing `/v1` or
+`/v2` on the base URL is stripped automatically; the adapter targets **v2**.
 
-Run the dev server with hot reload:
+## 🛠️ Commands
 
-```sh
-npm run dev
+| Command           | Description                          |
+| :---------------- | :----------------------------------- |
+| `npm run dev`     | Start the dev server with hot reload |
+| `npm run build`   | Type-check and build to `dist/`      |
+| `npm run preview` | Preview the production build locally |
+| `npm run lint`    | Run ESLint                           |
+| `npm run format`  | Format with Prettier                 |
+
+| Docker                                 | Description                  |
+| :------------------------------------- | :--------------------------- |
+| `docker build -t firecrawl-ui .`       | Build the image locally      |
+| `docker run -p 8080:8080 firecrawl-ui` | Serve via Nginx on port 8080 |
+
+The image is a multi-stage build (Node 24, then `nginx-unprivileged`). A custom
+`nginx.conf` rewrites unknown paths to `index.html` for client-side routing.
+
+## 🔌 API
+
+The app targets the Firecrawl **v2** API (`/v2/*`) through the hand-written
+adapter in `src/services/firecrawl.ts`. The full spec lives in
+[`openapi_v2.yaml`](openapi_v2.yaml).
+
+> Firecrawl still exposes the legacy **v1** API alongside v2, so existing v1
+> integrations keep working, and this UI just builds its requests against v2.
+
+## 🧭 Architecture
+
+```mermaid
+flowchart TB
+    U["You (in the browser)"] --> H["Home launcher<br/>URL + action"]
+    H --> V["Tool views<br/>Scrape · Crawl · Extract · Map · Search"]
+    V --> AD["API adapter<br/>src/services/firecrawl.ts"]
+    AD -->|"v2 requests"| FC[("Firecrawl API v2")]
+    CFG["API key / base URL<br/>localStorage or VITE_* env"] -.-> AD
 ```
 
-## Production Build
+## 🤝 Contributing
 
-Compile and minify the application:
+Contributions are welcome. Run `npm run lint` and `npx prettier --check .`
+before opening a pull request. PR titles follow `[firecrawl-ui] <Title>`.
 
-```sh
-npm run build
-```
+## 📝 License
 
-Preview the built app locally:
+Released under the [MIT](LICENSE) license. Powered by
+[Firecrawl](https://firecrawl.dev/).
 
-```sh
-npm run preview
-```
-
-The `public/404.html` file is copied into the build output and allows GitHub Pages
-to redirect unknown paths to `index.html` for proper client-side routing.
-
-## Docker
-
-Build the Docker image:
-
-```sh
-docker build -t firecrawl-ui .
-```
-
-Run the container and expose the Nginx server:
-
-```sh
-docker run -p 8080:8080 firecrawl-ui
-```
-
-The container includes a custom `nginx.conf` which uses `try_files $uri $uri/ /index.html;`
-to route unknown paths to the application entry point.
-
-A prebuilt image is also published and can be pulled from:
-
-- `ghcr.io/obeone/firecrawl-ui`
-- `docker.io/obeoneorg/firecrawl-ui`
-
-## API Specification
-
-The OpenAPI document describing all endpoints is available in `openapi_v2.yaml`. The application targets the Firecrawl **API v2** (`/v2/*`) through the adapter in `src/services/firecrawl.ts`.
-
-> **Note:** Firecrawl still exposes the legacy **v1** API (`/v1/*`) alongside v2, so existing v1 integrations keep working — this UI simply builds its requests against v2. Set `VITE_FIRECRAWL_API_BASE_URL` to the service root (e.g. `https://api.firecrawl.dev`); any trailing `/v1` or `/v2` is stripped automatically, and the adapter appends `/v2` itself.
-
-## Contributing
-
-Contributions are welcome. Please open an issue or submit a pull request.
-
-## Visuals
-
-![Scrape Screenshot](screenshots/scrape.png)
-
-![Crawl Screenshot](screenshots/crawl.png)
-
-![Extract Screenshot](screenshots/extract.png)
+Made by **Grégoire Compagnon (obeone)**.
