@@ -488,16 +488,29 @@ async function waitForExtract(
   http: AxiosInstance,
   initialResponse: FirecrawlExtractResponse,
 ): Promise<FirecrawlExtractResponse> {
-  if (!initialResponse.id || !initialResponse.status || initialResponse.status !== 'processing') {
+  // When the API answers synchronously the data is already present and there is
+  // no job to poll. Otherwise the async POST only returns { success, id } with
+  // no `status` field on v2, so a missing status still means "keep polling".
+  if (!initialResponse.id || initialResponse.data !== undefined) {
     return initialResponse;
   }
 
-  let response = initialResponse;
+  // Terminal job states: stop polling as soon as one of these is reached.
+  const terminalStatuses = new Set(['completed', 'failed', 'cancelled']);
+  // Bound the loop (~2 minutes at 1s interval) so a job that never settles
+  // cannot hang the UI indefinitely.
+  const maxAttempts = 120;
 
-  while (response.status === 'processing' && response.id) {
+  let response = initialResponse;
+  let attempts = 0;
+
+  while (!terminalStatuses.has(response.status ?? '') && attempts < maxAttempts) {
     await sleep(1000);
-    const pollResponse = await http.get<FirecrawlExtractResponse>(`/v2/extract/${response.id}`);
+    const pollResponse = await http.get<FirecrawlExtractResponse>(
+      `/v2/extract/${initialResponse.id}`,
+    );
     response = pollResponse.data;
+    attempts += 1;
   }
 
   return response;
