@@ -509,7 +509,7 @@ import { defineComponent, ref, inject, onMounted, onUnmounted, computed, watch }
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import axios from 'axios';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
 import CodeBlock from '../components/playground/CodeBlock.vue';
 import {
@@ -602,6 +602,7 @@ export default defineComponent({
   components: { PlaygroundLayout, CodeBlock },
   setup() {
     const router = useRouter();
+    const route = useRoute();
     // Define the type of the injected api object based on the structure provided in src/plugins/api.ts
     const api = inject('api') as {
       crawling: FirecrawlCrawlingApi;
@@ -654,6 +655,14 @@ export default defineComponent({
         events: [],
       },
     });
+
+    // Pre-fill the URL field from the ?url= query parameter (passed by the
+    // home-page launcher when the user picks a tool with a URL already typed).
+    const _q = route.query.url;
+    const _initialUrl = Array.isArray(_q) ? _q[0] : _q;
+    if (_initialUrl) {
+      formData.value.url = String(_initialUrl);
+    }
 
     // Inputs for includes/excludes as comma-separated strings for user convenience
     const includesInput = ref('');

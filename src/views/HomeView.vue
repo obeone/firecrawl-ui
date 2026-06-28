@@ -2,33 +2,34 @@
 /**
  * HomeView.vue
  *
- * Console landing for the Firecrawl UI playground. Presents a compact hero and
- * a quick-launch grid of the available tools, each opening its request/response
- * playground. Mirrors the top-bar tabs for a coherent navigation model.
+ * The tool's home: a functional launcher, not a marketing page. Paste a URL,
+ * pick an action (scrape / crawl / map / extract) and go straight into that
+ * tool with the URL pre-filled via the `url` query param. A slim row of direct
+ * tool links sits underneath for everything else (including search).
  */
-import { RouterLink } from 'vue-router';
+import { ref } from 'vue';
+import { useRouter, RouterLink } from 'vue-router';
+
+const router = useRouter();
 
 /**
- * A quick-launch tool card.
+ * A URL-based action reachable from the launcher.
  *
- * @property to - Router path the card opens.
- * @property label - Tool name.
- * @property desc - One-line description of what the tool does.
- * @property paths - Lucide-style SVG path `d` strings for the icon (match the tabs).
+ * @property key - Action id, also the route segment it pushes to.
+ * @property label - Visible label.
+ * @property paths - Lucide-style SVG path `d` strings for the icon.
  */
-interface ToolCard {
-  to: string;
+interface LaunchAction {
+  key: string;
   label: string;
-  desc: string;
   paths: string[];
 }
 
-/** Tools surfaced on the landing, in the same order as the top-bar tabs. */
-const tools: ToolCard[] = [
+/** URL-based actions offered by the launcher (search is query-based, kept aside). */
+const actions: LaunchAction[] = [
   {
-    to: '/scrape',
+    key: 'scrape',
     label: 'Scrape',
-    desc: 'Extract clean content from a single page as markdown, HTML or structured data.',
     paths: [
       'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z',
       'M14 2v6h6',
@@ -37,9 +38,8 @@ const tools: ToolCard[] = [
     ],
   },
   {
-    to: '/crawl',
+    key: 'crawl',
     label: 'Crawl',
-    desc: 'Traverse a whole site, follow links in depth and collect pages at scale.',
     paths: [
       'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z',
       'M3.6 9h16.8',
@@ -49,19 +49,8 @@ const tools: ToolCard[] = [
     ],
   },
   {
-    to: '/extract',
-    label: 'Extract',
-    desc: 'Pull structured fields from URLs with a prompt or schema, powered by AI.',
-    paths: [
-      'M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z',
-      'M3.3 7 12 12l8.7-5',
-      'M12 22V12',
-    ],
-  },
-  {
-    to: '/map',
+    key: 'map',
     label: 'Map',
-    desc: 'List every reachable URL of a website to understand its structure fast.',
     paths: [
       'M9 4 3.5 6.2A1 1 0 0 0 3 7.1v12.2a1 1 0 0 0 1.4.9L9 18l6 3 5.1-2.2a1 1 0 0 0 .6-.9V5.7a1 1 0 0 0-1.4-.9L15 7z',
       'M9 4v14',
@@ -69,351 +58,358 @@ const tools: ToolCard[] = [
     ],
   },
   {
-    to: '/search',
-    label: 'Search',
-    desc: 'Query the web and get ranked results with optional page content.',
-    paths: ['M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', 'm21 21-4.3-4.3'],
+    key: 'extract',
+    label: 'Extract',
+    paths: [
+      'M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z',
+      'M3.3 7 12 12l8.7-5',
+      'M12 22V12',
+    ],
   },
 ];
+
+/** Currently selected launcher action. */
+const action = ref<string>('scrape');
+
+/** The URL the user is about to act on. */
+const url = ref<string>('');
+
+/** A couple of example hosts to fill the field with one click. */
+const examples = ['news.ycombinator.com', 'stripe.com', 'en.wikipedia.org'];
+
+/**
+ * Normalizes a user-entered URL by trimming it and prepending https:// when no
+ * scheme is present.
+ *
+ * @param raw - The raw input value.
+ * @returns A normalized absolute URL, or an empty string if input was blank.
+ */
+function normalizeUrl(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+/**
+ * Launches the selected action with the entered URL, routing into the matching
+ * tool with `?url=` so it lands pre-filled. No-op on empty input.
+ */
+function launch(): void {
+  const normalized = normalizeUrl(url.value);
+  if (!normalized) return;
+  router.push({ path: `/${action.value}`, query: { url: normalized } });
+}
+
+/**
+ * Fills the URL field with an example host.
+ *
+ * @param host - The example host to insert.
+ */
+function useExample(host: string): void {
+  url.value = host;
+}
 </script>
 
 <template>
   <div class="home">
-    <!-- Hero -->
-    <section class="hero">
-      <span class="hero-eyebrow">Web data playground</span>
-      <div class="hero-mark">
-        <img src="@/assets/logo.png" alt="Firecrawl UI Logo" class="logo" />
+    <div class="launcher">
+      <!-- Action selector -->
+      <div class="actions" role="tablist" aria-label="Action">
+        <button
+          v-for="a in actions"
+          :key="a.key"
+          type="button"
+          role="tab"
+          class="action"
+          :class="{ active: a.key === action }"
+          :aria-selected="a.key === action"
+          @click="action = a.key"
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path v-for="(d, i) in a.paths" :key="i" :d="d" />
+          </svg>
+          {{ a.label }}
+        </button>
       </div>
-      <h1 class="hero-title">Firecrawl <span class="accent">UI</span></h1>
-      <p class="subtitle">
-        A request/response playground for the Firecrawl API. Build a call on the left, read the
-        response on the right. Everything runs locally.
-      </p>
-      <div class="hero-cta">
-        <RouterLink to="/scrape" class="cta cta-primary">Start scraping</RouterLink>
-        <RouterLink to="/api-config" class="cta cta-secondary">Configure API key</RouterLink>
-      </div>
-    </section>
 
-    <!-- Quick-launch tool grid -->
-    <section class="launch">
-      <h2 class="launch-title">Tools</h2>
-      <div class="grid">
-        <RouterLink v-for="tool in tools" :key="tool.to" :to="tool.to" class="tool">
-          <span class="tool-icon">
-            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-              <path v-for="(d, i) in tool.paths" :key="i" :d="d" />
-            </svg>
-          </span>
-          <span class="tool-body">
-            <span class="tool-name">{{ tool.label }}</span>
-            <span class="tool-desc">{{ tool.desc }}</span>
-          </span>
-          <span class="tool-arrow" aria-hidden="true">→</span>
-        </RouterLink>
-      </div>
-    </section>
+      <!-- URL bar -->
+      <form class="bar" @submit.prevent="launch">
+        <svg class="bar-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1" />
+          <path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" />
+        </svg>
+        <input
+          v-model="url"
+          type="text"
+          class="bar-input"
+          placeholder="Paste a URL, e.g. example.com"
+          aria-label="URL"
+          autofocus
+          spellcheck="false"
+          autocapitalize="off"
+        />
+        <button type="submit" class="bar-go" :disabled="!url.trim()">
+          {{ actions.find((a) => a.key === action)?.label }}
+          <span aria-hidden="true">→</span>
+        </button>
+      </form>
 
-    <!-- Footer strip -->
-    <footer class="home-foot">
-      <p class="local">
-        <span class="dot"></span>
-        Local-only — your API key and data never leave this browser.
-      </p>
-      <a
-        href="https://github.com/obeone/firecrawl-ui"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="repo"
-      >
-        Documentation &amp; source
-        <span aria-hidden="true">↗</span>
-      </a>
-    </footer>
+      <!-- Examples -->
+      <div class="examples">
+        <span class="examples-label">try</span>
+        <button
+          v-for="host in examples"
+          :key="host"
+          type="button"
+          class="example"
+          @click="useExample(host)"
+        >
+          {{ host }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Direct tool access -->
+    <nav class="pills" aria-label="Open a tool">
+      <RouterLink to="/scrape" class="pill">Scrape</RouterLink>
+      <RouterLink to="/crawl" class="pill">Crawl</RouterLink>
+      <RouterLink to="/extract" class="pill">Extract</RouterLink>
+      <RouterLink to="/map" class="pill">Map</RouterLink>
+      <RouterLink to="/search" class="pill">Search</RouterLink>
+      <RouterLink to="/api-config" class="pill pill-muted">API key</RouterLink>
+    </nav>
   </div>
 </template>
 
 <style scoped>
 .home {
-  max-width: 1040px;
+  max-width: 720px;
   margin: 0 auto;
   width: 100%;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 3rem;
-  padding: 2rem 0 2rem;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 2rem 0;
 }
 
 /* ---------------------------------------------------------------------------
- * Hero — the showcase. Gradient-text title (sparingly, hero only), a glowing
- * glass logo mark, and aurora-accented CTAs.
+ * Launcher
  * ------------------------------------------------------------------------- */
-.hero {
-  text-align: center;
-  padding-top: 1.5rem;
+.launcher {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
 }
 
-.hero-eyebrow {
-  display: inline-block;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--brand-strong);
-  /* Glass chip with a hairline so it reads on the aurora. */
+/* Action segmented control */
+.actions {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.3rem;
   background: var(--glass-fill);
   -webkit-backdrop-filter: blur(12px) saturate(160%);
   backdrop-filter: blur(12px) saturate(160%);
   border: 1px solid var(--glass-border);
-  padding: 0.35rem 0.95rem;
   border-radius: var(--radius-pill);
-  margin-bottom: 1.6rem;
 }
 
-.hero-mark {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 88px;
-  height: 88px;
-  margin: 0 auto 1.3rem;
-  border-radius: var(--radius-xl);
-  background: var(--gradient-aurora);
-  /* Violet/cyan glow radiating from the mark — the hero's focal light. */
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.12) inset,
-    0 18px 50px -12px rgba(124, 92, 255, 0.7),
-    0 8px 30px -8px rgba(24, 194, 221, 0.5);
-}
-
-.logo {
-  width: 56px;
-  height: 56px;
-  object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
-}
-
-.hero-title {
-  font-size: clamp(2.4rem, 5vw, 3.4rem);
-  font-weight: 800;
-  letter-spacing: -0.035em;
-  margin-bottom: 0.7rem;
-}
-
-/* Gradient text — only used on the hero accent to keep it special. */
-.accent {
-  background: var(--gradient-aurora);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-}
-
-.subtitle {
-  font-size: 1.08rem;
-  color: var(--color-text-soft);
-  max-width: 580px;
-  margin: 0 auto;
-}
-
-.hero-cta {
-  display: flex;
-  gap: 0.75rem;
-  justify-content: center;
-  margin-top: 1.8rem;
-  flex-wrap: wrap;
-}
-
-.cta {
+.action {
   display: inline-flex;
   align-items: center;
-  padding: 0.75rem 1.5rem;
-  border-radius: var(--radius-sm);
+  gap: 0.4rem;
+  padding: 0.45rem 0.95rem;
+  border: none;
+  background: none;
+  border-radius: var(--radius-pill);
+  font-size: 0.88rem;
   font-weight: 600;
-  font-size: 0.95rem;
-  border: 1px solid transparent;
+  color: var(--color-text-soft);
+  cursor: pointer;
   transition:
-    background var(--transition-fast),
-    border-color var(--transition-fast),
     color var(--transition-fast),
-    box-shadow var(--transition-fast),
-    transform var(--transition-fast);
+    background var(--transition-fast);
 }
 
-.cta-primary {
-  background: var(--gradient-violet);
-  color: #fff;
-  box-shadow: var(--box-shadow-button);
-}
-
-.cta-primary:hover {
-  background: var(--gradient-violet-hover);
-  color: #fff;
-  transform: translateY(-2px);
-  box-shadow: 0 12px 32px -8px rgba(124, 92, 255, 0.7);
-}
-
-/* Secondary CTA — frosted glass pill. */
-.cta-secondary {
-  background: var(--glass-fill);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  color: var(--color-heading);
-  border-color: var(--glass-border);
-}
-
-.cta-secondary:hover {
-  border-color: var(--violet-500);
-  color: var(--brand-strong);
-  background: var(--brand-soft);
-}
-
-/* ---------------------------------------------------------------------------
- * Launch grid — glass tool cards with hover-lift and a soft neon halo.
- * ------------------------------------------------------------------------- */
-.launch-title {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-text-mute);
-  margin-bottom: 1rem;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem;
-}
-
-.tool {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.2rem 1.3rem;
-  /* Frosted card so the aurora glows softly through each tile. */
-  background: var(--glass-fill);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--box-shadow-card);
-  color: var(--color-text);
-  transition:
-    border-color var(--transition),
-    box-shadow var(--transition),
-    transform var(--transition);
-}
-
-.tool:hover {
-  border-color: var(--color-border-hover);
-  /* Lift + soft violet halo on hover. */
-  box-shadow:
-    var(--box-shadow-container),
-    0 0 0 1px rgba(124, 92, 255, 0.25),
-    0 10px 36px -10px rgba(124, 92, 255, 0.5);
-  transform: translateY(-4px);
-  color: var(--color-text);
-}
-
-.tool-icon {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  flex-shrink: 0;
-  border-radius: var(--radius-md);
-  background: var(--brand-soft);
-  color: var(--brand-strong);
-  border: 1px solid rgba(124, 92, 255, 0.22);
-  transition:
-    background var(--transition),
-    color var(--transition),
-    box-shadow var(--transition);
-}
-
-.tool:hover .tool-icon {
-  /* Icon tile lights up to the aurora gradient on hover. */
-  background: var(--gradient-violet);
-  color: #fff;
-  box-shadow: 0 6px 20px -6px rgba(124, 92, 255, 0.7);
-}
-
-.tool-icon svg {
+.action svg {
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+  opacity: 0.85;
 }
 
-.tool-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  min-width: 0;
-}
-
-.tool-name {
-  font-weight: 700;
+.action:hover {
   color: var(--color-heading);
 }
 
-.tool-desc {
-  font-size: 0.88rem;
-  color: var(--color-text-soft);
-  line-height: 1.45;
+.action.active {
+  color: #fff;
+  background: var(--gradient-violet);
+  box-shadow: 0 6px 18px -8px rgba(124, 92, 255, 0.8);
 }
 
-.tool-arrow {
-  margin-left: auto;
-  color: var(--color-text-mute);
-  font-size: 1.1rem;
-  transition:
-    transform var(--transition-fast),
-    color var(--transition-fast);
+.action.active svg {
+  opacity: 1;
 }
 
-.tool:hover .tool-arrow {
-  color: var(--brand-strong);
-  transform: translateX(4px);
-}
-
-/* ---------------------------------------------------------------------------
- * Footer strip
- * ------------------------------------------------------------------------- */
-.home-foot {
+/* URL bar */
+.bar {
+  width: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--color-border);
+  gap: 0.6rem;
+  padding: 0.55rem 0.6rem 0.55rem 1rem;
+  background: var(--glass-fill-strong, var(--glass-fill));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    var(--box-shadow-card),
+    0 0 0 1px rgba(124, 92, 255, 0.1),
+    0 22px 60px -28px rgba(124, 92, 255, 0.55);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
-.local {
+.bar:focus-within {
+  border-color: var(--violet-500);
+  box-shadow:
+    var(--shadow-ring),
+    0 22px 60px -28px rgba(124, 92, 255, 0.7);
+}
+
+.bar-icon {
+  flex-shrink: 0;
+  fill: none;
+  stroke: var(--color-text-mute);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bar-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  padding: 0.5rem 0;
+  font-size: 1.05rem;
+  color: var(--color-heading);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.bar-input:focus {
+  outline: none;
+  border: none;
+  box-shadow: none;
+}
+
+.bar-input::placeholder {
+  color: var(--color-text-mute);
+}
+
+.bar-go {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 1.25rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--gradient-violet);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--box-shadow-button);
+  transition:
+    background var(--transition-fast),
+    transform var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+.bar-go:hover:not(:disabled) {
+  background: var(--gradient-violet-hover);
+  transform: translateY(-1px);
+}
+
+.bar-go:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Examples */
+.examples {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.85rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.examples-label {
+  font-size: 0.8rem;
   color: var(--color-text-mute);
 }
 
-.local .dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--hue-success);
-  box-shadow: 0 0 0 3px var(--hue-success-soft);
+.example {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--color-text-soft);
+  background: none;
+  border: none;
+  border-bottom: 1px dashed var(--color-border-hover);
+  padding: 0 0.1rem 0.05rem;
+  cursor: pointer;
+  transition: color var(--transition-fast);
 }
 
-.repo {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.88rem;
+.example:hover {
+  color: var(--brand-strong);
+}
+
+/* ---------------------------------------------------------------------------
+ * Direct tool pills
+ * ------------------------------------------------------------------------- */
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.pill {
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
   font-weight: 600;
+  color: var(--color-text-soft);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid var(--glass-border);
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.pill:hover {
+  color: var(--brand-strong);
+  border-color: var(--violet-500);
+  background: var(--brand-soft);
+}
+
+.pill-muted {
+  color: var(--color-text-mute);
 }
 </style>
