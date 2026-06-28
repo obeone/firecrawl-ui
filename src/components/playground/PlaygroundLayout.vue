@@ -135,15 +135,14 @@ function selectTab(key: string): void {
       <!-- RESPONSE pane -->
       <div class="pg-pane pg-response">
         <div class="pg-response-head">
-          <div class="pg-tabs" role="tablist">
+          <div class="pg-tabs" role="group" aria-label="Response view">
             <button
               v-for="tab in tabs"
               :key="tab.key"
               type="button"
-              role="tab"
               class="pg-tab"
               :class="{ active: tab.key === activeTab }"
-              :aria-selected="tab.key === activeTab"
+              :aria-pressed="tab.key === activeTab"
               @click="selectTab(tab.key)"
             >
               {{ tab.label }}

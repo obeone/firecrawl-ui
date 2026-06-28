@@ -127,6 +127,7 @@
           <p class="download-label">Download Results</p>
           <div class="download-buttons">
             <button
+              type="button"
               v-for="fmt in activeFormats"
               :key="fmt"
               class="download-button"
@@ -134,7 +135,7 @@
             >
               Download {{ fmt }} Archive
             </button>
-            <button class="download-button" @click="handleDownload('Full JSON')">
+            <button type="button" class="download-button" @click="handleDownload('Full JSON')">
               Download Full JSON
             </button>
           </div>

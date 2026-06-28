@@ -144,6 +144,7 @@ function toggleTheme(): void {
             </svg>
           </RouterLink>
           <button
+            type="button"
             class="icon-btn"
             @click="toggleTheme"
             aria-label="Toggle color theme"

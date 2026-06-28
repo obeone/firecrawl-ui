@@ -401,10 +401,11 @@
               Use subfolders
             </label>
             <template v-for="fmt in activeFormats" :key="fmt">
-              <button class="download-button" @click="handleDownload(fmt)">
+              <button type="button" class="download-button" @click="handleDownload(fmt)">
                 Download {{ fmt }} Archive
               </button>
               <button
+                type="button"
                 v-if="fmt === 'markdown'"
                 class="download-button"
                 @click="handleDownloadCompiledMarkdown()"
@@ -412,7 +413,7 @@
                 Download compiled Markdown
               </button>
             </template>
-            <button class="download-button" @click="handleDownload('Full JSON')">
+            <button type="button" class="download-button" @click="handleDownload('Full JSON')">
               Download Full JSON
             </button>
           </div>
@@ -444,10 +445,15 @@
                 Use subfolders
               </label>
               <template v-for="fmt in selectedFormats" :key="fmt">
-                <button class="download-button" @click="handleDownload(fmt, selectedCrawl.id)">
+                <button
+                  type="button"
+                  class="download-button"
+                  @click="handleDownload(fmt, selectedCrawl.id)"
+                >
                   Download {{ fmt }} Archive
                 </button>
                 <button
+                  type="button"
                   v-if="fmt === 'markdown'"
                   class="download-button"
                   @click="handleDownloadCompiledMarkdown(selectedCrawl.id)"
@@ -456,6 +462,7 @@
                 </button>
               </template>
               <button
+                type="button"
                 class="download-button"
                 @click="handleDownload('Full JSON', selectedCrawl.id)"
               >
@@ -464,7 +471,9 @@
             </div>
           </div>
 
-          <button class="primary-button" @click="selectedCrawlId = null">Hide Details</button>
+          <button type="button" class="primary-button" @click="selectedCrawlId = null">
+            Hide Details
+          </button>
         </div>
 
         <!-- Crawl history -->
