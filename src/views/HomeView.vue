@@ -131,6 +131,24 @@ function launch(): void {
 function useExample(host: string): void {
   url.value = host;
 }
+
+/** Tool routes that accept a URL, so their pills can carry the typed one. */
+const urlTools = ['/scrape', '/crawl', '/extract', '/map'];
+
+/**
+ * Router target for a direct tool pill. Carries the currently typed URL when the
+ * tool accepts one, so clicking a tool never silently drops the entered URL.
+ *
+ * @param path - The tool route path.
+ * @returns A plain path, or a location with `?url=` when a URL is entered.
+ */
+function toolLink(path: string): string | { path: string; query: { url: string } } {
+  const u = url.value.trim();
+  if (u && urlTools.includes(path)) {
+    return { path, query: { url: normalizeUrl(u) } };
+  }
+  return path;
+}
 </script>
 
 <template>
@@ -214,10 +232,10 @@ function useExample(host: string): void {
 
     <!-- Direct tool access -->
     <nav class="pills" aria-label="Open a tool">
-      <RouterLink to="/scrape" class="pill">Scrape</RouterLink>
-      <RouterLink to="/crawl" class="pill">Crawl</RouterLink>
-      <RouterLink to="/extract" class="pill">Extract</RouterLink>
-      <RouterLink to="/map" class="pill">Map</RouterLink>
+      <RouterLink :to="toolLink('/scrape')" class="pill">Scrape</RouterLink>
+      <RouterLink :to="toolLink('/crawl')" class="pill">Crawl</RouterLink>
+      <RouterLink :to="toolLink('/extract')" class="pill">Extract</RouterLink>
+      <RouterLink :to="toolLink('/map')" class="pill">Map</RouterLink>
       <RouterLink to="/search" class="pill">Search</RouterLink>
       <RouterLink to="/api-config" class="pill pill-muted">API key</RouterLink>
     </nav>
