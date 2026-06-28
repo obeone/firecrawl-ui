@@ -9,8 +9,26 @@
  */
 import { ref } from 'vue';
 import { useRouter, RouterLink } from 'vue-router';
+import { getApiConfig } from '../config/api.js';
 
 const router = useRouter();
+
+/**
+ * Whether Firecrawl access is configured. Either an API key (cloud) or a custom
+ * API URL (a self-hosted install, which may not require a key) counts as
+ * configured. The base URL always falls back to the public default, so the
+ * unconfigured case is "no key AND still pointing at the default cloud URL".
+ * When unconfigured, the launcher shows a setup notice and routes the action to
+ * the config page instead of a tool that would only fail with a 401.
+ */
+const isConfigured = ref<boolean>(
+  (() => {
+    const cfg = getApiConfig();
+    const hasKey = Boolean(cfg.apiKey?.trim());
+    const hasCustomUrl = Boolean(cfg.basePath) && !cfg.basePath.includes('api.firecrawl.dev');
+    return hasKey || hasCustomUrl;
+  })(),
+);
 
 /**
  * A URL-based action reachable from the launcher.
@@ -95,6 +113,11 @@ function normalizeUrl(raw: string): string {
  * tool with `?url=` so it lands pre-filled. No-op on empty input.
  */
 function launch(): void {
+  // Without any configuration every tool call would 401, so guide to setup first.
+  if (!isConfigured.value) {
+    router.push('/api-config');
+    return;
+  }
   const normalized = normalizeUrl(url.value);
   if (!normalized) return;
   router.push({ path: `/${action.value}`, query: { url: normalized } });
@@ -112,6 +135,24 @@ function useExample(host: string): void {
 
 <template>
   <div class="home">
+    <!-- Shown only when no API key is configured -->
+    <RouterLink v-if="!isConfigured" to="/api-config" class="setup-notice">
+      <span class="setup-icon">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+          <path d="M12 9v4M12 17h.01" />
+        </svg>
+      </span>
+      <span class="setup-text">
+        <strong>Firecrawl access not configured</strong>
+        Add your API key, or an API URL for a self-hosted install, to start.
+      </span>
+      <span class="setup-cta">
+        Configure
+        <span aria-hidden="true">→</span>
+      </span>
+    </RouterLink>
+
     <div class="launcher">
       <!-- Action selector -->
       <div class="actions" role="tablist" aria-label="Action">
@@ -193,6 +234,67 @@ function useExample(host: string): void {
   justify-content: center;
   gap: 1.5rem;
   padding: 2rem 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * Setup notice (no API key)
+ * ------------------------------------------------------------------------- */
+.setup-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  padding: 0.85rem 1.1rem;
+  border-radius: var(--radius-md);
+  background: var(--hue-warning-soft);
+  border: 1px solid color-mix(in srgb, var(--hue-warning) 45%, transparent);
+  color: var(--color-text);
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.setup-notice:hover {
+  border-color: var(--hue-warning);
+}
+
+.setup-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--hue-warning);
+}
+
+.setup-icon svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.setup-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.4;
+  font-size: 0.9rem;
+  color: var(--color-text-soft);
+}
+
+.setup-text strong {
+  color: var(--color-heading);
+  font-weight: 700;
+}
+
+.setup-cta {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--hue-warning);
 }
 
 /* ---------------------------------------------------------------------------
