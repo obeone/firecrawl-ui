@@ -118,8 +118,12 @@
     var(--cyan-400) 120%
   );
   /* Simpler violet→cyan sweep used by buttons. */
-  --gradient-violet: linear-gradient(135deg, var(--violet-500) 0%, var(--cyan-500) 100%);
-  --gradient-violet-hover: linear-gradient(135deg, var(--violet-400) 0%, var(--cyan-400) 100%);
+  /* Button gradient. Stops stay at violet-600 or darker so white label text
+     keeps a >= 4.5:1 contrast ratio (violet-500 and the bright cyan fail AA
+     under white). The bright violet->cyan sweep lives in --gradient-aurora for
+     decorative, non-text use only. */
+  --gradient-violet: linear-gradient(135deg, var(--violet-600) 0%, var(--violet-800) 100%);
+  --gradient-violet-hover: linear-gradient(135deg, var(--violet-600) 0%, var(--violet-700) 100%);
 
   /* Legacy "fire" names → now cool aurora gradients (aliases). */
   --gradient-fire: var(--gradient-aurora);
@@ -188,7 +192,7 @@
   --color-heading: #f4f3ff;
   --color-text: #cfcde0;
   --color-text-soft: #9d9bb5;
-  --color-text-mute: #6f6d87;
+  --color-text-mute: #8884a6;
 
   --color-link: var(--violet-300);
   --color-link-hover: var(--cyan-300);
@@ -233,7 +237,7 @@
   --color-heading: #f4f3ff;
   --color-text: #cfcde0;
   --color-text-soft: #9d9bb5;
-  --color-text-mute: #6f6d87;
+  --color-text-mute: #8884a6;
 
   --color-link: var(--violet-300);
   --color-link-hover: var(--cyan-300);
@@ -276,7 +280,7 @@
   --color-heading: var(--frost-800);
   --color-text: var(--frost-700);
   --color-text-soft: var(--frost-600);
-  --color-text-mute: var(--frost-500);
+  --color-text-mute: #6c7081;
 
   --color-link: var(--violet-600);
   --color-link-hover: var(--violet-700);

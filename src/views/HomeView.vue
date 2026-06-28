@@ -135,6 +135,9 @@ function useExample(host: string): void {
 
 <template>
   <div class="home">
+    <!-- Accessible page title (the launcher is intentionally visually title-less) -->
+    <h1 class="visually-hidden">Firecrawl UI</h1>
+
     <!-- Shown only when no API key is configured -->
     <RouterLink v-if="!isConfigured" to="/api-config" class="setup-notice">
       <span class="setup-icon">
@@ -155,15 +158,14 @@ function useExample(host: string): void {
 
     <div class="launcher">
       <!-- Action selector -->
-      <div class="actions" role="tablist" aria-label="Action">
+      <div class="actions" role="group" aria-label="Action">
         <button
           v-for="a in actions"
           :key="a.key"
           type="button"
-          role="tab"
           class="action"
           :class="{ active: a.key === action }"
-          :aria-selected="a.key === action"
+          :aria-pressed="a.key === action"
           @click="action = a.key"
         >
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
@@ -234,6 +236,19 @@ function useExample(host: string): void {
   justify-content: center;
   gap: 1.5rem;
   padding: 2rem 0;
+}
+
+/* Visually hidden but available to screen readers (carries the page h1). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ---------------------------------------------------------------------------

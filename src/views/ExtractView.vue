@@ -69,7 +69,9 @@
 
     <!-- ── RESPONSE actions (download button) ──────────────── -->
     <template #response-actions>
-      <button v-if="hasResult" class="action-button" @click="downloadResult">Download JSON</button>
+      <button type="button" v-if="hasResult" class="action-button" @click="downloadResult">
+        Download JSON
+      </button>
     </template>
 
     <!-- ── RESPONSE pane ────────────────────────────────────── -->
