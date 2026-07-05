@@ -204,6 +204,10 @@ function selectTab(key: string): void {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  /* width:100% so the panel fills the available width up to max-width; without
+     it the auto side margins in the flex column collapse it to content width
+     (~955px), leaving the response pane cramped and the split non-fixed. */
+  width: 100%;
   max-width: 1300px;
   margin: 0 auto;
   height: 100%;
@@ -239,7 +243,10 @@ function selectTab(key: string): void {
 /* Split */
 .pg-split {
   display: grid;
-  grid-template-columns: minmax(340px, 460px) 1fr;
+  /* Fixed request column + response taking the rest, so the request pane keeps
+     a stable width instead of flexing between 340 and 460px as the window
+     resizes. minmax(0, 1fr) lets the response pane shrink without overflow. */
+  grid-template-columns: 440px minmax(0, 1fr);
   gap: 1.25rem;
   flex: 1;
   min-height: 0;
