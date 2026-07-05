@@ -350,9 +350,12 @@
 
     <!-- RESPONSE: result rendering switched on the active tab -->
     <template #response="{ activeTab }">
-      <!-- Preview: rendered markdown text or HTML content as plain text -->
+      <!-- Preview: markdown rendered to sanitized HTML; falls back to a raw
+           dump when there is no markdown (e.g. HTML-only or JSON results). -->
       <div v-if="activeTab === 'preview'" class="preview-pane">
-        <pre>{{ previewContent }}</pre>
+        <!-- eslint-disable-next-line vue/no-v-html -- content is sanitized via DOMPurify in previewHtml -->
+        <div v-if="previewHtml" class="markdown-body" v-html="previewHtml"></div>
+        <pre v-else>{{ previewContent }}</pre>
       </div>
 
       <!-- Markdown: raw markdown via CodeBlock -->
@@ -390,6 +393,8 @@
 import { defineComponent, ref, inject, watch, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import type { FirecrawlScrapingApi } from '../services/firecrawl';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
 import CodeBlock from '../components/playground/CodeBlock.vue';
 import CopyButton from '../components/playground/CopyButton.vue';
@@ -682,6 +687,21 @@ export default defineComponent({
       if (markdownContent.value) return markdownContent.value;
       if (htmlContent.value) return htmlContent.value;
       return resultData.value ? JSON.stringify(resultData.value, null, 2) : '';
+    });
+
+    /**
+     * Preview markdown parsed to sanitized HTML for the rendered Preview tab.
+     *
+     * The scraped markdown is untrusted content, so the HTML produced by
+     * `marked` is run through DOMPurify before it reaches `v-html` to prevent
+     * XSS from malicious page content. Returns an empty string when there is no
+     * markdown to render (the Preview pane then falls back to the raw dump).
+     * @returns {string}
+     */
+    const previewHtml = computed<string>(() => {
+      if (!markdownContent.value) return '';
+      const rawHtml = marked.parse(markdownContent.value, { async: false }) as string;
+      return DOMPurify.sanitize(rawHtml);
     });
 
     /**
@@ -1123,6 +1143,7 @@ export default defineComponent({
       screenshotContent,
       metadataContent,
       previewContent,
+      previewHtml,
     };
   },
 });
@@ -1307,6 +1328,144 @@ export default defineComponent({
   color: var(--color-text);
   /* Translucent so the aurora tints the code surface. */
   background: var(--glass-fill);
+}
+
+/* ---------------------------------------------------------------------------
+ * Rendered markdown (Preview tab). Sanitized HTML from `previewHtml`, styled
+ * as readable prose with the token set so it stays coherent in light and dark.
+ * --------------------------------------------------------------------------- */
+.markdown-body {
+  padding: 1.25rem 1.5rem;
+  color: var(--color-text);
+  font-size: 0.92rem;
+  line-height: 1.7;
+  word-wrap: break-word;
+  /* Glass fill keeps the aurora visible behind the rendered content. */
+  background: var(--glass-fill);
+}
+
+.markdown-body > :first-child {
+  margin-top: 0;
+}
+
+.markdown-body > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  margin: 1.4em 0 0.6em;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-heading);
+}
+
+.markdown-body h1 {
+  font-size: 1.6em;
+}
+.markdown-body h2 {
+  font-size: 1.35em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--color-border);
+}
+.markdown-body h3 {
+  font-size: 1.15em;
+}
+
+.markdown-body p,
+.markdown-body ul,
+.markdown-body ol,
+.markdown-body blockquote,
+.markdown-body table,
+.markdown-body pre {
+  margin: 0 0 1em;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 1.5em;
+}
+
+.markdown-body li + li {
+  margin-top: 0.25em;
+}
+
+.markdown-body a {
+  color: var(--brand-strong);
+  text-decoration: underline;
+}
+
+.markdown-body a:hover {
+  text-decoration: none;
+}
+
+.markdown-body strong {
+  font-weight: 700;
+}
+
+/* Inline code: token-tinted chip. */
+.markdown-body code {
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-sm);
+  background: var(--color-background-soft);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+/* Fenced code blocks: reset the inline chip styling inside the pre. */
+.markdown-body pre {
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  background: var(--color-background-soft);
+}
+
+.markdown-body pre code {
+  padding: 0;
+  background: none;
+  font-size: 0.84em;
+}
+
+.markdown-body blockquote {
+  padding: 0.2em 1em;
+  border-left: 3px solid var(--color-border);
+  color: var(--color-text-mute);
+}
+
+.markdown-body hr {
+  height: 1px;
+  margin: 1.5em 0;
+  border: 0;
+  background: var(--color-border);
+}
+
+.markdown-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+}
+
+.markdown-body table {
+  border-collapse: collapse;
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.markdown-body th,
+.markdown-body td {
+  padding: 0.4em 0.75em;
+  border: 1px solid var(--color-border);
+}
+
+.markdown-body th {
+  font-weight: 700;
+  background: var(--color-background-soft);
 }
 
 /* ---------------------------------------------------------------------------
