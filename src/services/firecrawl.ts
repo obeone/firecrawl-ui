@@ -388,6 +388,9 @@ function toScrapeRequest(payload: Record<string, unknown>): {
     ...(typeof payload.onlyMainContent === 'boolean'
       ? { onlyMainContent: payload.onlyMainContent }
       : {}),
+    ...(typeof payload.onlyCleanContent === 'boolean'
+      ? { onlyCleanContent: payload.onlyCleanContent }
+      : {}),
     ...(typeof payload.timeout === 'number' ? { timeout: payload.timeout } : {}),
     ...(typeof payload.waitFor === 'number' ? { waitFor: payload.waitFor } : {}),
     ...(typeof payload.mobile === 'boolean' ? { mobile: payload.mobile } : {}),
@@ -402,7 +405,13 @@ function toScrapeRequest(payload: Record<string, unknown>): {
     ...(typeof payload.blockAds === 'boolean' ? { blockAds: payload.blockAds } : {}),
     ...(typeof payload.proxy === 'string' && payload.proxy ? { proxy: payload.proxy } : {}),
     ...(typeof payload.maxAge === 'number' ? { maxAge: payload.maxAge } : {}),
+    ...(typeof payload.minAge === 'number' ? { minAge: payload.minAge } : {}),
     ...(typeof payload.storeInCache === 'boolean' ? { storeInCache: payload.storeInCache } : {}),
+    ...(typeof payload.lockdown === 'boolean' ? { lockdown: payload.lockdown } : {}),
+    ...(typeof payload.redactPII === 'boolean' ? { redactPII: payload.redactPII } : {}),
+    ...(typeof payload.zeroDataRetention === 'boolean'
+      ? { zeroDataRetention: payload.zeroDataRetention }
+      : {}),
     ...(typeof payload.headers === 'object' && payload.headers !== null
       ? { headers: payload.headers }
       : {}),

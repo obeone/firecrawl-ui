@@ -27,13 +27,13 @@
             <option value="rawHtml">Raw HTML</option>
             <option value="links">Links</option>
             <option value="images">Images</option>
-            <option value="summary">Summary</option>
+            <option value="summary">Summary *</option>
             <option value="screenshot">Screenshot (Viewport)</option>
             <option value="screenshot@fullPage">Screenshot (Full Page)</option>
-            <option value="json">JSON (Structured Extraction)</option>
+            <option value="json">JSON (Structured Extraction) *</option>
             <option value="attributes">Attributes</option>
-            <option value="branding">Branding</option>
-            <option value="changeTracking">Change Tracking (Requires Markdown)</option>
+            <option value="branding">Branding *</option>
+            <option value="changeTracking">Change Tracking (Requires Markdown) *</option>
           </select>
           <small>Select one or more formats.</small>
         </div>
@@ -71,6 +71,10 @@
             <label>
               <input type="checkbox" v-model="formData.scrapeOptions.onlyMainContent" />
               Only Main Content (exclude headers, footers, etc.)
+            </label>
+            <label>
+              <input type="checkbox" v-model="formData.scrapeOptions.onlyCleanContent" />
+              Only Clean Content (beta, extra LLM pass to remove residual boilerplate)
             </label>
             <div class="form-group">
               <label for="includeTags">Include Tags (comma separated):</label>
@@ -113,7 +117,7 @@
                 <small>Delay before fetching content.</small>
               </div>
               <div class="form-group">
-                <label for="maxAge">Max Age (ms):</label>
+                <label for="maxAge">Max Age (ms) *:</label>
                 <input
                   id="maxAge"
                   v-model.number="formData.pageOptions.maxAge"
@@ -121,6 +125,16 @@
                   min="0"
                 />
                 <small>Use cached page if younger than this age.</small>
+              </div>
+              <div class="form-group">
+                <label for="minAge">Min Age (ms) *:</label>
+                <input
+                  id="minAge"
+                  v-model.number="formData.pageOptions.minAge"
+                  type="number"
+                  min="0"
+                />
+                <small>Only return cached data older than this age.</small>
               </div>
               <div class="form-group">
                 <label for="timeout">Timeout (ms):</label>
@@ -133,7 +147,7 @@
                 <small>Page request timeout (default: 30000).</small>
               </div>
               <div class="form-group">
-                <label for="proxy">Proxy:</label>
+                <label for="proxy">Proxy *:</label>
                 <select id="proxy" v-model="formData.pageOptions.proxy">
                   <option value="">Default</option>
                   <option value="auto">Auto</option>
@@ -165,7 +179,19 @@
               </label>
               <label class="checkbox-label">
                 <input type="checkbox" v-model="formData.pageOptions.storeInCache" />
-                Store In Cache
+                Store In Cache *
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="formData.pageOptions.lockdown" />
+                Lockdown Mode *
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="formData.pageOptions.redactPII" />
+                Redact PII *
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="formData.pageOptions.zeroDataRetention" />
+                Zero Data Retention *
               </label>
             </div>
             <div class="form-group">
@@ -191,7 +217,7 @@
               <small>Select HTTP method for the request.</small>
             </div>
             <div class="form-group">
-              <label for="location">Location:</label>
+              <label for="location">Location *:</label>
               <select id="location" v-model="formData.pageOptions.location">
                 <option value="">Auto</option>
                 <option value="US">US</option>
@@ -199,6 +225,16 @@
                 <option value="ASIA">ASIA</option>
               </select>
               <small>Select request location.</small>
+            </div>
+            <div class="form-group">
+              <label for="languages">Languages (comma separated) *:</label>
+              <input
+                id="languages"
+                type="text"
+                v-model="formData.pageOptions.languages"
+                placeholder="e.g. en-US, fr-FR"
+              />
+              <small>Preferred languages emulated for the request.</small>
             </div>
             <div class="form-group">
               <label>Actions:</label>
@@ -246,26 +282,48 @@
                 <template v-else-if="action.type === 'executeJavascript'">
                   <textarea v-model="action.script" rows="2" placeholder="script"></textarea>
                 </template>
-                <button type="button" @click="removeAction(idx)">Remove</button>
+                <button type="button" class="action-remove" @click="removeAction(idx)">
+                  Remove
+                </button>
               </div>
-              <button type="button" @click="addAction">Add Action</button>
+              <button type="button" class="action-add" @click="addAction">Add Action</button>
             </div>
           </div>
         </fieldset>
 
-        <div v-if="formData.scrapeOptions.formats.includes('json')" class="form-group">
-          <label for="extractorOptions">Extractor Options (JSON format):</label>
-          <textarea
-            id="extractorOptions"
-            v-model="extractorOptionsJson"
-            rows="8"
-            placeholder='e.g. {"key": "value"}'
-          ></textarea>
-          <small>Enter JSON options for extraction. Must be valid JSON.</small>
-          <div v-if="extractorOptionsError" class="error-message">
-            {{ extractorOptionsError }}
+        <fieldset
+          v-if="formData.scrapeOptions.formats.includes('json')"
+          class="form-group options-fieldset"
+        >
+          <legend>JSON Format (Structured Extraction) *</legend>
+          <small class="fieldset-hint">
+            Replaces the deprecated /v2/extract endpoint. Provide a prompt, a JSON schema, or both
+            to extract structured data with an LLM.
+          </small>
+          <div class="form-group">
+            <label for="jsonPrompt">Prompt:</label>
+            <textarea
+              id="jsonPrompt"
+              v-model="jsonFormatPrompt"
+              rows="3"
+              placeholder="Describe the data to extract, e.g. the product name and its price"
+            ></textarea>
+            <small>Natural language instruction for the extraction.</small>
           </div>
-        </div>
+          <div class="form-group">
+            <label for="jsonSchema">JSON Schema (optional):</label>
+            <textarea
+              id="jsonSchema"
+              v-model="jsonFormatSchemaJson"
+              rows="8"
+              placeholder='{"type": "object", "properties": {"title": {"type": "string"}}}'
+            ></textarea>
+            <small>Enter a JSON schema describing the expected output. Must be valid JSON.</small>
+            <div v-if="jsonFormatSchemaError" class="error-message">
+              {{ jsonFormatSchemaError }}
+            </div>
+          </div>
+        </fieldset>
 
         <div v-if="formData.scrapeOptions.formats.includes('attributes')" class="form-group">
           <label for="attributesOptions">Attribute Selectors (JSON format):</label>
@@ -281,15 +339,23 @@
           </div>
         </div>
 
+        <p class="api-note">
+          * Available only on the official Firecrawl cloud API. These options may be ignored or
+          unsupported on self-hosted instances.
+        </p>
+
         <button type="submit" class="primary-button">Scrape</button>
       </form>
     </template>
 
     <!-- RESPONSE: result rendering switched on the active tab -->
     <template #response="{ activeTab }">
-      <!-- Preview: rendered markdown text or HTML content as plain text -->
+      <!-- Preview: markdown rendered to sanitized HTML; falls back to a raw
+           dump when there is no markdown (e.g. HTML-only or JSON results). -->
       <div v-if="activeTab === 'preview'" class="preview-pane">
-        <pre>{{ previewContent }}</pre>
+        <!-- eslint-disable-next-line vue/no-v-html -- content is sanitized via DOMPurify in previewHtml -->
+        <div v-if="previewHtml" class="markdown-body" v-html="previewHtml"></div>
+        <pre v-else>{{ previewContent }}</pre>
       </div>
 
       <!-- Markdown: raw markdown via CodeBlock -->
@@ -327,6 +393,8 @@
 import { defineComponent, ref, inject, watch, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import type { FirecrawlScrapingApi } from '../services/firecrawl';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
 import CodeBlock from '../components/playground/CodeBlock.vue';
 import CopyButton from '../components/playground/CopyButton.vue';
@@ -345,12 +413,17 @@ type ScrapeResult = {
  * @property {boolean} [blockAds] - Block ads and popups.
  * @property {boolean} [removeBase64Images] - Remove Base64 encoded images.
  * @property {number} [maxAge] - Use cached page if younger than this age in milliseconds.
+ * @property {number} [minAge] - Only return cached data older than this age in milliseconds.
  * @property {boolean} [parsePDF] - Parse PDF files instead of returning base64.
  * @property {boolean} [storeInCache] - Store the page in Firecrawl cache.
+ * @property {boolean} [lockdown] - Enable lockdown mode for the request.
+ * @property {boolean} [redactPII] - Redact personally identifiable information from the output.
+ * @property {boolean} [zeroDataRetention] - Disable data retention for the request.
  * @property {'basic' | 'stealth' | 'enhanced' | 'auto' | ''} [proxy] - Proxy type for the request.
  * @property {Record<string, string>} [headers] - HTTP headers as a JSON object.
  * @property {string} [action] - HTTP method for the request (e.g., 'GET', 'POST').
  * @property {string} [location] - Request location (e.g., 'US', 'EU', 'ASIA').
+ * @property {string} [languages] - Comma-separated preferred languages for the request.
  * @property {any[]} [actions] - Actions to perform on the page prior to scraping.
  */
 interface FormDataPageOptions {
@@ -361,12 +434,17 @@ interface FormDataPageOptions {
   blockAds?: boolean;
   removeBase64Images?: boolean;
   maxAge?: number;
+  minAge?: number;
   parsePDF?: boolean;
   storeInCache?: boolean;
+  lockdown?: boolean;
+  redactPII?: boolean;
+  zeroDataRetention?: boolean;
   proxy?: 'basic' | 'stealth' | 'enhanced' | 'auto' | '';
   headers?: Record<string, string>;
   action?: string;
   location?: string;
+  languages?: string;
   actions?: any[];
 }
 
@@ -374,23 +452,16 @@ interface FormDataPageOptions {
  * @typedef {object} FormDataScrapeOptions
  * @property {string[]} formats - Array of output formats (e.g., "json", "markdown").
  * @property {boolean} [onlyMainContent] - Scrape only the main content, excluding headers, footers, etc.
+ * @property {boolean} [onlyCleanContent] - Run an extra LLM pass to remove residual boilerplate.
  * @property {string} [includeTags] - Comma-separated list of HTML tags to include.
  * @property {string} [excludeTags] - Comma-separated list of HTML tags to exclude.
  */
 interface FormDataScrapeOptions {
   formats: string[];
   onlyMainContent?: boolean;
+  onlyCleanContent?: boolean;
   includeTags?: string;
   excludeTags?: string;
-}
-
-/**
- * @typedef {object} FormDataExtractorOptions
- * @description Extractor options for JSON format, extending the API request structure.
- */
-interface FormDataExtractorOptions {
-  prompt?: string;
-  schema?: Record<string, unknown>;
 }
 
 /**
@@ -419,7 +490,6 @@ interface FormDataChangeTrackingOptions {
  * @property {string} url - The URL to scrape.
  * @property {FormDataPageOptions} pageOptions - Options related to page loading and network requests.
  * @property {FormDataScrapeOptions} scrapeOptions - Options related to content scraping.
- * @property {FormDataExtractorOptions} [extractorOptions] - Options for data extraction when 'json' format is selected.
  * @property {FormDataAttributesOptions} [attributesOptions] - Options for attribute extraction when 'attributes' format is selected.
  * @property {FormDataChangeTrackingOptions} changeTrackingOptions - Options for change tracking.
  */
@@ -427,7 +497,6 @@ interface FormData {
   url: string;
   pageOptions: FormDataPageOptions;
   scrapeOptions: FormDataScrapeOptions;
-  extractorOptions?: FormDataExtractorOptions;
   attributesOptions?: FormDataAttributesOptions;
   changeTrackingOptions: FormDataChangeTrackingOptions;
 }
@@ -467,23 +536,28 @@ export default defineComponent({
         skipTlsVerification: false,
         timeout: undefined,
         maxAge: undefined,
+        minAge: undefined,
         blockAds: true,
         removeBase64Images: true,
         parsePDF: true,
         storeInCache: true,
+        lockdown: false,
+        redactPII: false,
+        zeroDataRetention: false,
         proxy: '',
         headers: {},
         action: 'GET', // Default HTTP action
         location: '',
+        languages: '',
         actions: [],
       },
       scrapeOptions: {
         onlyMainContent: true,
+        onlyCleanContent: false,
         formats: ['markdown'],
         includeTags: '',
         excludeTags: '',
       },
-      extractorOptions: {},
       attributesOptions: {
         selectors: [],
       },
@@ -616,6 +690,21 @@ export default defineComponent({
     });
 
     /**
+     * Preview markdown parsed to sanitized HTML for the rendered Preview tab.
+     *
+     * The scraped markdown is untrusted content, so the HTML produced by
+     * `marked` is run through DOMPurify before it reaches `v-html` to prevent
+     * XSS from malicious page content. Returns an empty string when there is no
+     * markdown to render (the Preview pane then falls back to the raw dump).
+     * @returns {string}
+     */
+    const previewHtml = computed<string>(() => {
+      if (!markdownContent.value) return '';
+      const rawHtml = marked.parse(markdownContent.value, { async: false }) as string;
+      return DOMPurify.sanitize(rawHtml);
+    });
+
+    /**
      * Response tabs built from what the current result actually contains.
      * Only tabs backed by real data are shown; JSON is always available.
      * @returns {{ key: string; label: string }[]}
@@ -688,6 +777,18 @@ export default defineComponent({
         return;
       }
 
+      // Build the location object from the selected country and optional languages.
+      const languages = (formData.value.pageOptions.languages ?? '')
+        .split(',')
+        .map((lang) => lang.trim())
+        .filter((lang) => lang !== '');
+      const locationPayload: { country?: string; languages?: string[] } = {
+        ...(formData.value.pageOptions.location && formData.value.pageOptions.location !== ''
+          ? { country: formData.value.pageOptions.location }
+          : {}),
+        ...(languages.length > 0 ? { languages } : {}),
+      };
+
       const requestPayload = {
         url: formData.value.url,
         ...(formData.value.pageOptions.waitFor !== undefined &&
@@ -697,6 +798,10 @@ export default defineComponent({
         ...(formData.value.pageOptions.maxAge !== undefined &&
           formData.value.pageOptions.maxAge > 0 && {
             maxAge: formData.value.pageOptions.maxAge,
+          }),
+        ...(formData.value.pageOptions.minAge !== undefined &&
+          formData.value.pageOptions.minAge > 0 && {
+            minAge: formData.value.pageOptions.minAge,
           }),
         ...(formData.value.pageOptions.mobile === true && { mobile: true }),
         ...(formData.value.pageOptions.skipTlsVerification === true && {
@@ -717,6 +822,11 @@ export default defineComponent({
         ...(formData.value.pageOptions.storeInCache === false && {
           storeInCache: false,
         }),
+        ...(formData.value.pageOptions.lockdown === true && { lockdown: true }),
+        ...(formData.value.pageOptions.redactPII === true && { redactPII: true }),
+        ...(formData.value.pageOptions.zeroDataRetention === true && {
+          zeroDataRetention: true,
+        }),
         ...(formData.value.pageOptions.proxy &&
           formData.value.pageOptions.proxy !== '' && {
             proxy: formData.value.pageOptions.proxy,
@@ -725,10 +835,9 @@ export default defineComponent({
           Object.keys(formData.value.pageOptions.headers).length > 0 && {
             headers: formData.value.pageOptions.headers,
           }),
-        ...(formData.value.pageOptions.location &&
-          formData.value.pageOptions.location !== '' && {
-            location: { country: formData.value.pageOptions.location },
-          }),
+        ...(Object.keys(locationPayload).length > 0 && {
+          location: locationPayload,
+        }),
         ...(formData.value.pageOptions.actions &&
           formData.value.pageOptions.actions.length > 0 && {
             actions: formData.value.pageOptions.actions,
@@ -738,6 +847,9 @@ export default defineComponent({
         formats: formData.value.scrapeOptions.formats,
         ...(formData.value.scrapeOptions.onlyMainContent === false && {
           onlyMainContent: false,
+        }),
+        ...(formData.value.scrapeOptions.onlyCleanContent === true && {
+          onlyCleanContent: true,
         }),
         ...(formData.value.scrapeOptions.includeTags &&
           formData.value.scrapeOptions.includeTags.trim() !== '' && {
@@ -754,11 +866,15 @@ export default defineComponent({
               .filter((tag) => tag !== ''),
           }),
 
-        // Include extractorOptions and changeTrackingOptions if applicable.
+        // Build the JSON format object (prompt and/or schema) when 'json' is selected.
         ...(formData.value.scrapeOptions.formats.includes('json') &&
-          formData.value.extractorOptions &&
-          Object.keys(formData.value.extractorOptions).length > 0 && {
-            extract: formData.value.extractorOptions,
+          (jsonFormatPrompt.value.trim() !== '' || jsonFormatSchema.value) && {
+            extract: {
+              ...(jsonFormatPrompt.value.trim() !== '' && {
+                prompt: jsonFormatPrompt.value.trim(),
+              }),
+              ...(jsonFormatSchema.value && { schema: jsonFormatSchema.value }),
+            },
           }),
         ...(formData.value.scrapeOptions.formats.includes('attributes') &&
           formData.value.attributesOptions?.selectors &&
@@ -866,30 +982,44 @@ export default defineComponent({
     };
 
     /**
-     * Reactive variable for the JSON string of extractor options.
+     * Natural language prompt for the JSON output format (structured extraction).
      * @type {Ref<string>}
      */
-    const extractorOptionsJson = ref(
-      JSON.stringify(formData.value.extractorOptions || {}, null, 2),
-    );
+    const jsonFormatPrompt = ref('');
     /**
-     * Reactive variable for displaying extractor options JSON parsing errors.
+     * Raw JSON string of the schema for the JSON output format.
      * @type {Ref<string>}
      */
-    const extractorOptionsError = ref('');
+    const jsonFormatSchemaJson = ref('');
+    /**
+     * Parsed JSON schema object for the JSON output format, or undefined when empty/invalid.
+     * @type {Ref<Record<string, unknown> | undefined>}
+     */
+    const jsonFormatSchema = ref<Record<string, unknown> | undefined>(undefined);
+    /**
+     * Reactive variable for displaying JSON schema parsing errors.
+     * @type {Ref<string>}
+     */
+    const jsonFormatSchemaError = ref('');
 
     /**
-     * Watcher for `extractorOptionsJson` to parse and update `formData.extractorOptions`.
+     * Watcher for `jsonFormatSchemaJson` to parse and update `jsonFormatSchema`.
      * Sets an error message if parsing fails.
      */
     watch(
-      extractorOptionsJson,
+      jsonFormatSchemaJson,
       (newVal) => {
+        if (!newVal.trim()) {
+          jsonFormatSchema.value = undefined;
+          jsonFormatSchemaError.value = '';
+          return;
+        }
         try {
-          formData.value.extractorOptions = newVal ? JSON.parse(newVal) : {};
-          extractorOptionsError.value = '';
+          jsonFormatSchema.value = JSON.parse(newVal);
+          jsonFormatSchemaError.value = '';
         } catch (e: any) {
-          extractorOptionsError.value = `Invalid JSON: ${e.message}`;
+          jsonFormatSchema.value = undefined;
+          jsonFormatSchemaError.value = `Invalid JSON: ${e.message}`;
         }
       },
       { immediate: true },
@@ -991,8 +1121,9 @@ export default defineComponent({
       handleSubmit,
       downloadResult,
       downloadFormats,
-      extractorOptionsJson,
-      extractorOptionsError,
+      jsonFormatPrompt,
+      jsonFormatSchemaJson,
+      jsonFormatSchemaError,
       attributesOptionsJson,
       attributesOptionsError,
       actionTypes,
@@ -1012,6 +1143,7 @@ export default defineComponent({
       screenshotContent,
       metadataContent,
       previewContent,
+      previewHtml,
     };
   },
 });
@@ -1094,6 +1226,22 @@ export default defineComponent({
   margin-top: 0.2rem;
 }
 
+/* Help text shown directly under a fieldset legend. */
+.fieldset-hint {
+  display: block;
+  font-size: 0.8em;
+  color: var(--color-text-mute);
+  margin-bottom: 0.75rem;
+}
+
+/* Footnote explaining the "*" marker on cloud-only (official API) options. */
+.api-note {
+  margin: 0 0 1rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--color-text-mute);
+}
+
 /* Inline validation error text — danger hue from the token set. */
 .error-message {
   color: var(--hue-danger);
@@ -1101,12 +1249,63 @@ export default defineComponent({
   margin-top: 0.35rem;
 }
 
-/* Action row: type selector + param inputs in a tight flex row. */
+/* Action row: type selector + param inputs in a tight flex row that wraps on
+ * narrow request panes instead of overflowing. Inputs flex to fill the row. */
 .action-item {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.4rem;
   margin-bottom: 0.6rem;
+}
+
+/* Let text/number inputs share the row space; the select keeps its natural size. */
+.action-item input[type='text'],
+.action-item input[type='number'],
+.action-item textarea {
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+
+/*
+ * Per-action controls are secondary affordances, not page CTAs: keep them small
+ * and quiet so they don't compete with the primary Scrape button. "Remove" uses
+ * a danger-tinted ghost style; "Add Action" a neutral ghost outline.
+ */
+.action-remove,
+.action-add {
+  flex: 0 0 auto;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.action-add {
+  margin-top: 0.2rem;
+}
+
+.action-add:hover {
+  border-color: var(--brand-strong);
+  color: var(--brand-strong);
+}
+
+.action-remove {
+  border-color: color-mix(in srgb, var(--hue-danger) 45%, transparent);
+  color: var(--hue-danger);
+}
+
+.action-remove:hover {
+  background: color-mix(in srgb, var(--hue-danger) 12%, transparent);
+  border-color: var(--hue-danger);
 }
 
 /* ---------------------------------------------------------------------------
@@ -1129,6 +1328,144 @@ export default defineComponent({
   color: var(--color-text);
   /* Translucent so the aurora tints the code surface. */
   background: var(--glass-fill);
+}
+
+/* ---------------------------------------------------------------------------
+ * Rendered markdown (Preview tab). Sanitized HTML from `previewHtml`, styled
+ * as readable prose with the token set so it stays coherent in light and dark.
+ * --------------------------------------------------------------------------- */
+.markdown-body {
+  padding: 1.25rem 1.5rem;
+  color: var(--color-text);
+  font-size: 0.92rem;
+  line-height: 1.7;
+  word-wrap: break-word;
+  /* Glass fill keeps the aurora visible behind the rendered content. */
+  background: var(--glass-fill);
+}
+
+.markdown-body > :first-child {
+  margin-top: 0;
+}
+
+.markdown-body > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  margin: 1.4em 0 0.6em;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-heading);
+}
+
+.markdown-body h1 {
+  font-size: 1.6em;
+}
+.markdown-body h2 {
+  font-size: 1.35em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--color-border);
+}
+.markdown-body h3 {
+  font-size: 1.15em;
+}
+
+.markdown-body p,
+.markdown-body ul,
+.markdown-body ol,
+.markdown-body blockquote,
+.markdown-body table,
+.markdown-body pre {
+  margin: 0 0 1em;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 1.5em;
+}
+
+.markdown-body li + li {
+  margin-top: 0.25em;
+}
+
+.markdown-body a {
+  color: var(--brand-strong);
+  text-decoration: underline;
+}
+
+.markdown-body a:hover {
+  text-decoration: none;
+}
+
+.markdown-body strong {
+  font-weight: 700;
+}
+
+/* Inline code: token-tinted chip. */
+.markdown-body code {
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-sm);
+  background: var(--color-background-soft);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+/* Fenced code blocks: reset the inline chip styling inside the pre. */
+.markdown-body pre {
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  background: var(--color-background-soft);
+}
+
+.markdown-body pre code {
+  padding: 0;
+  background: none;
+  font-size: 0.84em;
+}
+
+.markdown-body blockquote {
+  padding: 0.2em 1em;
+  border-left: 3px solid var(--color-border);
+  color: var(--color-text-mute);
+}
+
+.markdown-body hr {
+  height: 1px;
+  margin: 1.5em 0;
+  border: 0;
+  background: var(--color-border);
+}
+
+.markdown-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+}
+
+.markdown-body table {
+  border-collapse: collapse;
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.markdown-body th,
+.markdown-body td {
+  padding: 0.4em 0.75em;
+  border: 1px solid var(--color-border);
+}
+
+.markdown-body th {
+  font-weight: 700;
+  background: var(--color-background-soft);
 }
 
 /* ---------------------------------------------------------------------------

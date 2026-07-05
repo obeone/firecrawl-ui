@@ -13,6 +13,15 @@
   >
     <!-- ── REQUEST pane ─────────────────────────────────────── -->
     <template #request>
+      <div class="deprecation-warning" role="alert">
+        <strong>/v2/extract is deprecated.</strong>
+        Use
+        <router-link :to="{ name: 'scrape' }">Scrape</router-link>
+        with a <code>json</code> output format instead. On the Scrape page, select the
+        <code>JSON (Structured Extraction)</code> format and provide a prompt and/or JSON schema to
+        extract structured data.
+      </div>
+
       <form @submit.prevent="runExtraction" class="extract-form">
         <div class="form-group">
           <label for="url-input">URLs (optional, one per line)</label>
@@ -267,6 +276,38 @@ const downloadResult = (): void => {
 
 <style scoped>
 /* ── Form layout ──────────────────────────────────────────────── */
+
+/*
+ * Deprecation banner: glass card tinted with the warning hue, pointing users
+ * to the Scrape page + JSON format as the supported replacement for /v2/extract.
+ */
+.deprecation-warning {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--hue-warning);
+  border-left: 4px solid var(--hue-warning);
+  border-radius: var(--radius-sm);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  color: var(--color-text);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.deprecation-warning a {
+  color: var(--hue-warning);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.deprecation-warning code {
+  padding: 0.05rem 0.3rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-background-soft);
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+}
 
 .extract-form {
   display: flex;

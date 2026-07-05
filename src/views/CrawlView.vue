@@ -172,13 +172,13 @@
                 <option value="rawHtml">Raw HTML</option>
                 <option value="links">Links</option>
                 <option value="images">Images</option>
-                <option value="summary">Summary</option>
+                <option value="summary">Summary *</option>
                 <option value="screenshot">Screenshot (Viewport)</option>
                 <option value="screenshot@fullPage">Screenshot (Full Page)</option>
-                <option value="json">JSON</option>
+                <option value="json">JSON *</option>
                 <option value="attributes">Attributes</option>
-                <option value="branding">Branding</option>
-                <option value="changeTracking">Change Tracking</option>
+                <option value="branding">Branding *</option>
+                <option value="changeTracking">Change Tracking *</option>
               </select>
               <small>Select one or more formats.</small>
             </div>
@@ -229,7 +229,7 @@
               Block Ads
             </label>
             <div class="form-group">
-              <label for="proxy">Proxy:</label>
+              <label for="proxy">Proxy *:</label>
               <select id="proxy" v-model="formData.scrapeOptions.proxy">
                 <option value="">Default</option>
                 <option value="auto">Auto</option>
@@ -239,7 +239,7 @@
               </select>
             </div>
             <div class="form-group">
-              <label for="locationCountry">Location Country:</label>
+              <label for="locationCountry">Location Country *:</label>
               <input
                 id="locationCountry"
                 v-model="formData.scrapeOptions.location.country"
@@ -248,7 +248,7 @@
               />
             </div>
             <div class="form-group">
-              <label for="locationLanguages">Location Languages:</label>
+              <label for="locationLanguages">Location Languages *:</label>
               <input
                 id="locationLanguages"
                 v-model="locationLanguagesInput"
@@ -258,28 +258,28 @@
               />
             </div>
             <div class="form-group">
-              <label for="jsonSchema">JSON Options Schema (JSON):</label>
+              <label for="jsonSchema">JSON Options Schema (JSON) *:</label>
               <textarea id="jsonSchema" v-model="jsonOptionsSchemaInput"></textarea>
               <div v-if="jsonOptionsSchemaError" class="error-message">
                 {{ jsonOptionsSchemaError }}
               </div>
             </div>
             <div class="form-group">
-              <label for="jsonSystemPrompt">JSON System Prompt:</label>
+              <label for="jsonSystemPrompt">JSON System Prompt *:</label>
               <textarea
                 id="jsonSystemPrompt"
                 v-model="formData.scrapeOptions.jsonOptions.systemPrompt"
               ></textarea>
             </div>
             <div class="form-group">
-              <label for="jsonPrompt">JSON Prompt:</label>
+              <label for="jsonPrompt">JSON Prompt *:</label>
               <textarea
                 id="jsonPrompt"
                 v-model="formData.scrapeOptions.jsonOptions.prompt"
               ></textarea>
             </div>
             <div class="form-group">
-              <label for="changeModes">Change Tracking Modes:</label>
+              <label for="changeModes">Change Tracking Modes *:</label>
               <input
                 id="changeModes"
                 v-model="changeTrackingModesInput"
@@ -289,14 +289,14 @@
               />
             </div>
             <div class="form-group">
-              <label for="changeSchema">Change Tracking Schema (JSON):</label>
+              <label for="changeSchema">Change Tracking Schema (JSON) *:</label>
               <textarea id="changeSchema" v-model="changeTrackingSchemaInput"></textarea>
               <div v-if="changeTrackingSchemaError" class="error-message">
                 {{ changeTrackingSchemaError }}
               </div>
             </div>
             <div class="form-group">
-              <label for="changePrompt">Change Tracking Prompt:</label>
+              <label for="changePrompt">Change Tracking Prompt *:</label>
               <textarea
                 id="changePrompt"
                 v-model="formData.scrapeOptions.changeTrackingOptions.prompt"
@@ -359,6 +359,11 @@
           </div>
         </fieldset>
 
+        <p class="api-note">
+          * Available only on the official Firecrawl cloud API. These options may be ignored or
+          unsupported on self-hosted instances.
+        </p>
+
         <button type="submit" class="primary-button">Submit Crawl</button>
       </form>
     </template>
@@ -420,7 +425,7 @@
         </div>
       </div>
 
-      <!-- PAGES TAB: selected crawl files + crawl history -->
+      <!-- HISTORY TAB: selected crawl files + crawl history -->
       <div v-else-if="activeTab === 'pages'" class="tab-pane">
         <!-- Selected crawl details -->
         <div v-if="selectedCrawl" class="selected-crawl-details-section">
@@ -921,7 +926,7 @@ export default defineComponent({
      */
     const responseTabs = computed(() => [
       { key: 'status', label: 'Status' },
-      { key: 'pages', label: 'Pages' },
+      { key: 'pages', label: 'History' },
       { key: 'json', label: 'JSON' },
     ]);
 
@@ -1868,6 +1873,14 @@ export default defineComponent({
   color: var(--hue-danger);
   font-size: 0.9em;
   margin-top: 0.3rem;
+}
+
+/* Footnote explaining the "*" marker on cloud-only (official API) options. */
+.api-note {
+  margin: 0 0 1rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--color-text-mute);
 }
 
 /* ---------------------------------------------------------------------------
