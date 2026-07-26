@@ -98,8 +98,9 @@
       <CodeBlock v-else-if="activeTab === 'json'" :json="urls" label="JSON" />
     </template>
 
-    <!-- ── Response actions: download button in tab bar ───────────────── -->
+    <!-- ── Response actions: copy + download buttons in tab bar ───────── -->
     <template #response-actions>
+      <CopyButton v-if="hasResult" :text="urlListText" label="Copy URL list" />
       <button v-if="hasResult" type="button" class="download-btn" @click="downloadJson">
         Download JSON
       </button>
@@ -222,6 +223,12 @@ const durationMs = ref<number | null>(null);
  * and the visibility of the download button.
  */
 const hasResult = computed<boolean>(() => urls.value.length > 0);
+
+/**
+ * The result as plain text, one URL per line, ready to be dropped in a .txt
+ * file or piped into another tool. Backs the "Copy URL list" action.
+ */
+const urlListText = computed<string>(() => urls.value.join('\n'));
 
 /**
  * Status bar text: URL count on success, 'Error' on failure, null while idle.
