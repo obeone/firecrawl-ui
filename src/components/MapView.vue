@@ -160,11 +160,15 @@ onMounted(() => {
 const search = ref('');
 
 /**
- * Reactive variable to control whether the website sitemap should be ignored during crawling.
- * Defaults to `true`.
- * @type {Ref<boolean>}
+ * Reactive variable holding the sitemap strategy sent to the `/v2/map` endpoint.
+ *
+ * Defaults to `include`, matching the API default: the sitemap is the only link
+ * source a self-hosted Firecrawl instance can rely on, so defaulting to `skip`
+ * made every map request return an empty list there.
+ *
+ * @type {Ref<'include' | 'skip' | 'only'>}
  */
-const sitemapMode = ref<'include' | 'skip' | 'only'>('skip');
+const sitemapMode = ref<'include' | 'skip' | 'only'>('include');
 
 /**
  * Reactive variable to control whether subdomains of the website should be included in the mapping.
