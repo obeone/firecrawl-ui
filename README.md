@@ -32,7 +32,7 @@ self-hosted instance.
 | 🧠  | **Extract**      | Pull structured fields from URLs with a prompt or schema (AI)             |
 | 🗺️  | **Map**          | List every reachable URL of a site to understand its structure            |
 | 🔍  | **Search**       | Query the web and get ranked results with optional page content           |
-| 🌗  | **Light / dark** | Glass + aurora theme, dark by default, remembered across sessions         |
+| 🌗  | **Light / dark** | Glass + aurora theme, follows your system preference, remembered          |
 | 🔑  | **Local config** | API key and base URL stored in your browser, never sent anywhere else     |
 | 🏠  | **Self-hosting** | Point the base URL at your own Firecrawl instance (with or without a key) |
 
@@ -108,13 +108,13 @@ Precedence is `localStorage` > `VITE_*` env > default. Any trailing `/v1` or
 
 ## 🛠️ Commands
 
-| Command           | Description                          |
-| :---------------- | :----------------------------------- |
-| `npm run dev`     | Start the dev server with hot reload |
-| `npm run build`   | Type-check and build to `dist/`      |
-| `npm run preview` | Preview the production build locally |
-| `npm run lint`    | Run ESLint                           |
-| `npm run format`  | Format with Prettier                 |
+| Command           | Description                            |
+| :---------------- | :------------------------------------- |
+| `npm run dev`     | Start the dev server with hot reload   |
+| `npm run build`   | Build the production bundle to `dist/` |
+| `npm run preview` | Preview the production build locally   |
+| `npm run lint`    | Run ESLint                             |
+| `npm run format`  | Format with Prettier                   |
 
 | Docker                                 | Description                  |
 | :------------------------------------- | :--------------------------- |
