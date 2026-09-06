@@ -172,10 +172,10 @@
                 <option value="rawHtml">Raw HTML</option>
                 <option value="links">Links</option>
                 <option value="images">Images</option>
-                <option value="summary">Summary *</option>
+                <option value="summary">Summary †</option>
                 <option value="screenshot">Screenshot (Viewport)</option>
                 <option value="screenshot@fullPage">Screenshot (Full Page)</option>
-                <option value="json">JSON *</option>
+                <option value="json">JSON †</option>
                 <option value="attributes">Attributes</option>
                 <option value="branding">Branding *</option>
                 <option value="changeTracking">Change Tracking *</option>
@@ -258,21 +258,21 @@
               />
             </div>
             <div class="form-group">
-              <label for="jsonSchema">JSON Options Schema (JSON) *:</label>
+              <label for="jsonSchema">JSON Options Schema (JSON) †:</label>
               <textarea id="jsonSchema" v-model="jsonOptionsSchemaInput"></textarea>
               <div v-if="jsonOptionsSchemaError" class="error-message">
                 {{ jsonOptionsSchemaError }}
               </div>
             </div>
             <div class="form-group">
-              <label for="jsonSystemPrompt">JSON System Prompt *:</label>
+              <label for="jsonSystemPrompt">JSON System Prompt †:</label>
               <textarea
                 id="jsonSystemPrompt"
                 v-model="formData.scrapeOptions.jsonOptions.systemPrompt"
               ></textarea>
             </div>
             <div class="form-group">
-              <label for="jsonPrompt">JSON Prompt *:</label>
+              <label for="jsonPrompt">JSON Prompt †:</label>
               <textarea
                 id="jsonPrompt"
                 v-model="formData.scrapeOptions.jsonOptions.prompt"
@@ -362,6 +362,10 @@
         <p class="api-note">
           * Available only on the official Firecrawl cloud API. These options may be ignored or
           unsupported on self-hosted instances.
+        </p>
+        <p class="api-note">
+          † LLM-backed. Works on a self-hosted instance once it has an OpenAI-compatible provider or
+          Ollama configured.
         </p>
 
         <button type="submit" class="primary-button">Submit Crawl</button>

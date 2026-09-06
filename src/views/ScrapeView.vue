@@ -27,10 +27,10 @@
             <option value="rawHtml">Raw HTML</option>
             <option value="links">Links</option>
             <option value="images">Images</option>
-            <option value="summary">Summary *</option>
+            <option value="summary">Summary †</option>
             <option value="screenshot">Screenshot (Viewport)</option>
             <option value="screenshot@fullPage">Screenshot (Full Page)</option>
-            <option value="json">JSON (Structured Extraction) *</option>
+            <option value="json">JSON (Structured Extraction) †</option>
             <option value="attributes">Attributes</option>
             <option value="branding">Branding *</option>
             <option value="changeTracking">Change Tracking (Requires Markdown) *</option>
@@ -295,7 +295,7 @@
           v-if="formData.scrapeOptions.formats.includes('json')"
           class="form-group options-fieldset"
         >
-          <legend>JSON Format (Structured Extraction) *</legend>
+          <legend>JSON Format (Structured Extraction) †</legend>
           <small class="fieldset-hint">
             Replaces the deprecated /v2/extract endpoint. Provide a prompt, a JSON schema, or both
             to extract structured data with an LLM.
@@ -342,6 +342,10 @@
         <p class="api-note">
           * Available only on the official Firecrawl cloud API. These options may be ignored or
           unsupported on self-hosted instances.
+        </p>
+        <p class="api-note">
+          † LLM-backed. Works on a self-hosted instance once it has an OpenAI-compatible provider or
+          Ollama configured.
         </p>
 
         <button type="submit" class="primary-button">Scrape</button>
