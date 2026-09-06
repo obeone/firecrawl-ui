@@ -75,6 +75,12 @@ export interface FirecrawlExtractResponse {
   error?: string;
   warning?: string;
   sources?: Record<string, unknown>;
+  /** URLs from the request that the API rejected as invalid (malformed or disallowed). */
+  invalidURLs?: string[] | null;
+  /** ISO timestamp after which the job result is no longer retrievable. */
+  expiresAt?: string;
+  /** Number of LLM tokens consumed while extracting structured data. */
+  tokensUsed?: number;
 }
 
 /**
