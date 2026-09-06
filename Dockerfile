@@ -5,7 +5,7 @@
 
 # Stage 1: Build the application
 # Uses a Node.js image to install dependencies and build the Vue.js application.
-FROM node:24-slim AS build
+FROM node:26-slim AS build
 
 WORKDIR /app
 
