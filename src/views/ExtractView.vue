@@ -46,11 +46,15 @@
 
         <div class="form-group">
           <label for="schema-input">JSON Schema (optional)</label>
+          <small class="hint">
+            A JSON Schema document, not a shape by example: describe each field with its own
+            <code>type</code>.
+          </small>
           <textarea
             id="schema-input"
             v-model="schemaString"
             rows="5"
-            placeholder='{"title": "string"}'
+            placeholder='{"type": "object", "properties": {"title": {"type": "string"}}}'
           ></textarea>
           <small v-if="schemaError" class="schema-error">{{ schemaError }}</small>
         </div>
