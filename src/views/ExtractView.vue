@@ -68,9 +68,167 @@
             <input type="checkbox" v-model="options.allowExternalLinks" />
             Allow External Links
           </label>
+          <label>
+            <input type="checkbox" v-model="options.ignoreSitemap" />
+            Ignore Sitemap
+          </label>
+          <label>
+            <input type="checkbox" v-model="options.includeSubdomains" />
+            Include Subdomains
+          </label>
+          <label>
+            <input type="checkbox" v-model="options.ignoreInvalidURLs" />
+            Ignore Invalid URLs
+          </label>
         </div>
 
-        <button type="submit" class="run-button" :disabled="loading || !!schemaError">
+        <!-- Scrape Options: controls forwarded as `scrapeOptions` to /v2/extract,
+             mirroring how ScrapeView groups its own page/scrape options. -->
+        <fieldset class="form-group options-fieldset">
+          <legend
+            class="collapsible-header"
+            @click="isScrapeOptionsCollapsed = !isScrapeOptionsCollapsed"
+          >
+            Scrape Options
+          </legend>
+          <div v-show="!isScrapeOptionsCollapsed">
+            <div class="form-group">
+              <label>Formats</label>
+              <div class="checkbox-grid">
+                <label
+                  v-for="format in availableFormats"
+                  :key="format.value"
+                  class="checkbox-label"
+                >
+                  <input type="checkbox" :value="format.value" v-model="scrapeOptions.formats" />
+                  {{ format.label }}
+                </label>
+              </div>
+            </div>
+
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="scrapeOptions.onlyMainContent" />
+              Only Main Content
+            </label>
+
+            <div class="form-group">
+              <label for="include-tags-input">Include Tags (comma separated)</label>
+              <input
+                id="include-tags-input"
+                type="text"
+                v-model="scrapeOptions.includeTags"
+                placeholder="e.g. p, div, span"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="exclude-tags-input">Exclude Tags (comma separated)</label>
+              <input
+                id="exclude-tags-input"
+                type="text"
+                v-model="scrapeOptions.excludeTags"
+                placeholder="e.g. script, style"
+              />
+            </div>
+
+            <div class="grid-layout">
+              <div class="form-group">
+                <label for="wait-for-input">Wait For (ms)</label>
+                <input
+                  id="wait-for-input"
+                  type="number"
+                  min="0"
+                  v-model.number="scrapeOptions.waitFor"
+                />
+              </div>
+              <div class="form-group">
+                <label for="timeout-input">Timeout (ms)</label>
+                <input
+                  id="timeout-input"
+                  type="number"
+                  min="0"
+                  v-model.number="scrapeOptions.timeout"
+                />
+              </div>
+              <div class="form-group">
+                <label for="max-age-input">Max Age (ms)</label>
+                <input
+                  id="max-age-input"
+                  type="number"
+                  min="0"
+                  v-model.number="scrapeOptions.maxAge"
+                />
+              </div>
+              <div class="form-group">
+                <label for="proxy-select">Proxy</label>
+                <select id="proxy-select" v-model="scrapeOptions.proxy">
+                  <option value="auto">Auto</option>
+                  <option value="basic">Basic</option>
+                  <option value="stealth">Stealth</option>
+                </select>
+              </div>
+            </div>
+
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="scrapeOptions.mobile" />
+              Emulate Mobile Device
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="scrapeOptions.blockAds" />
+              Block Ads & Popups
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="scrapeOptions.removeBase64Images" />
+              Remove Base64 Images
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="scrapeOptions.skipTlsVerification" />
+              Skip TLS Verification
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="scrapeOptions.storeInCache" />
+              Store In Cache
+            </label>
+
+            <div class="grid-layout">
+              <div class="form-group">
+                <label for="location-country-input">Location Country</label>
+                <input
+                  id="location-country-input"
+                  type="text"
+                  v-model="scrapeOptions.locationCountry"
+                  placeholder="e.g. US"
+                />
+              </div>
+              <div class="form-group">
+                <label for="location-languages-input">Location Languages (comma separated)</label>
+                <input
+                  id="location-languages-input"
+                  type="text"
+                  v-model="scrapeOptions.locationLanguages"
+                  placeholder="e.g. en-US"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="headers-input">HTTP Headers (JSON)</label>
+              <textarea
+                id="headers-input"
+                v-model="headersString"
+                rows="3"
+                placeholder='{"Authorization": "Bearer token"}'
+              ></textarea>
+              <small v-if="headersError" class="error-message">{{ headersError }}</small>
+            </div>
+          </div>
+        </fieldset>
+
+        <button
+          type="submit"
+          class="run-button"
+          :disabled="loading || !!schemaError || !!headersError"
+        >
           {{ loading ? 'Running…' : 'Extract' }}
         </button>
       </form>
@@ -85,6 +243,16 @@
 
     <!-- ── RESPONSE pane ────────────────────────────────────── -->
     <template #response="{ activeTab }">
+      <!-- Invalid URLs warning: shown above the result whenever the API rejected
+           one or more requested URLs. Reuses the deprecation banner's warning-hue
+           styling instead of introducing a new color token. -->
+      <div v-if="invalidUrls.length" class="deprecation-warning invalid-urls-warning" role="alert">
+        <strong>{{ invalidUrls.length }} invalid URL(s) were rejected by the API:</strong>
+        <ul>
+          <li v-for="url in invalidUrls" :key="url">{{ url }}</li>
+        </ul>
+      </div>
+
       <!-- Result tab: a human-readable key/value view of the extracted data -->
       <div v-if="activeTab === 'result'" class="result-view">
         <template v-if="resultIsObject">
@@ -105,6 +273,18 @@
 
       <!-- JSON tab: raw pretty-printed output via CodeBlock -->
       <CodeBlock v-else-if="activeTab === 'json'" :json="result" label="JSON" />
+
+      <!-- Sources tab: per-key list of source URLs used to build the result. -->
+      <div v-else-if="activeTab === 'sources'" class="result-view sources-view">
+        <div v-for="(urls, key) in sourcesMap" :key="String(key)" class="sources-group">
+          <span class="result-key">{{ key }}</span>
+          <ul class="sources-list">
+            <li v-for="url in urls" :key="url">
+              <a :href="url" target="_blank" rel="noopener noreferrer">{{ url }}</a>
+            </li>
+          </ul>
+        </div>
+      </div>
     </template>
   </PlaygroundLayout>
 </template>
@@ -139,13 +319,72 @@ onMounted(() => {
   }
 });
 const schemaString = ref(''); // Stores the JSON schema string provided by the user.
-const options = ref({ enableWebSearch: false, showSources: false, allowExternalLinks: false }); // Stores extraction options.
+/**
+ * Top-level /v2/extract options. Defaults mirror the API's own defaults
+ * (`includeSubdomains` and `ignoreInvalidURLs` default to true server-side)
+ * so the payload builder below can detect and omit unchanged values.
+ */
+const options = ref({
+  enableWebSearch: false,
+  showSources: false,
+  allowExternalLinks: false,
+  ignoreSitemap: false,
+  includeSubdomains: true,
+  ignoreInvalidURLs: true,
+});
 const loading = ref(false); // Indicates if an extraction request is in progress.
 const error = ref(''); // Stores any error messages from the extraction process.
 const result = ref<FirecrawlExtractResponse['data'] | null>(null); // Stores the successful extraction result.
 const schemaError = ref<string | null>(null); // Stores error messages related to JSON schema parsing.
 const parsedSchema = ref<any>(undefined); // Holds the parsed schema object.
 const durationMs = ref<number | null>(null); // Request round-trip duration in milliseconds.
+
+/**
+ * The full, final /v2/extract response (post-polling), kept alongside `result`
+ * so the response pane can surface fields other than `data` — namely
+ * `invalidURLs` and `sources` — without disturbing the existing success/error
+ * handling that only ever looked at `data`.
+ */
+const fullResponse = ref<FirecrawlExtractResponse | null>(null);
+
+/** Checkbox options for the `scrapeOptions.formats` field. */
+const availableFormats = [
+  { value: 'markdown', label: 'Markdown' },
+  { value: 'html', label: 'HTML' },
+  { value: 'rawHtml', label: 'Raw HTML' },
+  { value: 'links', label: 'Links' },
+  { value: 'summary', label: 'Summary' },
+] as const;
+
+/**
+ * `scrapeOptions` sub-object forwarded to /v2/extract. Values are seeded with
+ * the API's own defaults so the payload builder can send only the fields the
+ * user actually changed, keeping the request body readable.
+ */
+const scrapeOptions = ref({
+  formats: ['markdown'] as string[],
+  onlyMainContent: true,
+  includeTags: '',
+  excludeTags: '',
+  waitFor: 0,
+  timeout: 60000,
+  maxAge: 172800000,
+  mobile: false,
+  blockAds: true,
+  removeBase64Images: false,
+  skipTlsVerification: false,
+  storeInCache: true,
+  proxy: 'auto' as 'auto' | 'basic' | 'stealth',
+  locationCountry: '',
+  locationLanguages: '',
+});
+
+/** Whether the "Scrape Options" fieldset is collapsed, matching ScrapeView's pattern. */
+const isScrapeOptionsCollapsed = ref(true);
+
+const headersString = ref(''); // Stores the HTTP headers JSON string provided by the user.
+const headersError = ref<string | null>(null); // Stores error messages related to headers JSON parsing.
+const parsedHeaders = ref<Record<string, string> | undefined>(undefined); // Holds the parsed headers object.
 
 /**
  * Watcher to parse the schema string and update the parsed schema.
@@ -165,6 +404,29 @@ watch(
     } catch (e: any) {
       schemaError.value = e.message;
       parsedSchema.value = null;
+    }
+  },
+  { immediate: true },
+);
+
+/**
+ * Watcher to parse the headers string and update the parsed headers.
+ * Sets an error message if parsing fails, mirroring the schema watcher above.
+ */
+watch(
+  headersString,
+  (newVal) => {
+    if (!newVal.trim()) {
+      headersError.value = null;
+      parsedHeaders.value = undefined;
+      return;
+    }
+    try {
+      parsedHeaders.value = JSON.parse(newVal);
+      headersError.value = null;
+    } catch (e: any) {
+      headersError.value = e.message;
+      parsedHeaders.value = undefined;
     }
   },
   { immediate: true },
@@ -196,10 +458,58 @@ const statusType = computed<'success' | 'error' | 'idle'>(() => {
 });
 
 /** Response tabs shown in the PlaygroundLayout tab bar. */
-const responseTabs = computed(() => [
-  { key: 'result', label: 'Result' },
-  { key: 'json', label: 'JSON' },
-]);
+const responseTabs = computed(() => {
+  const tabs = [
+    { key: 'result', label: 'Result' },
+    { key: 'json', label: 'JSON' },
+  ];
+  // Only offer the Sources tab when the response actually carries sources —
+  // it is empty unless the request set `showSources: true`.
+  if (Object.keys(sourcesMap.value).length > 0) {
+    tabs.push({ key: 'sources', label: 'Sources' });
+  }
+  return tabs;
+});
+
+/**
+ * URLs from the request that the API rejected as invalid. Empty when the
+ * response carries none, which also hides the warning strip in the template.
+ */
+const invalidUrls = computed<string[]>(() => fullResponse.value?.invalidURLs ?? []);
+
+/**
+ * Normalize a single `sources` entry into a flat list of URL strings. Entries
+ * may be plain URL strings or objects carrying a `url` field, similarly to
+ * how `mapUrls` normalizes its own link entries in the adapter layer.
+ *
+ * @param value - A single value from the `sources` response map.
+ * @returns The URLs found in that value.
+ */
+function toSourceUrls(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => {
+      if (typeof entry === 'string') return entry;
+      if (entry && typeof entry === 'object' && typeof (entry as any).url === 'string') {
+        return (entry as any).url as string;
+      }
+      return undefined;
+    })
+    .filter((url): url is string => Boolean(url));
+}
+
+/**
+ * The response's `sources` map normalized to `Record<string, string[]>` for
+ * the Sources tab. Empty when the response has no non-empty sources.
+ */
+const sourcesMap = computed<Record<string, string[]>>(() => {
+  const sources = fullResponse.value?.sources;
+  if (!sources || typeof sources !== 'object') return {};
+  const entries = Object.entries(sources)
+    .map(([key, value]) => [key, toSourceUrls(value)] as const)
+    .filter(([, urls]) => urls.length > 0);
+  return Object.fromEntries(entries);
+});
 
 /**
  * Format a single value for display in the result key/value view.
@@ -214,10 +524,74 @@ function formatValue(value: unknown): string {
 }
 
 /**
+ * Build the `scrapeOptions` sub-object for the /v2/extract payload.
+ *
+ * This is a playground UI, so the request body should stay readable: rather
+ * than echoing every field back at its current value, only fields that
+ * differ from the API's own documented default are included. When nothing
+ * deviates, `undefined` is returned so the caller omits `scrapeOptions`
+ * entirely, matching the "send only what changed" rule for the whole payload.
+ *
+ * @returns The scrapeOptions object to forward, or undefined when every field
+ * still matches its API default.
+ */
+function buildScrapeOptions(): Record<string, unknown> | undefined {
+  const opts = scrapeOptions.value;
+  const scrapeOptionsPayload: Record<string, unknown> = {};
+
+  // formats: default is exactly ["markdown"]. Any other selection (including
+  // additional formats, or none at all) is sent explicitly.
+  const isDefaultFormats = opts.formats.length === 1 && opts.formats[0] === 'markdown';
+  if (!isDefaultFormats && opts.formats.length > 0) {
+    scrapeOptionsPayload.formats = opts.formats;
+  }
+
+  if (opts.onlyMainContent === false) scrapeOptionsPayload.onlyMainContent = false;
+
+  const includeTags = opts.includeTags
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter((tag) => tag);
+  if (includeTags.length) scrapeOptionsPayload.includeTags = includeTags;
+
+  const excludeTags = opts.excludeTags
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter((tag) => tag);
+  if (excludeTags.length) scrapeOptionsPayload.excludeTags = excludeTags;
+
+  if (opts.waitFor !== 0) scrapeOptionsPayload.waitFor = opts.waitFor;
+  if (opts.timeout !== 60000) scrapeOptionsPayload.timeout = opts.timeout;
+  if (opts.maxAge !== 172800000) scrapeOptionsPayload.maxAge = opts.maxAge;
+  if (opts.mobile === true) scrapeOptionsPayload.mobile = true;
+  if (opts.blockAds === false) scrapeOptionsPayload.blockAds = false;
+  if (opts.removeBase64Images === true) scrapeOptionsPayload.removeBase64Images = true;
+  if (opts.skipTlsVerification === true) scrapeOptionsPayload.skipTlsVerification = true;
+  if (opts.storeInCache === false) scrapeOptionsPayload.storeInCache = false;
+  if (opts.proxy !== 'auto') scrapeOptionsPayload.proxy = opts.proxy;
+
+  const languages = opts.locationLanguages
+    .split(',')
+    .map((lang) => lang.trim())
+    .filter((lang) => lang);
+  const location: Record<string, unknown> = {
+    ...(opts.locationCountry.trim() && { country: opts.locationCountry.trim() }),
+    ...(languages.length && { languages }),
+  };
+  if (Object.keys(location).length) scrapeOptionsPayload.location = location;
+
+  if (parsedHeaders.value && Object.keys(parsedHeaders.value).length) {
+    scrapeOptionsPayload.headers = parsedHeaders.value;
+  }
+
+  return Object.keys(scrapeOptionsPayload).length ? scrapeOptionsPayload : undefined;
+}
+
+/**
  * Send the extraction request to the API.
  */
 const runExtraction = async (): Promise<void> => {
-  if (schemaError.value) return;
+  if (schemaError.value || headersError.value) return;
 
   const urls = urlInput.value
     .split('\n')
@@ -228,6 +602,8 @@ const runExtraction = async (): Promise<void> => {
     return;
   }
 
+  const scrapeOptionsPayload = buildScrapeOptions();
+
   const payload = {
     ...(urls.length && { urls }),
     ...(promptInput.value && { prompt: promptInput.value }),
@@ -235,16 +611,28 @@ const runExtraction = async (): Promise<void> => {
     ...(options.value.enableWebSearch && { enableWebSearch: true }),
     ...(options.value.showSources && { showSources: true }),
     ...(options.value.allowExternalLinks && { allowExternalLinks: true }),
+    // ignoreSitemap and allowExternalLinks default to false, so only send them
+    // when the user turned them on.
+    ...(options.value.ignoreSitemap && { ignoreSitemap: true }),
+    // includeSubdomains and ignoreInvalidURLs default to true API-side, so
+    // only send them when the user turned them off.
+    ...(options.value.includeSubdomains === false && { includeSubdomains: false }),
+    ...(options.value.ignoreInvalidURLs === false && { ignoreInvalidURLs: false }),
+    ...(scrapeOptionsPayload && { scrapeOptions: scrapeOptionsPayload }),
   };
 
   try {
     loading.value = true;
     error.value = '';
     durationMs.value = null;
+    fullResponse.value = null;
     const t0 = performance.now();
     const response = await api.extraction.extractData(payload);
     durationMs.value = performance.now() - t0;
     const respData = response.data;
+    // Keep the full response around (invalidURLs, sources, ...) regardless of
+    // outcome, so the response pane can surface it alongside the error state.
+    fullResponse.value = respData;
     if (respData.success && (respData as any).data) {
       result.value = (respData as any).data;
     } else {
@@ -391,6 +779,86 @@ const downloadResult = (): void => {
   height: 15px;
 }
 
+/* ── Scrape Options fieldset ──────────────────────────────────── */
+
+/*
+ * Collapsible glass card for the scrapeOptions group, matching the
+ * .options-fieldset / .collapsible-header pattern used by ScrapeView so the
+ * two playground forms read as one system.
+ */
+.options-fieldset {
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+}
+
+.options-fieldset legend {
+  font-weight: 700;
+  padding: 0 0.4rem;
+  color: var(--color-heading);
+}
+
+.collapsible-header {
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition-fast);
+}
+
+.collapsible-header:hover {
+  color: var(--brand-strong);
+}
+
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.45rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.checkbox-label input[type='checkbox'] {
+  accent-color: var(--violet-500);
+  width: 15px;
+  height: 15px;
+}
+
+.grid-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.options-fieldset input[type='text'],
+.options-fieldset input[type='number'],
+.options-fieldset select {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.84rem;
+  background: var(--color-background-soft);
+  color: var(--color-text);
+  box-sizing: border-box;
+}
+
+/* Inline validation error text — danger hue from the token set. */
+.error-message {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--hue-danger);
+  margin-top: 0.2rem;
+}
+
 /* ── Run button ────────────────────────────────────────────────── */
 
 /*
@@ -515,5 +983,55 @@ const downloadResult = (): void => {
   color: var(--color-text);
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* ── Invalid URLs warning strip ───────────────────────────────── */
+
+/*
+ * Reuses .deprecation-warning's glass + warning-hue treatment so the response
+ * pane's invalid-URLs notice reads as the same visual language as the
+ * request pane's deprecation banner, rather than introducing a new hue.
+ */
+.invalid-urls-warning {
+  margin: 1rem 1rem 0;
+}
+
+.invalid-urls-warning ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.invalid-urls-warning li {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  word-break: break-all;
+}
+
+/* ── Sources tab ──────────────────────────────────────────────── */
+
+.sources-group {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sources-group:last-child {
+  border-bottom: none;
+}
+
+.sources-list {
+  margin: 0.4rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.sources-list a {
+  color: var(--brand-strong);
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+  word-break: break-all;
+  text-decoration: underline;
+}
+
+.sources-list a:hover {
+  text-decoration: none;
 }
 </style>
