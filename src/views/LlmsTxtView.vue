@@ -36,6 +36,10 @@
         Served by the <code>/{{ apiVersion }}</code> endpoint. This Firecrawl install does not
         expose <code>/v2</code> for this feature.
       </p>
+      <!-- Deprecation notices the API itself returned, shown verbatim -->
+      <ul v-if="apiWarnings.length" class="api-version-notice">
+        <li v-for="(warning, index) in apiWarnings" :key="index">{{ warning }}</li>
+      </ul>
     </div>
 
     <!-- Failed state -->
@@ -121,6 +125,8 @@ const llmsfulltxt = ref('');
 const fullTextExpanded = ref(false);
 /** API version the connected Firecrawl instance actually served this job on. */
 const apiVersion = ref<FirecrawlApiVersion | null>(null);
+/** Deprecation notices returned by the API for this job. */
+const apiWarnings = ref<string[]>([]);
 
 /** Polling interval handle. */
 let intervalId: ReturnType<typeof setInterval> | null = null;
@@ -148,6 +154,7 @@ function pollStatus(id: string): void {
       const data = response.data;
       generationStatus.value = data.status;
       apiVersion.value = data.apiVersion;
+      apiWarnings.value = data.warnings;
 
       if (data.status === 'completed') {
         llmstxt.value = data.llmstxt;
