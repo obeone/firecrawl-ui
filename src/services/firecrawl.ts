@@ -272,6 +272,7 @@ export interface DeepResearchStatus {
   totalUrls: number;
   error: string | null;
   apiVersion: FirecrawlApiVersion;
+  warnings: string[];
 }
 
 /**
@@ -292,6 +293,7 @@ export interface LlmsTxtStatus {
   llmstxt: string;
   llmsfulltxt: string;
   apiVersion: FirecrawlApiVersion;
+  warnings: string[];
 }
 
 /**
@@ -1077,22 +1079,31 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
             featureVersions,
             'deep-research',
             async (version) => {
-              const response = await http.get<{
-                success?: boolean;
-                data?: {
-                  status?: DeepResearchStatus['status'];
-                  finalAnalysis?: string;
-                  json?: Record<string, unknown> | null;
-                  activities?: ResearchActivity[];
-                  sources?: ResearchSource[];
-                  currentDepth?: number;
-                  maxDepth?: number;
-                  totalUrls?: number;
-                  error?: string;
-                };
-              }>(`/${version}/deep-research/${id}`);
+              type DeepResearchFields = {
+                status?: DeepResearchStatus['status'];
+                finalAnalysis?: string;
+                json?: Record<string, unknown> | null;
+                activities?: ResearchActivity[];
+                sources?: ResearchSource[];
+                currentDepth?: number;
+                maxDepth?: number;
+                totalUrls?: number;
+                error?: string;
+              };
 
-              const data = response.data.data ?? {};
+              const response = await http.get<
+                DeepResearchFields & {
+                  success?: boolean;
+                  warnings?: string[];
+                  data?: DeepResearchFields;
+                }
+              >(`/${version}/deep-research/${id}`);
+
+              const body = response.data;
+              // v2 nests every job field under `data`. The deprecated v1
+              // endpoint returns most of them at the top level and nests only
+              // activities and sources, so read from both, nested first.
+              const data: DeepResearchFields = { ...body, ...(body.data ?? {}) };
 
               return {
                 data: {
@@ -1106,6 +1117,7 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
                   totalUrls: data.totalUrls ?? 0,
                   error: data.error ?? null,
                   apiVersion: version,
+                  warnings: body.warnings ?? [],
                 },
               };
             },
@@ -1138,6 +1150,7 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
             const response = await http.get<{
               success?: boolean;
               status?: LlmsTxtStatus['status'];
+              warnings?: string[];
               data?: { llmstxt?: string; llmsfulltxt?: string };
             }>(`/${version}/llmstxt/${id}`);
 
@@ -1149,6 +1162,7 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
                 llmstxt: data.llmstxt ?? '',
                 llmsfulltxt: data.llmsfulltxt ?? '',
                 apiVersion: version,
+                warnings: response.data.warnings ?? [],
               },
             };
           });

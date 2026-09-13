@@ -97,6 +97,10 @@
         Served by the <code>/{{ apiVersion }}</code> endpoint. This Firecrawl install does not
         expose <code>/v2</code> for this feature.
       </p>
+      <!-- Deprecation notices the API itself returned, shown verbatim -->
+      <ul v-if="apiWarnings.length" class="api-version-notice">
+        <li v-for="(warning, index) in apiWarnings" :key="index">{{ warning }}</li>
+      </ul>
 
       <div v-if="activities.length" class="activities">
         <h4>Live Activity</h4>
@@ -256,6 +260,8 @@ const researchJson = ref<Record<string, unknown> | null>(null);
 const researchError = ref<string | null>(null);
 /** API version the connected Firecrawl instance actually served this job on. */
 const apiVersion = ref<FirecrawlApiVersion | null>(null);
+/** Deprecation notices returned by the API for this job. */
+const apiWarnings = ref<string[]>([]);
 
 /** Polling interval handle. */
 let intervalId: ReturnType<typeof setInterval> | null = null;
@@ -287,6 +293,7 @@ function stopPolling(): void {
 function applyStatus(data: DeepResearchStatus): void {
   jobStatus.value = data.status;
   apiVersion.value = data.apiVersion;
+  apiWarnings.value = data.warnings;
   currentDepth.value = data.currentDepth;
   maxDepthReported.value = data.maxDepth;
   totalUrls.value = data.totalUrls;
