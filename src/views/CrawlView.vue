@@ -385,9 +385,14 @@
           </div>
           <p>{{ progress }}% Completed</p>
           <p>{{ pagesCompleted }} / {{ totalPages }} pages processed</p>
-          <button class="primary-button" type="button" @click="cancelCurrentCrawl">
-            Cancel Crawl
-          </button>
+          <div class="crawl-status-actions">
+            <button class="primary-button" type="button" @click="cancelCurrentCrawl">
+              Cancel Crawl
+            </button>
+            <button class="primary-button" type="button" @click="loadCrawlErrors">
+              Check Errors
+            </button>
+          </div>
         </div>
 
         <!-- Completed crawl summary (when not actively crawling) -->
@@ -399,6 +404,36 @@
           </div>
           <p>{{ progress }}% Completed</p>
           <p>{{ pagesCompleted }} / {{ totalPages }} pages processed</p>
+          <div class="crawl-status-actions">
+            <button class="primary-button" type="button" @click="loadCrawlErrors">
+              Check Errors
+            </button>
+          </div>
+        </div>
+
+        <!-- Per-URL error report, fetched on demand via "Check Errors". Only
+             rendered once a report has actually been retrieved, so an empty
+             list is distinguishable from "never asked". -->
+        <div v-if="crawlErrorsLoaded" class="crawl-errors-section">
+          <h3>Crawl Errors</h3>
+          <p v-if="crawlErrors.length === 0 && robotsBlocked.length === 0">
+            No errors reported for this crawl.
+          </p>
+          <ul v-if="crawlErrors.length > 0" class="errors-list">
+            <li v-for="(crawlError, index) in crawlErrors" :key="crawlError.id || index">
+              <strong>{{ crawlError.url || 'Unknown URL' }}</strong>
+              <span class="error-detail">{{ crawlError.error || 'Unknown error' }}</span>
+              <em v-if="crawlError.timestamp" class="error-timestamp">
+                {{ new Date(crawlError.timestamp).toLocaleString() }}
+              </em>
+            </li>
+          </ul>
+          <template v-if="robotsBlocked.length > 0">
+            <h4>Blocked by robots.txt</h4>
+            <ul class="errors-list">
+              <li v-for="(blockedUrl, index) in robotsBlocked" :key="index">{{ blockedUrl }}</li>
+            </ul>
+          </template>
         </div>
 
         <!-- Download options after crawl completion -->
@@ -485,6 +520,29 @@
           </button>
         </div>
 
+        <!-- Crawls running server-side right now. Unlike the history below,
+             this list comes from the API, so it also covers jobs started from
+             another browser or another client. -->
+        <div class="active-crawls-section">
+          <div class="section-header">
+            <h2>Active Crawls</h2>
+            <button class="history-button" type="button" @click="loadActiveCrawls">Refresh</button>
+          </div>
+          <div v-if="activeCrawlsError" class="error-message">{{ activeCrawlsError }}</div>
+          <ul v-else-if="activeCrawls.length > 0" class="history-list">
+            <li v-for="crawl in activeCrawls" :key="crawl.id" class="history-item">
+              <span class="history-info">
+                <strong>{{ crawl.url || 'Unknown URL' }}</strong>
+                <span class="history-meta">ID: {{ crawl.id }}</span>
+              </span>
+              <button class="history-button" type="button" @click.prevent="selectCrawl(crawl.id)">
+                View
+              </button>
+            </li>
+          </ul>
+          <p v-else>No active crawls.</p>
+        </div>
+
         <!-- Crawl history -->
         <div class="crawl-history-section">
           <h2>Crawl History</h2>
@@ -531,6 +589,8 @@ import { useRouter, useRoute } from 'vue-router';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
 import CodeBlock from '../components/playground/CodeBlock.vue';
 import {
+  type ActiveCrawl,
+  type CrawlError,
   type FirecrawlCrawlingApi,
   type FirecrawlExtractionApi,
   type FirecrawlMappingApi,
@@ -891,6 +951,18 @@ export default defineComponent({
     // State for selected crawl history item
     const selectedCrawlId = ref<string | null>(null);
     const simulatedFiles = ref<string[]>([]);
+
+    // Error report for the current crawl. `crawlErrorsLoaded` gates the report
+    // section so an empty report reads as "no errors" rather than "not fetched".
+    const crawlErrors = ref<CrawlError[]>([]);
+    const robotsBlocked = ref<string[]>([]);
+    const crawlErrorsLoaded = ref(false);
+
+    // Crawls currently running server-side, plus its own error slot: this list
+    // is refreshed independently of the request form, so a failure here must
+    // not overwrite the submission error shown in the layout status bar.
+    const activeCrawls = ref<ActiveCrawl[]>([]);
+    const activeCrawlsError = ref('');
 
     // LocalStorage key for crawl history
     const HISTORY_STORAGE_KEY = 'crawlHistory';
@@ -1479,6 +1551,10 @@ export default defineComponent({
         result.value = null;
         currentCrawlId.value = null;
         durationMs.value = null;
+        // Drop the previous job's error report so it cannot be read as this one's.
+        crawlErrors.value = [];
+        robotsBlocked.value = [];
+        crawlErrorsLoaded.value = false;
 
         // Call the crawling API to submit the crawl job
         const startedAt = performance.now();
@@ -1547,6 +1623,57 @@ export default defineComponent({
         currentCrawlId.value = null;
       } catch (err: any) {
         error.value = `Failed to cancel crawl: ${err.message || 'Unknown error'}`;
+      }
+    };
+
+    /**
+     * Fetch the per-URL error report for the crawl currently in focus.
+     *
+     * The job identifier is resolved in order of specificity: the running job,
+     * then the last submitted job, then the history entry the user expanded.
+     * A failure is surfaced in the layout error banner, since the user
+     * explicitly asked for this report.
+     *
+     * @returns {Promise<void>} Resolves once the report has been fetched or
+     * the failure has been reported.
+     */
+    const loadCrawlErrors = async (): Promise<void> => {
+      const jobId = currentCrawlId.value || result.value?.id || selectedCrawlId.value;
+      if (!jobId) {
+        error.value = 'No crawl job available to fetch errors.';
+        return;
+      }
+      try {
+        error.value = '';
+        const response = await api.crawling.getCrawlErrors(jobId);
+        crawlErrors.value = response.data.errors;
+        robotsBlocked.value = response.data.robotsBlocked;
+        crawlErrorsLoaded.value = true;
+      } catch (err: any) {
+        console.error(`Failed to fetch crawl errors for job ID ${jobId}:`, err);
+        error.value = `Failed to fetch crawl errors: ${err.message || 'Unknown error'}`;
+      }
+    };
+
+    /**
+     * Fetch the list of crawl jobs currently running on the API side.
+     *
+     * Failures land in `activeCrawlsError` and are rendered inside the Active
+     * Crawls section rather than in the layout error banner, so a background
+     * refresh cannot mask an error coming from the crawl form.
+     *
+     * @returns {Promise<void>} Resolves once the list has been refreshed or the
+     * failure has been recorded.
+     */
+    const loadActiveCrawls = async (): Promise<void> => {
+      activeCrawlsError.value = '';
+      try {
+        const response = await api.crawling.getActiveCrawls();
+        activeCrawls.value = response.data.crawls;
+      } catch (err: any) {
+        console.error('Failed to fetch active crawls:', err);
+        activeCrawls.value = [];
+        activeCrawlsError.value = `Failed to fetch active crawls: ${err.message || 'Unknown error'}`;
       }
     };
 
@@ -1695,7 +1822,12 @@ export default defineComponent({
           console.error('Failed to parse crawl history from LocalStorage:', e);
         }
       }
-      await Promise.all(crawlHistory.value.map((c) => checkHistoryStatus(c)));
+      await Promise.all([
+        ...crawlHistory.value.map((c) => checkHistoryStatus(c)),
+        // Seed the Active Crawls list so the History tab is meaningful before
+        // the user hits Refresh; failures stay inside that section.
+        loadActiveCrawls(),
+      ]);
     });
 
     // Cleanup polling interval when the component unmounts
@@ -1747,6 +1879,13 @@ export default defineComponent({
       statusType,
       handleSubmit,
       cancelCurrentCrawl,
+      loadCrawlErrors,
+      crawlErrors,
+      robotsBlocked,
+      crawlErrorsLoaded,
+      activeCrawls,
+      activeCrawlsError,
+      loadActiveCrawls,
       isCrawlerOptionsCollapsed,
       isScrapeOptionsCollapsed,
       isWebhookOptionsCollapsed,
@@ -1946,6 +2085,88 @@ export default defineComponent({
   gap: 0.5rem;
   flex-wrap: wrap;
   align-items: center;
+}
+
+/* Action row under the status readout (cancel / check errors). */
+.crawl-status-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+/* ---------------------------------------------------------------------------
+ * Crawl error report: glass card tinted with the danger hue so a failing
+ * crawl reads apart from the neutral status blocks above it.
+ * --------------------------------------------------------------------------- */
+.crawl-errors-section {
+  margin-top: 1.25rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--hue-danger);
+  border-left: 3px solid var(--hue-danger);
+  border-radius: var(--radius-sm);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+
+.crawl-errors-section h4 {
+  font-size: 0.9rem;
+  margin: 1rem 0 0.4rem;
+}
+
+.errors-list {
+  list-style: disc;
+  margin: 0;
+  padding-left: 1.4rem;
+  font-size: 0.88rem;
+  color: var(--color-text-soft);
+}
+
+.errors-list li {
+  margin-bottom: 0.35rem;
+  word-break: break-word;
+}
+
+/* Message and timestamp sit on their own lines so no separator glyph is
+   needed between them on narrow panes. */
+.error-detail {
+  display: block;
+  color: var(--color-text);
+}
+
+.error-timestamp {
+  display: block;
+  font-size: 0.85em;
+  color: var(--color-text-mute);
+}
+
+/* ---------------------------------------------------------------------------
+ * Active crawls: same frosted rows as the history list, with a header row
+ * carrying the manual refresh action.
+ * --------------------------------------------------------------------------- */
+.active-crawls-section {
+  margin-bottom: 1.5rem;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.6rem;
+}
+
+.section-header h2 {
+  margin: 0;
+}
+
+/* Job identifier shown under the URL of an active crawl. */
+.history-meta {
+  margin-left: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--color-text-mute);
 }
 
 /* ---------------------------------------------------------------------------
