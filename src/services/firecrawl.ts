@@ -130,12 +130,61 @@ export interface FirecrawlScrapingApi {
 /**
  * Legacy-compatible crawling client.
  */
+export interface CrawlError {
+  id?: string;
+  timestamp?: string | null;
+  url?: string;
+  error?: string;
+}
+
+/**
+ * Crawl error report returned by the errors endpoint.
+ */
+export interface CrawlErrorsReport {
+  errors: CrawlError[];
+  robotsBlocked: string[];
+}
+
+export interface ActiveCrawl {
+  id: string;
+  url?: string;
+  teamId?: string;
+  options?: Record<string, unknown>;
+}
+
 export interface FirecrawlCrawlingApi {
   crawlUrls(
     payload: Record<string, unknown>,
   ): Promise<WrappedResponse<{ id: string; url: string }>>;
   getCrawlStatus(id: string): Promise<WrappedResponse<LegacyCrawlStatusResponse>>;
   cancelCrawl(id: string): Promise<WrappedResponse<{ status: string }>>;
+  getCrawlErrors(id: string): Promise<WrappedResponse<CrawlErrorsReport>>;
+  getActiveCrawls(): Promise<WrappedResponse<{ crawls: ActiveCrawl[] }>>;
+}
+
+/**
+ * Status of a batch scrape job, mirroring the crawl status structure with the
+ * extra `creditsUsed` counter exposed by the batch endpoint.
+ */
+export interface BatchScrapeStatusResponse {
+  status: CrawlJob['status'];
+  completed: number;
+  total: number;
+  creditsUsed: number;
+  next: string | null;
+  data: Record<string, unknown>[];
+}
+
+/**
+ * Legacy-compatible batch scraping client.
+ */
+export interface FirecrawlBatchScrapingApi {
+  batchScrape(
+    payload: Record<string, unknown>,
+  ): Promise<WrappedResponse<{ id: string; url: string }>>;
+  getBatchScrapeStatus(id: string): Promise<WrappedResponse<BatchScrapeStatusResponse>>;
+  cancelBatchScrape(id: string): Promise<WrappedResponse<{ message: string }>>;
+  getBatchScrapeErrors(id: string): Promise<WrappedResponse<CrawlErrorsReport>>;
 }
 
 /**
@@ -143,6 +192,7 @@ export interface FirecrawlCrawlingApi {
  */
 export interface FirecrawlExtractionApi {
   extractData(payload: Record<string, unknown>): Promise<WrappedResponse<FirecrawlExtractResponse>>;
+  getExtractStatus(id: string): Promise<WrappedResponse<FirecrawlExtractResponse>>;
 }
 
 /**
@@ -160,12 +210,113 @@ export interface FirecrawlSearchApi {
 }
 
 /**
+ * Team credit usage information returned by Firecrawl.
+ *
+ * Only `remainingCredits` is guaranteed by the API contract; the optional
+ * fields are surfaced when the Firecrawl plan exposes them.
+ */
+export interface CreditUsage {
+  remainingCredits: number | null;
+  planCredits?: number | null;
+  billingPeriodStart?: string | null;
+  billingPeriodEnd?: string | null;
+}
+
+/**
+ * Team token usage information returned by Firecrawl (Extract feature).
+ */
+export interface TokenUsage {
+  remainingTokens: number | null;
+}
+
+/**
+ * Legacy-compatible billing client.
+ */
+export interface FirecrawlBillingApi {
+  getCreditUsage(): Promise<WrappedResponse<CreditUsage>>;
+  getTokenUsage(): Promise<WrappedResponse<TokenUsage>>;
+}
+
+/**
+ * A single activity entry emitted while a deep research job progresses.
+ */
+export interface ResearchActivity {
+  type?: string;
+  status?: string;
+  message?: string;
+  timestamp?: string;
+  depth?: number;
+}
+
+/**
+ * A source discovered and analyzed during a deep research job.
+ */
+export interface ResearchSource {
+  url?: string;
+  title?: string;
+  description?: string;
+  favicon?: string;
+}
+
+/**
+ * Status and results of a deep research job.
+ */
+export interface DeepResearchStatus {
+  status: 'processing' | 'completed' | 'failed';
+  finalAnalysis: string;
+  json: Record<string, unknown> | null;
+  activities: ResearchActivity[];
+  sources: ResearchSource[];
+  currentDepth: number;
+  maxDepth: number;
+  totalUrls: number;
+  error: string | null;
+  apiVersion: FirecrawlApiVersion;
+  warnings: string[];
+}
+
+/**
+ * Legacy-compatible deep research client.
+ */
+export interface FirecrawlResearchApi {
+  startDeepResearch(
+    payload: Record<string, unknown>,
+  ): Promise<WrappedResponse<{ id: string; apiVersion: FirecrawlApiVersion }>>;
+  getDeepResearchStatus(id: string): Promise<WrappedResponse<DeepResearchStatus>>;
+}
+
+/**
+ * Status and results of an LLMs.txt generation job.
+ */
+export interface LlmsTxtStatus {
+  status: 'processing' | 'completed' | 'failed';
+  llmstxt: string;
+  llmsfulltxt: string;
+  apiVersion: FirecrawlApiVersion;
+  warnings: string[];
+}
+
+/**
+ * Legacy-compatible LLMs.txt generation client.
+ */
+export interface FirecrawlLlmsTxtApi {
+  generateLlmsTxt(
+    payload: Record<string, unknown>,
+  ): Promise<WrappedResponse<{ id: string; apiVersion: FirecrawlApiVersion }>>;
+  getLlmsTxtStatus(id: string): Promise<WrappedResponse<LlmsTxtStatus>>;
+}
+
+/**
  * Collection of all Firecrawl adapters exposed to Vue.
  */
 export interface FirecrawlApiClients {
+  billing: FirecrawlBillingApi;
+  batchScraping: FirecrawlBatchScrapingApi;
   crawling: FirecrawlCrawlingApi;
   extraction: FirecrawlExtractionApi;
+  llmsTxt: FirecrawlLlmsTxtApi;
   mapping: FirecrawlMappingApi;
+  research: FirecrawlResearchApi;
   scraping: FirecrawlScrapingApi;
   search: FirecrawlSearchApi;
 }
@@ -203,6 +354,96 @@ function createHttpClient(apiKey: string, baseUrl: string): AxiosInstance {
       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
     },
   });
+}
+
+/**
+ * Firecrawl API versions this adapter can target, in order of preference.
+ */
+const API_VERSION_PREFERENCE = ['v2', 'v1'] as const;
+
+/**
+ * A Firecrawl API version prefix used to build request paths.
+ */
+export type FirecrawlApiVersion = (typeof API_VERSION_PREFERENCE)[number];
+
+/**
+ * Features whose endpoints are not served by every Firecrawl deployment.
+ *
+ * Firecrawl Cloud exposes deep research and LLMs.txt generation under `/v2`;
+ * self-hosted installs only serve them under `/v1` and answer `/v2` with a
+ * 404. Every other endpoint this adapter uses exists under `/v2` on both.
+ */
+type VersionedFeature = 'deep-research' | 'llmstxt';
+
+/**
+ * Records, per feature, which API version the connected instance answers on.
+ *
+ * This is a correctness requirement, not only an optimization: a job started
+ * against one version must be polled on that same version.
+ */
+type FeatureVersionCache = Map<VersionedFeature, FirecrawlApiVersion>;
+
+/**
+ * Tell whether an error is an HTTP 404, meaning the endpoint is not exposed.
+ *
+ * @param error - The error thrown by an Axios request.
+ * @returns True when the response status is 404.
+ */
+function isEndpointMissing(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 404;
+}
+
+/**
+ * Run a request against the first API version the instance actually serves.
+ *
+ * The resolved version is cached for the lifetime of the client so later calls
+ * skip the probe, and so status polls reach the version that started the job.
+ *
+ * @param cache - The per-client feature version cache.
+ * @param feature - The feature whose endpoint availability varies.
+ * @param send - Callback issuing the request for a given API version.
+ * @returns The result of the first successful attempt.
+ * @throws The original error when it is not a missing-endpoint 404, or the
+ * last 404 when no candidate version is served.
+ */
+async function requestWithVersionFallback<T>(
+  cache: FeatureVersionCache,
+  feature: VersionedFeature,
+  send: (version: FirecrawlApiVersion) => Promise<T>,
+): Promise<T> {
+  const resolvedVersion = cache.get(feature);
+
+  if (resolvedVersion) {
+    return send(resolvedVersion);
+  }
+
+  let lastError: unknown;
+
+  for (const version of API_VERSION_PREFERENCE) {
+    try {
+      const result = await send(version);
+
+      cache.set(feature, version);
+
+      if (version !== API_VERSION_PREFERENCE[0]) {
+        // Surface the downgrade: self-hosted installs land here on every run.
+        console.info(
+          `[firecrawl] "${feature}" is not exposed under /${API_VERSION_PREFERENCE[0]}; ` +
+            `falling back to /${version} (self-hosted install).`,
+        );
+      }
+
+      return result;
+    } catch (error) {
+      if (!isEndpointMissing(error)) {
+        throw error;
+      }
+
+      lastError = error;
+    }
+  }
+
+  throw lastError;
 }
 
 /**
@@ -540,8 +781,57 @@ async function waitForExtract(
  */
 export function createFirecrawlApiClients(apiKey: string, baseUrl: string): FirecrawlApiClients {
   const http = createHttpClient(apiKey, baseUrl);
+  const featureVersions: FeatureVersionCache = new Map();
 
   return {
+    billing: {
+      async getCreditUsage() {
+        try {
+          const response = await http.get<{
+            success?: boolean;
+            data?: {
+              remaining_credits?: number;
+              plan_credits?: number;
+              billing_period_start?: string | null;
+              billing_period_end?: string | null;
+            };
+          }>('/v2/team/credit-usage');
+
+          const data = response.data.data ?? {};
+
+          return {
+            data: {
+              remainingCredits:
+                typeof data.remaining_credits === 'number' ? data.remaining_credits : null,
+              planCredits: typeof data.plan_credits === 'number' ? data.plan_credits : null,
+              billingPeriodStart: data.billing_period_start ?? null,
+              billingPeriodEnd: data.billing_period_end ?? null,
+            },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch credit usage');
+        }
+      },
+      async getTokenUsage() {
+        try {
+          const response = await http.get<{
+            success?: boolean;
+            data?: { remaining_tokens?: number };
+          }>('/v2/team/token-usage');
+
+          const data = response.data.data ?? {};
+
+          return {
+            data: {
+              remainingTokens:
+                typeof data.remaining_tokens === 'number' ? data.remaining_tokens : null,
+            },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch token usage');
+        }
+      },
+    },
     scraping: {
       async scrapeAndExtractFromUrl(payload) {
         try {
@@ -615,12 +905,125 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
           );
 
           return {
-            data: {
-              status: response.data.status ?? 'cancelled',
-            },
+            data: { status: response.data.status ?? 'cancelled' },
           };
         } catch (error) {
           throw formatApiError(error, 'Failed to cancel crawl');
+        }
+      },
+      async getCrawlErrors(id) {
+        try {
+          const response = await http.get<{
+            errors?: CrawlError[];
+            robotsBlocked?: string[];
+          }>(`/v2/crawl/${id}/errors`);
+
+          return {
+            data: {
+              errors: response.data.errors ?? [],
+              robotsBlocked: response.data.robotsBlocked ?? [],
+            },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch crawl errors');
+        }
+      },
+      async getActiveCrawls() {
+        try {
+          const response = await http.get<{ success?: boolean; crawls?: ActiveCrawl[] }>(
+            '/v2/crawl/active',
+          );
+
+          return {
+            data: { crawls: response.data.crawls ?? [] },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch active crawls');
+        }
+      },
+    },
+    batchScraping: {
+      async batchScrape(payload) {
+        try {
+          const urls = Array.isArray(payload.urls)
+            ? (payload.urls as unknown[]).filter((url): url is string => typeof url === 'string')
+            : [];
+          // Reuse the single-scrape option mapping to keep batch options in sync.
+          const { options } = toScrapeRequest({ url: '', ...payload });
+          const response = await http.post<{ success: boolean; id: string; url: string }>(
+            '/v2/batch/scrape',
+            {
+              urls,
+              ...options,
+              ...(typeof payload.webhook === 'object' && payload.webhook !== null
+                ? { webhook: payload.webhook }
+                : {}),
+            },
+          );
+
+          return {
+            data: {
+              id: response.data.id,
+              url: response.data.url,
+            },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Batch scrape request failed');
+        }
+      },
+      async getBatchScrapeStatus(id) {
+        try {
+          const response = await http.get<{
+            status?: CrawlJob['status'];
+            completed?: number;
+            total?: number;
+            creditsUsed?: number;
+            next?: string | null;
+            data?: Document[];
+          }>(`/v2/batch/scrape/${id}`);
+
+          return {
+            data: {
+              status: response.data.status ?? 'scraping',
+              completed: response.data.completed ?? 0,
+              total: response.data.total ?? 0,
+              creditsUsed: response.data.creditsUsed ?? 0,
+              next: response.data.next ?? null,
+              data: (response.data.data ?? []).map(toLegacyDocument),
+            },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch batch scrape status');
+        }
+      },
+      async cancelBatchScrape(id) {
+        try {
+          const response = await http.delete<{ success?: boolean; message?: string }>(
+            `/v2/batch/scrape/${id}`,
+          );
+
+          return {
+            data: { message: response.data.message ?? 'Batch scrape job cancelled.' },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to cancel batch scrape');
+        }
+      },
+      async getBatchScrapeErrors(id) {
+        try {
+          const response = await http.get<{
+            errors?: CrawlError[];
+            robotsBlocked?: string[];
+          }>(`/v2/batch/scrape/${id}/errors`);
+
+          return {
+            data: {
+              errors: response.data.errors ?? [],
+              robotsBlocked: response.data.robotsBlocked ?? [],
+            },
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch batch scrape errors');
         }
       },
     },
@@ -635,6 +1038,136 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
           };
         } catch (error) {
           throw formatApiError(error, 'Extract request failed');
+        }
+      },
+      async getExtractStatus(id) {
+        try {
+          const response = await http.get<FirecrawlExtractResponse>(`/v2/extract/${id}`);
+
+          return {
+            data: response.data,
+          };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch extract status');
+        }
+      },
+    },
+    research: {
+      async startDeepResearch(payload) {
+        try {
+          return await requestWithVersionFallback(
+            featureVersions,
+            'deep-research',
+            async (version) => {
+              const response = await http.post<{ success: boolean; id: string }>(
+                `/${version}/deep-research`,
+                payload,
+              );
+
+              return {
+                data: { id: response.data.id, apiVersion: version },
+              };
+            },
+          );
+        } catch (error) {
+          throw formatApiError(error, 'Failed to start deep research');
+        }
+      },
+      async getDeepResearchStatus(id) {
+        try {
+          return await requestWithVersionFallback(
+            featureVersions,
+            'deep-research',
+            async (version) => {
+              type DeepResearchFields = {
+                status?: DeepResearchStatus['status'];
+                finalAnalysis?: string;
+                json?: Record<string, unknown> | null;
+                activities?: ResearchActivity[];
+                sources?: ResearchSource[];
+                currentDepth?: number;
+                maxDepth?: number;
+                totalUrls?: number;
+                error?: string;
+              };
+
+              const response = await http.get<
+                DeepResearchFields & {
+                  success?: boolean;
+                  warnings?: string[];
+                  data?: DeepResearchFields;
+                }
+              >(`/${version}/deep-research/${id}`);
+
+              const body = response.data;
+              // v2 nests every job field under `data`. The deprecated v1
+              // endpoint returns most of them at the top level and nests only
+              // activities and sources, so read from both, nested first.
+              const data: DeepResearchFields = { ...body, ...(body.data ?? {}) };
+
+              return {
+                data: {
+                  status: data.status ?? 'processing',
+                  finalAnalysis: data.finalAnalysis ?? '',
+                  json: data.json ?? null,
+                  activities: data.activities ?? [],
+                  sources: data.sources ?? [],
+                  currentDepth: data.currentDepth ?? 0,
+                  maxDepth: data.maxDepth ?? 0,
+                  totalUrls: data.totalUrls ?? 0,
+                  error: data.error ?? null,
+                  apiVersion: version,
+                  warnings: body.warnings ?? [],
+                },
+              };
+            },
+          );
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch deep research status');
+        }
+      },
+    },
+    llmsTxt: {
+      async generateLlmsTxt(payload) {
+        try {
+          return await requestWithVersionFallback(featureVersions, 'llmstxt', async (version) => {
+            const response = await http.post<{ success: boolean; id: string }>(
+              `/${version}/llmstxt`,
+              payload,
+            );
+
+            return {
+              data: { id: response.data.id, apiVersion: version },
+            };
+          });
+        } catch (error) {
+          throw formatApiError(error, 'Failed to start LLMs.txt generation');
+        }
+      },
+      async getLlmsTxtStatus(id) {
+        try {
+          return await requestWithVersionFallback(featureVersions, 'llmstxt', async (version) => {
+            const response = await http.get<{
+              success?: boolean;
+              status?: LlmsTxtStatus['status'];
+              warnings?: string[];
+              data?: { llmstxt?: string; llmsfulltxt?: string };
+            }>(`/${version}/llmstxt/${id}`);
+
+            const data = response.data.data ?? {};
+
+            return {
+              data: {
+                status: response.data.status ?? 'processing',
+                llmstxt: data.llmstxt ?? '',
+                llmsfulltxt: data.llmsfulltxt ?? '',
+                apiVersion: version,
+                warnings: response.data.warnings ?? [],
+              },
+            };
+          });
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch LLMs.txt status');
         }
       },
     },

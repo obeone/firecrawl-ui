@@ -1,11 +1,15 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
 import HomeView from '../views/HomeView.vue';
 import ScrapeView from '../views/ScrapeView.vue';
+import BatchScrapeView from '../views/BatchScrapeView.vue';
 import CrawlView from '../views/CrawlView.vue';
 import ApiConfigView from '../views/ApiConfigView.vue';
 import ExtractView from '../views/ExtractView.vue'; // Import the new view
 import MapView from '../components/MapView.vue';
 import SearchView from '../components/SearchView.vue';
+import ResearchView from '../views/ResearchView.vue';
+import LlmsTxtView from '../views/LlmsTxtView.vue';
+import BillingView from '../views/BillingView.vue';
 import AboutView from '../views/AboutView.vue';
 
 const router = createRouter({
@@ -20,6 +24,11 @@ const router = createRouter({
       path: '/scrape',
       name: 'scrape',
       component: ScrapeView, // Route for the web scraping functionality.
+    },
+    {
+      path: '/batch-scrape',
+      name: 'batch-scrape',
+      component: BatchScrapeView, // Route for the batch scraping functionality.
     },
     {
       path: '/crawl',
@@ -45,6 +54,21 @@ const router = createRouter({
       path: '/search',
       name: 'search',
       component: SearchView, // Route for the search functionality view.
+    },
+    {
+      path: '/research',
+      name: 'research',
+      component: ResearchView, // Route for the deep research functionality.
+    },
+    {
+      path: '/llmstxt',
+      name: 'llmstxt',
+      component: LlmsTxtView, // Route for the LLMs.txt generation view.
+    },
+    {
+      path: '/billing',
+      name: 'billing',
+      component: BillingView, // Route for the billing and credit usage view.
     },
     {
       path: '/about',

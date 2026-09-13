@@ -236,6 +236,26 @@
           {{ loading ? 'Running…' : 'Extract' }}
         </button>
       </form>
+
+      <!-- Resume: /v2/extract jobs are addressable by id, so a result produced
+           in an earlier session can be pulled back without re-running (and
+           re-paying for) the extraction. Kept outside the form so pressing
+           Enter in the field does not submit a new extraction. -->
+      <div class="form-group resume-group">
+        <label for="resume-id-input">Resume by Job ID</label>
+        <small class="hint">Fetch the result of an extract job submitted earlier.</small>
+        <div class="resume-row">
+          <input id="resume-id-input" v-model="resumeId" type="text" placeholder="Extract job ID" />
+          <button
+            type="button"
+            class="action-button"
+            :disabled="loading || !resumeId.trim()"
+            @click="resumeExtraction"
+          >
+            Fetch Result
+          </button>
+        </div>
+      </div>
     </template>
 
     <!-- ── RESPONSE actions (download button) ──────────────── -->
@@ -385,6 +405,8 @@ const scrapeOptions = ref({
 
 /** Whether the "Scrape Options" fieldset is collapsed, matching ScrapeView's pattern. */
 const isScrapeOptionsCollapsed = ref(true);
+
+const resumeId = ref(''); // Job ID typed by the user to resume a previous extract job.
 
 const headersString = ref(''); // Stores the HTTP headers JSON string provided by the user.
 const headersError = ref<string | null>(null); // Stores error messages related to headers JSON parsing.
@@ -651,6 +673,61 @@ const runExtraction = async (): Promise<void> => {
 };
 
 /**
+ * Fetch the result of a previously submitted extract job by its job ID.
+ *
+ * Mirrors `runExtraction`'s state handling so the response pane behaves
+ * identically whether the data came from a fresh run or from a resumed job:
+ * the full response is kept for the invalid-URLs strip and the Sources tab,
+ * and `result` only ever holds the `data` payload.
+ *
+ * A job that is still processing is reported back to the user rather than
+ * treated as a result, since /v2/extract returns no `data` until it finishes.
+ *
+ * @returns A promise that resolves once the status fetch and the state update
+ * are complete.
+ */
+const resumeExtraction = async (): Promise<void> => {
+  const id = resumeId.value.trim();
+  if (!id) {
+    error.value = 'Please enter an extract job ID.';
+    return;
+  }
+
+  try {
+    loading.value = true;
+    error.value = '';
+    result.value = null;
+    fullResponse.value = null;
+    durationMs.value = null;
+
+    const t0 = performance.now();
+    const response = await api.extraction.getExtractStatus(id);
+    durationMs.value = performance.now() - t0;
+    const respData = response.data;
+    // Keep the full response regardless of outcome so invalidURLs and sources
+    // stay visible even when the job itself ended in an error state.
+    fullResponse.value = respData;
+
+    if (respData.status === 'processing') {
+      error.value = 'Job is still processing. Try again in a moment.';
+    } else if (respData.status === 'failed' || respData.status === 'cancelled') {
+      throw new Error(respData.error || `Extract job ${respData.status}`);
+    } else if (respData.data !== undefined && respData.data !== null) {
+      // Either an explicitly completed job, or an older response shape that
+      // carries data without a status field.
+      result.value = respData.data as FirecrawlExtractResponse['data'];
+    } else {
+      throw new Error(respData.error || 'No data returned for this job ID.');
+    }
+  } catch (err: any) {
+    error.value = err?.message || 'Request failed';
+    result.value = null;
+  } finally {
+    loading.value = false;
+  }
+};
+
+/**
  * Download the JSON result to a file.
  */
 const downloadResult = (): void => {
@@ -902,6 +979,65 @@ const downloadResult = (): void => {
 .run-button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* ── Resume by job ID ─────────────────────────────────────────── */
+
+/*
+ * Separated from the form above by a hairline rule: resuming a job is a
+ * distinct entry point, not another field of the extraction request.
+ */
+.resume-group {
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.resume-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Job IDs are opaque tokens, so the field gets the same mono treatment as
+   the JSON textareas above it. */
+.resume-row input[type='text'] {
+  flex: 1;
+  min-width: 0;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+  background: var(--color-background-soft);
+  color: var(--color-text);
+  box-sizing: border-box;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.resume-row input[type='text']:focus {
+  outline: none;
+  border-color: var(--violet-500);
+  box-shadow: var(--shadow-ring);
+}
+
+.resume-row .action-button {
+  flex-shrink: 0;
+}
+
+.resume-row .action-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Keep the disabled button visually inert instead of lighting up on hover. */
+.resume-row .action-button:disabled:hover {
+  border-color: var(--glass-border);
+  color: var(--color-heading);
+  background: var(--glass-fill);
+  box-shadow: none;
 }
 
 /* ── Response-actions Download button ─────────────────────────── */
