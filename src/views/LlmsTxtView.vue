@@ -31,6 +31,11 @@
     <!-- Status while the job is processing -->
     <div v-if="jobId && generationStatus === 'processing'" class="status-section">
       <p class="generating-status">Generating… (Job ID: {{ jobId }})</p>
+      <!-- Explicit downgrade notice: self-hosted installs only serve the v1 endpoint -->
+      <p v-if="apiVersion && apiVersion !== 'v2'" class="api-version-notice">
+        Served by the <code>/{{ apiVersion }}</code> endpoint. This Firecrawl install does not
+        expose <code>/v2</code> for this feature.
+      </p>
     </div>
 
     <!-- Failed state -->
@@ -73,7 +78,7 @@
 
 <script setup lang="ts">
 import { ref, inject, onUnmounted } from 'vue';
-import type { FirecrawlLlmsTxtApi, LlmsTxtStatus } from '@/services/firecrawl';
+import type { FirecrawlApiVersion, FirecrawlLlmsTxtApi, LlmsTxtStatus } from '@/services/firecrawl';
 
 /**
  * LlmsTxtView Component
@@ -114,6 +119,8 @@ const llmstxt = ref('');
 const llmsfulltxt = ref('');
 /** Whether the collapsible full-text block is expanded. */
 const fullTextExpanded = ref(false);
+/** API version the connected Firecrawl instance actually served this job on. */
+const apiVersion = ref<FirecrawlApiVersion | null>(null);
 
 /** Polling interval handle. */
 let intervalId: ReturnType<typeof setInterval> | null = null;
@@ -140,6 +147,7 @@ function pollStatus(id: string): void {
       const response = await api.llmsTxt!.getLlmsTxtStatus(id);
       const data = response.data;
       generationStatus.value = data.status;
+      apiVersion.value = data.apiVersion;
 
       if (data.status === 'completed') {
         llmstxt.value = data.llmstxt;
@@ -182,6 +190,7 @@ async function handleSubmit(): Promise<void> {
       showFullText: showFullText.value,
     });
     jobId.value = response.data.id;
+    apiVersion.value = response.data.apiVersion;
     generationStatus.value = 'processing';
     pollStatus(response.data.id);
   } catch (err: unknown) {
@@ -375,5 +384,16 @@ input[type='number'] {
 .error {
   color: #d9534f;
   margin-top: 0.75rem;
+}
+
+.api-version-notice {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--color-text-soft, #6b7280);
+}
+
+.api-version-notice code {
+  font-family: inherit;
+  font-weight: 600;
 }
 </style>
