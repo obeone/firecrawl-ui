@@ -92,6 +92,11 @@
       <p class="progress-line">
         Depth {{ currentDepth }}/{{ maxDepthReported }} &middot; {{ totalUrls }} URLs visited
       </p>
+      <!-- Explicit downgrade notice: self-hosted installs only serve the v1 endpoint -->
+      <p v-if="apiVersion && apiVersion !== 'v2'" class="api-version-notice">
+        Served by the <code>/{{ apiVersion }}</code> endpoint. This Firecrawl install does not
+        expose <code>/v2</code> for this feature.
+      </p>
 
       <div v-if="activities.length" class="activities">
         <h4>Live Activity</h4>
@@ -179,6 +184,7 @@
 <script setup lang="ts">
 import { ref, computed, inject, onUnmounted } from 'vue';
 import type {
+  FirecrawlApiVersion,
   FirecrawlResearchApi,
   DeepResearchStatus,
   ResearchActivity,
@@ -248,6 +254,8 @@ const finalAnalysis = ref('');
 const researchJson = ref<Record<string, unknown> | null>(null);
 /** Error message reported by the server on failure. */
 const researchError = ref<string | null>(null);
+/** API version the connected Firecrawl instance actually served this job on. */
+const apiVersion = ref<FirecrawlApiVersion | null>(null);
 
 /** Polling interval handle. */
 let intervalId: ReturnType<typeof setInterval> | null = null;
@@ -278,6 +286,7 @@ function stopPolling(): void {
  */
 function applyStatus(data: DeepResearchStatus): void {
   jobStatus.value = data.status;
+  apiVersion.value = data.apiVersion;
   currentDepth.value = data.currentDepth;
   maxDepthReported.value = data.maxDepth;
   totalUrls.value = data.totalUrls;
@@ -431,6 +440,7 @@ async function handleSubmit(): Promise<void> {
   try {
     const response = await api.research!.startDeepResearch(payload);
     jobId.value = response.data.id;
+    apiVersion.value = response.data.apiVersion;
     jobStatus.value = 'processing';
     pollStatus(response.data.id);
   } catch (err: unknown) {
@@ -714,5 +724,16 @@ a.source-title:hover {
 .error {
   color: #d9534f;
   margin-top: 0.75rem;
+}
+
+.api-version-notice {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--color-text-soft, #6b7280);
+}
+
+.api-version-notice code {
+  font-family: inherit;
+  font-weight: 600;
 }
 </style>
