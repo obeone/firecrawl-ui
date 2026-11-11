@@ -1,7 +1,6 @@
 import axios, { AxiosError, type AxiosInstance } from 'axios';
 import { FirecrawlApiError } from '../utils/errors';
 import { normalizeMapLinks, type MapLink } from '../utils/mapLinks';
-import { pollJob, isTerminalStatus } from '../utils/polling';
 import type {
   V2BatchScrapeStarted,
   V2BatchScrapeStatus,
@@ -13,8 +12,6 @@ import type {
   V2CrawlStatus,
   V2CreditUsageResponse,
   V2Document,
-  V2ExtractStarted,
-  V2ExtractStatus,
   V2FormatEntry,
   V2MapRequest,
   V2MapResponse,
@@ -64,18 +61,6 @@ interface CrawlJob {
   next?: string | null;
   data: Document[];
 }
-
-/**
- * Extract response used by the UI: the start response (`id`, `invalidURLs`)
- * merged with the status response (`status`, `data`, `expiresAt`,
- * `tokensUsed`), plus the fields the API returns but the spec omits.
- */
-export type FirecrawlExtractResponse = V2ExtractStarted &
-  V2ExtractStatus & {
-    error?: string;
-    warning?: string;
-    sources?: Record<string, unknown>;
-  };
 
 /**
  * Legacy-shaped response wrapper used by the existing Vue views.
@@ -182,14 +167,6 @@ export interface FirecrawlBatchScrapingApi {
   getBatchScrapeResults(id: string): Promise<WrappedResponse<BatchScrapeStatusResponse>>;
   cancelBatchScrape(id: string): Promise<WrappedResponse<{ message: string }>>;
   getBatchScrapeErrors(id: string): Promise<WrappedResponse<CrawlErrorsReport>>;
-}
-
-/**
- * Legacy-compatible extraction client.
- */
-export interface FirecrawlExtractionApi {
-  extractData(payload: Record<string, unknown>): Promise<WrappedResponse<FirecrawlExtractResponse>>;
-  getExtractStatus(id: string): Promise<WrappedResponse<FirecrawlExtractResponse>>;
 }
 
 /**
@@ -379,7 +356,6 @@ export interface FirecrawlApiClients {
   billing: FirecrawlBillingApi;
   batchScraping: FirecrawlBatchScrapingApi;
   crawling: FirecrawlCrawlingApi;
-  extraction: FirecrawlExtractionApi;
   llmsTxt: FirecrawlLlmsTxtApi;
   mapping: FirecrawlMappingApi;
   research: FirecrawlResearchApi;
@@ -1213,43 +1189,6 @@ function toCrawlRequest(payload: Record<string, unknown>): {
   return { url, options };
 }
 
-/** Delay between two extract status checks, in milliseconds. */
-const EXTRACT_POLL_INTERVAL_MS = 1000;
-/** How long the UI waits for an extract job before handing back its ID, in milliseconds. */
-const EXTRACT_POLL_TIMEOUT_MS = 120_000;
-
-/**
- * Poll the extract endpoint until the job is complete.
- *
- * @param http - The configured Axios client.
- * @param initialResponse - The first extract response.
- * @returns The final extract response.
- * @throws {PollTimeoutError} When the job is still running after the wait limit.
- */
-async function waitForExtract(
-  http: AxiosInstance,
-  initialResponse: FirecrawlExtractResponse,
-): Promise<FirecrawlExtractResponse> {
-  // When the API answers synchronously the data is already present and there is
-  // no job to poll. Otherwise the async POST only returns { success, id } with
-  // no `status` field on v2, so a missing status still means "keep polling".
-  if (!initialResponse.id || initialResponse.data !== undefined) {
-    return initialResponse;
-  }
-
-  // Bound the wait (~2 minutes) so a job that never settles cannot hang the
-  // UI; running out raises a PollTimeoutError, not a server failure.
-  const jobId = initialResponse.id;
-  const handle = pollJob({
-    request: async () => (await http.get<FirecrawlExtractResponse>(`/v2/extract/${jobId}`)).data,
-    isSettled: (value) => isTerminalStatus(value.status),
-    intervalMs: EXTRACT_POLL_INTERVAL_MS,
-    timeoutMs: EXTRACT_POLL_TIMEOUT_MS,
-    jobId,
-  });
-  return (await handle.result) as FirecrawlExtractResponse;
-}
-
 /**
  * Raw `GET /v2/crawl/{id}` response.
  */
@@ -1598,34 +1537,6 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
           };
         } catch (error) {
           throw formatApiError(error, 'Failed to fetch batch scrape errors');
-        }
-      },
-    },
-    extraction: {
-      async extractData(payload) {
-        try {
-          const response = await http.post<V2ExtractStarted & FirecrawlExtractResponse>(
-            '/v2/extract',
-            payload,
-          );
-          const finalResponse = await waitForExtract(http, response.data);
-
-          return {
-            data: finalResponse,
-          };
-        } catch (error) {
-          throw formatApiError(error, 'Extract request failed');
-        }
-      },
-      async getExtractStatus(id) {
-        try {
-          const response = await http.get<FirecrawlExtractResponse>(`/v2/extract/${id}`);
-
-          return {
-            data: response.data,
-          };
-        } catch (error) {
-          throw formatApiError(error, 'Failed to fetch extract status');
         }
       },
     },

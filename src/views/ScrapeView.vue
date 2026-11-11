@@ -241,8 +241,8 @@
         >
           <legend>JSON Format (Structured Extraction) †</legend>
           <small class="fieldset-hint">
-            Replaces the deprecated /v2/extract endpoint. Provide a prompt, a JSON schema, or both
-            to extract structured data with an LLM.
+            Replaces the deprecated Extract endpoint. Provide a prompt, a JSON schema, or both to
+            extract structured data with an LLM.
           </small>
           <div class="form-group">
             <label for="jsonPrompt">Prompt:</label>

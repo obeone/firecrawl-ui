@@ -34,7 +34,7 @@ This is a Vue 3 + TypeScript + Vite SPA that provides a UI for the Firecrawl API
 
 ### API Adapter (`src/services/firecrawl.ts`)
 
-Hand-written adapter layer that targets the Firecrawl **API v2** (`/v2/*` endpoints). `createFirecrawlApiClients()` builds a set of legacy-compatible clients (`crawling`, `extraction`, `mapping`, `scraping`, `search`) that translate the payloads the views build into v2 requests and normalize v2 responses back into the shapes the views expect. The authoritative reference is the online v2 API documentation at <https://docs.firecrawl.dev/api-reference/v2-introduction>.
+Hand-written adapter layer that targets the Firecrawl **API v2** (`/v2/*` endpoints). `createFirecrawlApiClients()` builds a set of legacy-compatible clients (`crawling`, `mapping`, `scraping`, `search`, …) that translate the payloads the views build into v2 requests and normalize v2 responses back into the shapes the views expect. The authoritative reference is the online v2 API documentation at <https://docs.firecrawl.dev/api-reference/v2-introduction>.
 
 ### API types (`src/types/`)
 
@@ -42,7 +42,7 @@ Hand-written adapter layer that targets the Firecrawl **API v2** (`/v2/*` endpoi
 
 ### Job polling (`src/composables/useJobPoller.ts`)
 
-Every view that follows an asynchronous job (crawl, batch scrape, deep research, LLMs.txt) polls through `useJobPoller()` (one job) or `useKeyedJobPoller()` (several jobs, keyed by ID), built on `pollJob()` in `src/utils/polling.ts`; the extract adapter calls `pollJob()` directly. Rules: one request in flight at a time, never `setInterval`; `completed`, `failed` and `cancelled` all end the loop; a failed status request is reported as `unavailable`, never as a failed job; a local timeout raises `PollTimeoutError`, distinct from a server failure. Loops stop on their own when the view is destroyed and cannot be started afterwards.
+Every view that follows an asynchronous job (crawl, batch scrape, deep research, LLMs.txt) polls through `useJobPoller()` (one job) or `useKeyedJobPoller()` (several jobs, keyed by ID), built on `pollJob()` in `src/utils/polling.ts`. Rules: one request in flight at a time, never `setInterval`; `completed`, `failed` and `cancelled` all end the loop; a failed status request is reported as `unavailable`, never as a failed job; a local timeout raises `PollTimeoutError`, distinct from a server failure. Loops stop on their own when the view is destroyed and cannot be started afterwards.
 
 ### API Configuration (`src/config/api.ts`)
 
