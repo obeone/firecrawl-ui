@@ -51,7 +51,7 @@
 
         <div class="form-group">
           <label for="limit">Limit</label>
-          <input id="limit" v-model.number="limit" type="number" min="1" max="30000" />
+          <input id="limit" v-model.number="limit" type="number" min="1" max="100000" />
         </div>
 
         <div class="form-group">
@@ -168,10 +168,10 @@ const sitemapMode = ref<'include' | 'skip' | 'only'>('include');
 
 /**
  * Reactive variable to control whether subdomains of the website should be included in the mapping.
- * Defaults to `false`.
+ * Defaults to `true`, like the v2 API.
  * @type {Ref<boolean>}
  */
-const includeSubdomains = ref(false);
+const includeSubdomains = ref(true);
 
 /**
  * Reactive variable for the maximum number of links to return.

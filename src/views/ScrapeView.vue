@@ -38,28 +38,6 @@
           <small>Select one or more formats.</small>
         </div>
 
-        <!-- Change Tracking Options (conditional) -->
-        <div v-if="formData.scrapeOptions.formats.includes('changeTracking')" class="form-group">
-          <label for="changeTrackingThreshold">Change Threshold (%):</label>
-          <input
-            id="changeTrackingThreshold"
-            v-model.number="formData.changeTrackingOptions.threshold"
-            type="number"
-            min="0"
-            max="100"
-          />
-          <small>Minimum percentage change to trigger tracking.</small>
-
-          <label for="changeTrackingFrequency">Check Frequency (minutes):</label>
-          <input
-            id="changeTrackingFrequency"
-            v-model.number="formData.changeTrackingOptions.frequency"
-            type="number"
-            min="1"
-          />
-          <small>Frequency to check for changes.</small>
-        </div>
-
         <fieldset class="form-group options-fieldset">
           <legend
             class="collapsible-header"
@@ -142,9 +120,11 @@
                   id="timeout"
                   v-model.number="formData.pageOptions.timeout"
                   type="number"
-                  min="0"
+                  min="1000"
+                  max="300000"
+                  placeholder="60000"
                 />
-                <small>Page request timeout (default: 30000).</small>
+                <small>Page request timeout, 1000 to 300000 (server default: 60000).</small>
               </div>
               <div class="form-group">
                 <label for="proxy">Proxy *:</label>
@@ -175,7 +155,7 @@
               </label>
               <label class="checkbox-label">
                 <input v-model="formData.pageOptions.parsePDF" type="checkbox" />
-                Parse PDF Files
+                Parse PDF and Image Files (unchecked: PDF returned as base64)
               </label>
               <label class="checkbox-label">
                 <input v-model="formData.pageOptions.storeInCache" type="checkbox" />
@@ -206,25 +186,18 @@
               <small>Enter HTTP headers as JSON object.</small>
             </div>
             <div class="form-group">
-              <label for="action">HTTP Action:</label>
-              <select id="action" v-model="formData.pageOptions.action">
-                <option value="GET">GET</option>
-                <option value="POST">POST</option>
-                <option value="PUT">PUT</option>
-                <option value="DELETE">DELETE</option>
-                <option value="PATCH">PATCH</option>
-              </select>
-              <small>Select HTTP method for the request.</small>
-            </div>
-            <div class="form-group">
               <label for="location">Location *:</label>
-              <select id="location" v-model="formData.pageOptions.location">
-                <option value="">Auto</option>
-                <option value="US">US</option>
-                <option value="EU">EU</option>
-                <option value="ASIA">ASIA</option>
-              </select>
-              <small>Select request location.</small>
+              <input
+                id="location"
+                v-model="formData.pageOptions.location"
+                type="text"
+                maxlength="2"
+                placeholder="US"
+              />
+              <div v-if="locationError" class="error-message">{{ locationError }}</div>
+              <small
+                >Two-letter ISO country code (e.g. US, DE, JP). Empty: server default (US).</small
+              >
             </div>
             <div class="form-group">
               <label for="languages">Languages (comma separated) *:</label>
@@ -398,6 +371,7 @@ import { defineComponent, ref, watch, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useApi } from '../plugins/api';
 import { getErrorMessage } from '@/utils/errors';
+import { checkCountryCode, firstFormError } from '@/utils/formValidation';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
@@ -419,15 +393,14 @@ type ScrapeResult = {
  * @property {boolean} [removeBase64Images] - Remove Base64 encoded images.
  * @property {number} [maxAge] - Use cached page if younger than this age in milliseconds.
  * @property {number} [minAge] - Only return cached data older than this age in milliseconds.
- * @property {boolean} [parsePDF] - Parse PDF files instead of returning base64.
+ * @property {boolean} [parsePDF] - Parse PDF and image files; false returns PDFs as base64.
  * @property {boolean} [storeInCache] - Store the page in Firecrawl cache.
  * @property {boolean} [lockdown] - Enable lockdown mode for the request.
  * @property {boolean} [redactPII] - Redact personally identifiable information from the output.
  * @property {boolean} [zeroDataRetention] - Disable data retention for the request.
  * @property {'basic' | 'stealth' | 'enhanced' | 'auto' | ''} [proxy] - Proxy type for the request.
  * @property {Record<string, string>} [headers] - HTTP headers as a JSON object.
- * @property {string} [action] - HTTP method for the request (e.g., 'GET', 'POST').
- * @property {string} [location] - Request location (e.g., 'US', 'EU', 'ASIA').
+ * @property {string} [location] - ISO 3166-1 alpha-2 country code (e.g., 'US', 'DE').
  * @property {string} [languages] - Comma-separated preferred languages for the request.
  * @property {PageAction[]} actions - Actions to perform on the page prior to scraping.
  */
@@ -447,7 +420,6 @@ interface FormDataPageOptions {
   zeroDataRetention?: boolean;
   proxy?: 'basic' | 'stealth' | 'enhanced' | 'auto' | '';
   headers?: Record<string, string>;
-  action?: string;
   location?: string;
   languages?: string;
   actions: PageAction[];
@@ -496,29 +468,17 @@ interface FormDataAttributesOptions {
 }
 
 /**
- * @typedef {object} FormDataChangeTrackingOptions
- * @property {number} threshold - Minimum percentage change to trigger tracking.
- * @property {number} frequency - Frequency in minutes to check for changes.
- */
-interface FormDataChangeTrackingOptions {
-  threshold: number;
-  frequency: number;
-}
-
-/**
  * @typedef {object} FormData
  * @property {string} url - The URL to scrape.
  * @property {FormDataPageOptions} pageOptions - Options related to page loading and network requests.
  * @property {FormDataScrapeOptions} scrapeOptions - Options related to content scraping.
  * @property {FormDataAttributesOptions} [attributesOptions] - Options for attribute extraction when 'attributes' format is selected.
- * @property {FormDataChangeTrackingOptions} changeTrackingOptions - Options for change tracking.
  */
 interface FormData {
   url: string;
   pageOptions: FormDataPageOptions;
   scrapeOptions: FormDataScrapeOptions;
   attributesOptions?: FormDataAttributesOptions;
-  changeTrackingOptions: FormDataChangeTrackingOptions;
 }
 
 /**
@@ -566,7 +526,6 @@ export default defineComponent({
         zeroDataRetention: false,
         proxy: '',
         headers: {},
-        action: 'GET', // Default HTTP action
         location: '',
         languages: '',
         actions: [],
@@ -580,10 +539,6 @@ export default defineComponent({
       },
       attributesOptions: {
         selectors: [],
-      },
-      changeTrackingOptions: {
-        threshold: 10,
-        frequency: 60,
       },
     });
 
@@ -764,6 +719,14 @@ export default defineComponent({
     });
 
     /**
+     * Validation message for the location country field, empty when valid.
+     * @type {ComputedRef<string>}
+     */
+    const locationError = computed(
+      () => checkCountryCode(formData.value.pageOptions.location).error ?? '',
+    );
+
+    /**
      * Validates if a given string is a well-formed URL.
      * @param {string} url - The URL string to validate.
      * @returns {boolean} True if the URL is valid, false otherwise.
@@ -797,15 +760,28 @@ export default defineComponent({
         return;
       }
 
+      // Never send a request while a JSON or location field is invalid: the
+      // last valid value would otherwise be submitted without any warning.
+      const formats = formData.value.scrapeOptions.formats;
+      const fieldError = firstFormError([
+        headersError.value,
+        formats.includes('json') ? jsonFormatSchemaError.value : '',
+        formats.includes('attributes') ? attributesOptionsError.value : '',
+        locationError.value,
+      ]);
+      if (fieldError) {
+        error.value = `Please fix the form before submitting: ${fieldError}`;
+        return;
+      }
+
       // Build the location object from the selected country and optional languages.
       const languages = (formData.value.pageOptions.languages ?? '')
         .split(',')
         .map((lang) => lang.trim())
         .filter((lang) => lang !== '');
+      const country = checkCountryCode(formData.value.pageOptions.location).code;
       const locationPayload: { country?: string; languages?: string[] } = {
-        ...(formData.value.pageOptions.location && formData.value.pageOptions.location !== ''
-          ? { country: formData.value.pageOptions.location }
-          : {}),
+        ...(country ? { country } : {}),
         ...(languages.length > 0 ? { languages } : {}),
       };
 
@@ -828,8 +804,7 @@ export default defineComponent({
           skipTlsVerification: true,
         }),
         ...(formData.value.pageOptions.timeout !== undefined &&
-          formData.value.pageOptions.timeout > 0 &&
-          formData.value.pageOptions.timeout !== 30000 && {
+          formData.value.pageOptions.timeout > 0 && {
             timeout: formData.value.pageOptions.timeout,
           }),
         ...(formData.value.pageOptions.blockAds === false && {
@@ -900,12 +875,6 @@ export default defineComponent({
           formData.value.attributesOptions.selectors.length > 0 && {
             attributesOptions: formData.value.attributesOptions,
           }),
-        ...(formData.value.scrapeOptions.formats.includes('changeTracking') && {
-          changeTrackingOptions: {
-            threshold: formData.value.changeTrackingOptions?.threshold ?? 10,
-            frequency: formData.value.changeTrackingOptions?.frequency ?? 60,
-          },
-        }),
       };
 
       // Record the request start time to compute elapsed duration on resolve.
@@ -1134,6 +1103,7 @@ export default defineComponent({
       loading,
       headersJson,
       headersError,
+      locationError,
       error,
       result,
       handleSubmit,

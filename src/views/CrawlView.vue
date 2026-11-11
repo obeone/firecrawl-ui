@@ -148,8 +148,8 @@
                 Allow Subdomains
               </label>
               <label class="checkbox-label">
-                <input v-model="formData.crawlerOptions.navigateBacklinks" type="checkbox" />
-                Navigate Backlinks
+                <input v-model="formData.crawlerOptions.crawlEntireDomain" type="checkbox" />
+                Crawl Entire Domain (follow sibling and parent links)
               </label>
             </div>
           </div>
@@ -217,8 +217,11 @@
                 id="timeout"
                 v-model.number="formData.scrapeOptions.timeout"
                 type="number"
-                min="0"
+                min="1000"
+                max="300000"
+                placeholder="60000"
               />
+              <small>Per-page timeout, 1000 to 300000 (server default: 60000).</small>
             </div>
             <label class="checkbox-label">
               <input v-model="formData.scrapeOptions.skipTlsVerification" type="checkbox" />
@@ -244,8 +247,12 @@
                 id="locationCountry"
                 v-model="formData.scrapeOptions.location.country"
                 type="text"
+                maxlength="2"
                 placeholder="US"
               />
+              <div v-if="locationCountryError" class="error-message">
+                {{ locationCountryError }}
+              </div>
             </div>
             <div class="form-group">
               <label for="locationLanguages">Location Languages *:</label>
@@ -263,13 +270,6 @@
               <div v-if="jsonOptionsSchemaError" class="error-message">
                 {{ jsonOptionsSchemaError }}
               </div>
-            </div>
-            <div class="form-group">
-              <label for="jsonSystemPrompt">JSON System Prompt †:</label>
-              <textarea
-                id="jsonSystemPrompt"
-                v-model="formData.scrapeOptions.jsonOptions.systemPrompt"
-              ></textarea>
             </div>
             <div class="form-group">
               <label for="jsonPrompt">JSON Prompt †:</label>
@@ -591,6 +591,7 @@ import CodeBlock from '../components/playground/CodeBlock.vue';
 import { type ActiveCrawl, type CrawlError } from '../services/firecrawl';
 import { useApi } from '../plugins/api';
 import { getErrorMessage } from '@/utils/errors';
+import { checkCountryCode } from '@/utils/formValidation';
 
 /**
  * Interface for Crawler Options section of the form.
@@ -601,14 +602,13 @@ interface CrawlerOptions {
   maxDepth?: number;
   maxDiscoveryDepth?: number;
   sitemap?: 'include' | 'skip' | 'only';
-  ignoreSitemap?: boolean;
   ignoreQueryParameters?: boolean;
   limit?: number;
   delay?: number;
   maxConcurrency?: number;
   allowExternalLinks?: boolean;
   allowSubdomains?: boolean;
-  navigateBacklinks?: boolean;
+  crawlEntireDomain?: boolean;
 }
 
 /**
@@ -629,7 +629,6 @@ interface ScrapeOptions {
   timeout?: number;
   jsonOptions: {
     schema?: object;
-    systemPrompt?: string;
     prompt?: string;
   };
   location: {
@@ -717,14 +716,13 @@ export default defineComponent({
         maxDepth: undefined,
         maxDiscoveryDepth: undefined,
         sitemap: 'include',
-        ignoreSitemap: false,
         ignoreQueryParameters: false,
         limit: undefined,
         delay: undefined,
         maxConcurrency: undefined,
         allowExternalLinks: false,
         allowSubdomains: false,
-        navigateBacklinks: false,
+        crawlEntireDomain: false,
       },
       scrapeOptions: {
         formats: ['markdown'],
@@ -777,6 +775,10 @@ export default defineComponent({
     const webhookHeadersError = ref('');
     const webhookMetadataError = ref('');
     const jsonOptionsSchemaError = ref('');
+    /** Validation message for the location country field, empty when valid. */
+    const locationCountryError = computed(
+      () => checkCountryCode(formData.value.scrapeOptions.location?.country).error ?? '',
+    );
     const changeTrackingSchemaError = ref('');
 
     // State for collapsible sections
@@ -1438,7 +1440,8 @@ export default defineComponent({
         webhookHeadersError.value ||
         webhookMetadataError.value ||
         jsonOptionsSchemaError.value ||
-        changeTrackingSchemaError.value
+        changeTrackingSchemaError.value ||
+        locationCountryError.value
       ) {
         error.value = 'Please fix the errors above before submitting';
         return;
@@ -1467,12 +1470,11 @@ export default defineComponent({
       if (crawler.maxDiscoveryDepth !== undefined)
         payload.maxDiscoveryDepth = crawler.maxDiscoveryDepth;
       if (crawler.sitemap) payload.sitemap = crawler.sitemap;
-      if (crawler.ignoreSitemap) payload.ignoreSitemap = true;
       if (crawler.ignoreQueryParameters) payload.ignoreQueryParameters = true;
       if (crawler.limit !== undefined) payload.limit = crawler.limit;
       if (crawler.delay !== undefined) payload.delay = crawler.delay;
       if (crawler.maxConcurrency !== undefined) payload.maxConcurrency = crawler.maxConcurrency;
-      if (crawler.navigateBacklinks) payload.allowBackwardLinks = true;
+      if (crawler.crawlEntireDomain) payload.crawlEntireDomain = true;
       if (crawler.allowExternalLinks) payload.allowExternalLinks = true;
       if (crawler.allowSubdomains) payload.allowSubdomains = true;
 
@@ -1496,14 +1498,13 @@ export default defineComponent({
       if (scrape.jsonOptions) {
         const jsonOpts: Record<string, unknown> = {};
         if (scrape.jsonOptions.schema) jsonOpts.schema = scrape.jsonOptions.schema;
-        if (scrape.jsonOptions.systemPrompt)
-          jsonOpts.systemPrompt = scrape.jsonOptions.systemPrompt;
         if (scrape.jsonOptions.prompt) jsonOpts.prompt = scrape.jsonOptions.prompt;
         if (Object.keys(jsonOpts).length > 0) scrapePayload.jsonOptions = jsonOpts;
       }
       if (scrape.location) {
         const loc: Record<string, unknown> = {};
-        if (scrape.location.country) loc.country = scrape.location.country;
+        const country = checkCountryCode(scrape.location.country).code;
+        if (country) loc.country = country;
         if (scrape.location.languages && scrape.location.languages.length > 0)
           loc.languages = scrape.location.languages;
         if (Object.keys(loc).length > 0) scrapePayload.location = loc;
@@ -1865,6 +1866,7 @@ export default defineComponent({
       webhookHeadersError,
       webhookMetadataError,
       jsonOptionsSchemaError,
+      locationCountryError,
       changeTrackingSchemaError,
       parseIncludeTags,
       parseExcludeTags,
