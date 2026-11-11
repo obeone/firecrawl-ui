@@ -135,8 +135,12 @@ Precedence is `localStorage` > `VITE_*` env > default. Any trailing `/v1` or
 | `docker build -t firecrawl-ui .`       | Build the image locally      |
 | `docker run -p 8080:8080 firecrawl-ui` | Serve via Nginx on port 8080 |
 
-The image is a multi-stage build (Node 24, then `nginx-unprivileged`). A custom
+The image is a multi-stage build (Node 26, then `nginx-unprivileged`). A custom
 `nginx.conf` rewrites unknown paths to `index.html` for client-side routing.
+
+Published images (`ghcr.io/obeone/firecrawl-ui`, `obeoneorg/firecrawl-ui`) are
+built only after CI passes. Tags: `latest` follows `main`, `sha-<commit>` pins a
+commit, and a `vX.Y.Z` git tag also publishes `X.Y.Z` and `X.Y`.
 
 ## 🔌 API
 

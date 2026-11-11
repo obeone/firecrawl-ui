@@ -62,7 +62,9 @@ Create a `.env` file in the project root. These are optional — the app also st
 
 ### Docker
 
-Multi-stage build: Node 24 slim for building, `nginxinc/nginx-unprivileged:stable-alpine` for serving. Nginx listens on port 8080. Custom `nginx.conf` routes all unknown paths to `index.html` for client-side routing.
+Multi-stage build: Node 26 slim for building (major version pinned in `.nvmrc`, `package.json` `engines` and the `Dockerfile`), `nginxinc/nginx-unprivileged:stable-alpine` for serving. Nginx listens on port 8080. Custom `nginx.conf` routes all unknown paths to `index.html` for client-side routing.
+
+`.github/workflows/docker.yml` is a reusable workflow called by `ci.yml` after the `node` job: pull requests only build the image (amd64), pushes to `main` and `v*` tags publish it, tagged `latest` (main only), `sha-<commit>` and the semver version.
 
 ## Code Conventions
 
