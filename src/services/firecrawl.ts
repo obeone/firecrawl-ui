@@ -227,6 +227,59 @@ export interface CreditUsage {
  */
 export interface TokenUsage {
   remainingTokens: number | null;
+  planTokens?: number | null;
+  billingPeriodStart?: string | null;
+  billingPeriodEnd?: string | null;
+}
+
+/**
+ * Raw `data` object of `GET /v2/team/credit-usage` and `/v2/team/token-usage`.
+ *
+ * The v2 API answers in camelCase; snake_case keys are still read as a
+ * fallback for older self-hosted deployments.
+ */
+type RawUsage = Record<string, unknown>;
+
+function pickNumber(data: RawUsage, camel: string, snake: string): number | null {
+  const value = data[camel] ?? data[snake];
+  return typeof value === 'number' ? value : null;
+}
+
+function pickString(data: RawUsage, camel: string, snake: string): string | null {
+  const value = data[camel] ?? data[snake];
+  return typeof value === 'string' ? value : null;
+}
+
+/**
+ * Normalize the `data` object of `GET /v2/team/credit-usage`.
+ *
+ * @param data - Raw response `data` object, possibly missing.
+ * @returns Credit usage with `null` for every field the server did not send.
+ */
+export function toCreditUsage(data: RawUsage | null | undefined): CreditUsage {
+  const raw = data ?? {};
+  return {
+    remainingCredits: pickNumber(raw, 'remainingCredits', 'remaining_credits'),
+    planCredits: pickNumber(raw, 'planCredits', 'plan_credits'),
+    billingPeriodStart: pickString(raw, 'billingPeriodStart', 'billing_period_start'),
+    billingPeriodEnd: pickString(raw, 'billingPeriodEnd', 'billing_period_end'),
+  };
+}
+
+/**
+ * Normalize the `data` object of `GET /v2/team/token-usage`.
+ *
+ * @param data - Raw response `data` object, possibly missing.
+ * @returns Token usage with `null` for every field the server did not send.
+ */
+export function toTokenUsage(data: RawUsage | null | undefined): TokenUsage {
+  const raw = data ?? {};
+  return {
+    remainingTokens: pickNumber(raw, 'remainingTokens', 'remaining_tokens'),
+    planTokens: pickNumber(raw, 'planTokens', 'plan_tokens'),
+    billingPeriodStart: pickString(raw, 'billingPeriodStart', 'billing_period_start'),
+    billingPeriodEnd: pickString(raw, 'billingPeriodEnd', 'billing_period_end'),
+  };
 }
 
 /**
@@ -787,46 +840,22 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
     billing: {
       async getCreditUsage() {
         try {
-          const response = await http.get<{
-            success?: boolean;
-            data?: {
-              remaining_credits?: number;
-              plan_credits?: number;
-              billing_period_start?: string | null;
-              billing_period_end?: string | null;
-            };
-          }>('/v2/team/credit-usage');
+          const response = await http.get<{ success?: boolean; data?: RawUsage }>(
+            '/v2/team/credit-usage',
+          );
 
-          const data = response.data.data ?? {};
-
-          return {
-            data: {
-              remainingCredits:
-                typeof data.remaining_credits === 'number' ? data.remaining_credits : null,
-              planCredits: typeof data.plan_credits === 'number' ? data.plan_credits : null,
-              billingPeriodStart: data.billing_period_start ?? null,
-              billingPeriodEnd: data.billing_period_end ?? null,
-            },
-          };
+          return { data: toCreditUsage(response.data.data) };
         } catch (error) {
           throw formatApiError(error, 'Failed to fetch credit usage');
         }
       },
       async getTokenUsage() {
         try {
-          const response = await http.get<{
-            success?: boolean;
-            data?: { remaining_tokens?: number };
-          }>('/v2/team/token-usage');
+          const response = await http.get<{ success?: boolean; data?: RawUsage }>(
+            '/v2/team/token-usage',
+          );
 
-          const data = response.data.data ?? {};
-
-          return {
-            data: {
-              remainingTokens:
-                typeof data.remaining_tokens === 'number' ? data.remaining_tokens : null,
-            },
-          };
+          return { data: toTokenUsage(response.data.data) };
         } catch (error) {
           throw formatApiError(error, 'Failed to fetch token usage');
         }
