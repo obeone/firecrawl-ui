@@ -157,6 +157,10 @@ export interface FirecrawlCrawlingApi {
     payload: Record<string, unknown>,
   ): Promise<WrappedResponse<{ id: string; url: string }>>;
   getCrawlStatus(id: string): Promise<WrappedResponse<LegacyCrawlStatusResponse>>;
+  /**
+   * Fetch a crawl's status and every result page, following `next`.
+   */
+  getCrawlResults(id: string): Promise<WrappedResponse<LegacyCrawlStatusResponse>>;
   cancelCrawl(id: string): Promise<WrappedResponse<{ status: string }>>;
   getCrawlErrors(id: string): Promise<WrappedResponse<CrawlErrorsReport>>;
   getActiveCrawls(): Promise<WrappedResponse<{ crawls: ActiveCrawl[] }>>;
@@ -183,6 +187,10 @@ export interface FirecrawlBatchScrapingApi {
     payload: Record<string, unknown>,
   ): Promise<WrappedResponse<{ id: string; url: string }>>;
   getBatchScrapeStatus(id: string): Promise<WrappedResponse<BatchScrapeStatusResponse>>;
+  /**
+   * Fetch a batch scrape's status and every result page, following `next`.
+   */
+  getBatchScrapeResults(id: string): Promise<WrappedResponse<BatchScrapeStatusResponse>>;
   cancelBatchScrape(id: string): Promise<WrappedResponse<{ message: string }>>;
   getBatchScrapeErrors(id: string): Promise<WrappedResponse<CrawlErrorsReport>>;
 }
@@ -826,6 +834,125 @@ async function waitForExtract(
 }
 
 /**
+ * Raw `GET /v2/crawl/{id}` response.
+ */
+interface RawCrawlStatus extends RawJobPage {
+  success?: boolean;
+  status: CrawlJob['status'];
+  completed?: number;
+  total?: number;
+}
+
+/**
+ * Raw `GET /v2/batch/scrape/{id}` response.
+ */
+interface RawBatchStatus extends RawJobPage {
+  status?: CrawlJob['status'];
+  completed?: number;
+  total?: number;
+  creditsUsed?: number;
+}
+
+function toCrawlStatus(raw: RawCrawlStatus, documents: Document[]): LegacyCrawlStatusResponse {
+  return {
+    status: raw.status,
+    completed: raw.completed ?? 0,
+    total: raw.total ?? 0,
+    next: raw.next ?? null,
+    data: documents.map(toLegacyDocument),
+  };
+}
+
+function toBatchStatus(raw: RawBatchStatus, documents: Document[]): BatchScrapeStatusResponse {
+  return {
+    status: raw.status ?? 'scraping',
+    completed: raw.completed ?? 0,
+    total: raw.total ?? 0,
+    creditsUsed: raw.creditsUsed ?? 0,
+    next: raw.next ?? null,
+    data: documents.map(toLegacyDocument),
+  };
+}
+
+/**
+ * Upper bound on result pages fetched for one job, as a guard against a
+ * server that keeps answering with a `next` link.
+ */
+export const MAX_RESULT_PAGES = 1000;
+
+/**
+ * Turn a `next` link returned by the API into a path on the configured client.
+ *
+ * The request is always rebuilt from the job path the adapter already knows
+ * plus the query string of `next` (e.g. `?skip=10`), and sent through the
+ * authenticated client. The API key therefore only ever goes to the configured
+ * API URL, even when `next` names another host (a proxy-unaware self-hosted
+ * deployment, or a hostile response).
+ *
+ * @param next - The `next` URL from a status response.
+ * @param jobPath - The job's status path, e.g. `/v2/crawl/<id>`.
+ * @returns The relative path to request.
+ * @throws Error when `next` does not point at the same job.
+ */
+export function toNextPagePath(next: string, jobPath: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(next, 'http://relative.invalid');
+  } catch {
+    throw new Error(`Invalid pagination URL: ${next}`);
+  }
+  if (!parsed.pathname.replace(/\/+$/, '').endsWith(jobPath)) {
+    throw new Error(`Unexpected pagination URL: ${next}`);
+  }
+  return `${jobPath}${parsed.search}`;
+}
+
+/**
+ * A raw status page of a crawl or batch scrape job.
+ */
+interface RawJobPage {
+  next?: string | null;
+  data?: Document[];
+}
+
+/**
+ * Follow the `next` links of a job status response and gather every document.
+ *
+ * Paging stops when `next` is absent or a page brings no documents: a job
+ * that is still running, failed or was cancelled keeps returning `next`, so
+ * its absence alone cannot end the loop.
+ *
+ * @param http - The authenticated client bound to the configured API URL.
+ * @param jobPath - The job's status path, e.g. `/v2/crawl/<id>`.
+ * @param first - The first status page, already fetched.
+ * @returns Every document of the job, in page order.
+ */
+async function collectResultPages(
+  http: AxiosInstance,
+  jobPath: string,
+  first: RawJobPage,
+): Promise<Document[]> {
+  const documents = [...(first.data ?? [])];
+  let next = first.next ?? null;
+  let lastCount = first.data?.length ?? 0;
+  let pages = 1;
+
+  while (next && lastCount > 0) {
+    if (pages >= MAX_RESULT_PAGES) {
+      throw new Error(`Stopped after ${MAX_RESULT_PAGES} result pages`);
+    }
+    const response = await http.get<RawJobPage>(toNextPagePath(next, jobPath));
+    const data = response.data.data ?? [];
+    documents.push(...data);
+    lastCount = data.length;
+    next = response.data.next ?? null;
+    pages += 1;
+  }
+
+  return documents;
+}
+
+/**
  * Build a Firecrawl adapter collection for the current configuration.
  *
  * @param apiKey - The Firecrawl API key.
@@ -905,26 +1032,20 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
       },
       async getCrawlStatus(id) {
         try {
-          const response = await http.get<{
-            success: boolean;
-            status: CrawlJob['status'];
-            completed?: number;
-            total?: number;
-            next?: string | null;
-            data?: Document[];
-          }>(`/v2/crawl/${id}`);
-
-          return {
-            data: {
-              status: response.data.status,
-              completed: response.data.completed ?? 0,
-              total: response.data.total ?? 0,
-              next: response.data.next ?? null,
-              data: (response.data.data ?? []).map(toLegacyDocument),
-            },
-          };
+          const response = await http.get<RawCrawlStatus>(`/v2/crawl/${id}`);
+          return { data: toCrawlStatus(response.data, response.data.data ?? []) };
         } catch (error) {
           throw formatApiError(error, 'Failed to fetch crawl status');
+        }
+      },
+      async getCrawlResults(id) {
+        try {
+          const jobPath = `/v2/crawl/${id}`;
+          const response = await http.get<RawCrawlStatus>(jobPath);
+          const documents = await collectResultPages(http, jobPath, response.data);
+          return { data: { ...toCrawlStatus(response.data, documents), next: null } };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch crawl results');
         }
       },
       async cancelCrawl(id) {
@@ -1002,27 +1123,20 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
       },
       async getBatchScrapeStatus(id) {
         try {
-          const response = await http.get<{
-            status?: CrawlJob['status'];
-            completed?: number;
-            total?: number;
-            creditsUsed?: number;
-            next?: string | null;
-            data?: Document[];
-          }>(`/v2/batch/scrape/${id}`);
-
-          return {
-            data: {
-              status: response.data.status ?? 'scraping',
-              completed: response.data.completed ?? 0,
-              total: response.data.total ?? 0,
-              creditsUsed: response.data.creditsUsed ?? 0,
-              next: response.data.next ?? null,
-              data: (response.data.data ?? []).map(toLegacyDocument),
-            },
-          };
+          const response = await http.get<RawBatchStatus>(`/v2/batch/scrape/${id}`);
+          return { data: toBatchStatus(response.data, response.data.data ?? []) };
         } catch (error) {
           throw formatApiError(error, 'Failed to fetch batch scrape status');
+        }
+      },
+      async getBatchScrapeResults(id) {
+        try {
+          const jobPath = `/v2/batch/scrape/${id}`;
+          const response = await http.get<RawBatchStatus>(jobPath);
+          const documents = await collectResultPages(http, jobPath, response.data);
+          return { data: { ...toBatchStatus(response.data, documents), next: null } };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch batch scrape results');
         }
       },
       async cancelBatchScrape(id) {
