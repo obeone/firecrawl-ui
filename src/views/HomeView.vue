@@ -10,6 +10,7 @@
 import { ref } from 'vue';
 import { useRouter, RouterLink } from 'vue-router';
 import { getApiConfig } from '../config/api.js';
+import { isFirecrawlCloud } from '../utils/connection';
 
 const router = useRouter();
 
@@ -25,7 +26,7 @@ const isConfigured = ref<boolean>(
   (() => {
     const cfg = getApiConfig();
     const hasKey = Boolean(cfg.apiKey?.trim());
-    const hasCustomUrl = Boolean(cfg.basePath) && !cfg.basePath.includes('api.firecrawl.dev');
+    const hasCustomUrl = !isFirecrawlCloud(cfg.basePath);
     return hasKey || hasCustomUrl;
   })(),
 );

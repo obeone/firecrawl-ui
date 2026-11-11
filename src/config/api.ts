@@ -6,20 +6,35 @@ import { normalizeFirecrawlBaseUrl } from '../services/firecrawl.js';
  * @returns {string} The base URL from local storage, environment variables or a
  *   default value.
  */
-const getBaseUrl = (): string => {
+const getBaseUrl = (): string => resolveBaseUrl(localStorage.getItem('firecrawl_base_url'));
+
+/**
+ * Resolve the base URL to use when the stored value may be empty.
+ *
+ * @param stored - The value saved in the settings form, possibly empty.
+ * @returns The stored value, else the build-time URL, else Firecrawl Cloud.
+ */
+export function resolveBaseUrl(stored: string | null | undefined): string {
   return normalizeFirecrawlBaseUrl(
-    localStorage.getItem('firecrawl_base_url') ||
-      import.meta.env.VITE_FIRECRAWL_API_BASE_URL ||
-      'https://api.firecrawl.dev',
+    stored?.trim() || import.meta.env.VITE_FIRECRAWL_API_BASE_URL || 'https://api.firecrawl.dev',
   );
-};
+}
+
+/**
+ * Return the API key baked into the bundle at build time.
+ *
+ * @returns The value of `VITE_FIRECRAWL_API_KEY`, or an empty string.
+ */
+export function getBuildTimeApiKey(): string {
+  return import.meta.env.VITE_FIRECRAWL_API_KEY || '';
+}
 
 /**
  * Returns the API key for the Firecrawl API
  * @returns {string} The API key from local storage, environment variables, or empty string
  */
 const getApiKey = (): string => {
-  return localStorage.getItem('firecrawl_api_key') || import.meta.env.VITE_FIRECRAWL_API_KEY || '';
+  return localStorage.getItem('firecrawl_api_key') || getBuildTimeApiKey();
 };
 
 /**
@@ -39,12 +54,30 @@ const apiConfig = {
 export function updateApiConfig(baseUrl?: string, apiKeyValue?: string): void {
   if (typeof baseUrl === 'string') {
     localStorage.setItem('firecrawl_base_url', baseUrl);
-    apiConfig.basePath = normalizeFirecrawlBaseUrl(baseUrl || 'https://api.firecrawl.dev');
+    apiConfig.basePath = resolveBaseUrl(baseUrl);
   }
   if (typeof apiKeyValue === 'string') {
-    localStorage.setItem('firecrawl_api_key', apiKeyValue);
-    apiConfig.apiKey = apiKeyValue;
+    if (apiKeyValue.trim()) {
+      localStorage.setItem('firecrawl_api_key', apiKeyValue.trim());
+      apiConfig.apiKey = apiKeyValue.trim();
+    } else {
+      forgetApiKey();
+    }
   }
+}
+
+/**
+ * Remove the API key saved in this browser.
+ *
+ * The key baked in at build time, if any, cannot be removed from here and
+ * becomes the active key again.
+ *
+ * @returns True when a build-time key is still in use afterwards.
+ */
+export function forgetApiKey(): boolean {
+  localStorage.removeItem('firecrawl_api_key');
+  apiConfig.apiKey = getBuildTimeApiKey();
+  return Boolean(apiConfig.apiKey);
 }
 
 /**

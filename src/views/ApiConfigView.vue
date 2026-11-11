@@ -12,7 +12,9 @@
         </span>
         <div>
           <h1>API Configuration</h1>
-          <p class="settings-sub">A valid API key is required to use Firecrawl.</p>
+          <p class="settings-sub">
+            An API key is required for Firecrawl Cloud; a self-hosted instance may not need one.
+          </p>
         </div>
       </div>
       <ApiKeyInput />
