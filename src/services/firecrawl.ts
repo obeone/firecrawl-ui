@@ -5,19 +5,23 @@ import type {
   V2BatchScrapeStarted,
   V2BatchScrapeStatus,
   V2CrawlErrors,
+  V2Action,
   V2CrawlRequest,
   V2CrawlStarted,
+  V2CrawlWebhook,
   V2CrawlStatus,
   V2CreditUsageResponse,
   V2Document,
   V2ExtractStarted,
   V2ExtractStatus,
+  V2FormatEntry,
   V2MapRequest,
   V2MapResponse,
   V2QueueStatus,
   V2ScrapeOptions,
   V2ScrapeRequest,
   V2SearchRequest,
+  V2SearchSource,
   V2TokenUsageResponse,
 } from '../types/firecrawlApi';
 
@@ -590,6 +594,104 @@ function toLegacySearchResult(result: Record<string, unknown>): Record<string, u
 }
 
 /**
+ * Whether a value is a plain JSON object.
+ *
+ * @param value - The value to check.
+ * @returns `true` for a non-null, non-array object.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Whether a value is one of a fixed list of strings.
+ *
+ * @param value - The value to check.
+ * @param allowed - The accepted values.
+ * @returns `true` when `value` is in `allowed`.
+ */
+function isOneOf<T extends string>(value: unknown, allowed: readonly T[]): value is T {
+  return typeof value === 'string' && (allowed as readonly string[]).includes(value);
+}
+
+/**
+ * Keep a list only when every entry is a string.
+ *
+ * @param value - The value to check.
+ * @returns The list, or `undefined` when it is not an array of strings.
+ */
+function toStringList(value: unknown): string[] | undefined {
+  return Array.isArray(value) && value.every((entry) => typeof entry === 'string')
+    ? value
+    : undefined;
+}
+
+/**
+ * Keep the string-valued entries of an object, as the spec types HTTP headers.
+ *
+ * @param value - The value to convert.
+ * @returns The string entries, or `undefined` when `value` is not an object.
+ */
+function toStringRecord(value: unknown): Record<string, string> | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, string] => typeof entry[1] === 'string',
+    ),
+  );
+}
+
+/**
+ * Formats the adapter sends as a plain string. `satisfies` limits the list to
+ * the plain forms the spec allows; specConformance.test.ts checks it lists
+ * every one of them, so a format added by a spec refresh is not dropped.
+ */
+export const PLAIN_FORMATS = [
+  'markdown',
+  'summary',
+  'html',
+  'rawHtml',
+  'rawBase64',
+  'links',
+  'images',
+  'screenshot',
+  'json',
+  'changeTracking',
+  'branding',
+  'product',
+  'menu',
+  'audio',
+  'video',
+] as const satisfies ReadonlyArray<Extract<V2FormatEntry, string>>;
+
+/** Change-tracking modes of the v2 `changeTracking` format. */
+const CHANGE_TRACKING_MODES = ['git-diff', 'json'] as const satisfies ReadonlyArray<
+  NonNullable<Extract<V2FormatEntry, { type: 'changeTracking' }>['modes']>[number]
+>;
+
+/** Attribute selectors of the v2 `attributes` format. */
+type AttributeSelector = Extract<V2FormatEntry, { type: 'attributes' }>['selectors'][number];
+
+/**
+ * Keep the well-formed entries of an `attributes` selector list.
+ *
+ * @param value - The selector list from the legacy payload.
+ * @returns The `{ selector, attribute }` entries, or `undefined` when `value` is not a list.
+ */
+function toAttributeSelectors(value: unknown): AttributeSelector[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  return value.flatMap((entry): AttributeSelector[] =>
+    isRecord(entry) && typeof entry.selector === 'string' && typeof entry.attribute === 'string'
+      ? [{ selector: entry.selector, attribute: entry.attribute }]
+      : [],
+  );
+}
+
+/**
  * Convert legacy format strings and option blocks to the v2 format structure.
  *
  * @param formats - The format list from the legacy payload.
@@ -599,29 +701,21 @@ function toLegacySearchResult(result: Record<string, unknown>): Record<string, u
 function toV2Formats(
   formats: unknown,
   payload: Record<string, unknown>,
-): Array<string | Record<string, unknown>> | undefined {
+): V2FormatEntry[] | undefined {
   if (!Array.isArray(formats) || formats.length === 0) {
     return undefined;
   }
 
-  const extractOptions =
-    typeof payload.extract === 'object' && payload.extract !== null
-      ? (payload.extract as Record<string, unknown>)
-      : undefined;
-  const jsonOptions =
-    typeof payload.jsonOptions === 'object' && payload.jsonOptions !== null
-      ? (payload.jsonOptions as Record<string, unknown>)
-      : undefined;
-  const changeTrackingOptions =
-    typeof payload.changeTrackingOptions === 'object' && payload.changeTrackingOptions !== null
-      ? (payload.changeTrackingOptions as Record<string, unknown>)
-      : undefined;
-  const attributesOptions =
-    typeof payload.attributesOptions === 'object' && payload.attributesOptions !== null
-      ? (payload.attributesOptions as Record<string, unknown>)
-      : undefined;
+  const extractOptions = isRecord(payload.extract) ? payload.extract : undefined;
+  const jsonOptions = isRecord(payload.jsonOptions) ? payload.jsonOptions : undefined;
+  const changeTrackingOptions = isRecord(payload.changeTrackingOptions)
+    ? payload.changeTrackingOptions
+    : undefined;
+  const attributesOptions = isRecord(payload.attributesOptions)
+    ? payload.attributesOptions
+    : undefined;
 
-  return formats.flatMap((format): Array<string | Record<string, unknown>> => {
+  return formats.flatMap((format): V2FormatEntry[] => {
     if (format === 'screenshot@fullPage') {
       return [{ type: 'screenshot', fullPage: true }];
     }
@@ -632,12 +726,8 @@ function toV2Formats(
         (typeof jsonOptions?.prompt === 'string' && jsonOptions.prompt) ||
         undefined;
       const schema =
-        (typeof extractOptions?.schema === 'object' && extractOptions.schema !== null
-          ? extractOptions.schema
-          : undefined) ||
-        (typeof jsonOptions?.schema === 'object' && jsonOptions.schema !== null
-          ? jsonOptions.schema
-          : undefined);
+        (isRecord(extractOptions?.schema) ? extractOptions.schema : undefined) ||
+        (isRecord(jsonOptions?.schema) ? jsonOptions.schema : undefined);
 
       return [
         {
@@ -653,13 +743,12 @@ function toV2Formats(
         {
           type: 'changeTracking',
           modes: Array.isArray(changeTrackingOptions?.modes)
-            ? changeTrackingOptions.modes
+            ? changeTrackingOptions.modes.filter((mode) => isOneOf(mode, CHANGE_TRACKING_MODES))
             : ['git-diff'],
           ...(typeof changeTrackingOptions?.prompt === 'string' && changeTrackingOptions.prompt
             ? { prompt: changeTrackingOptions.prompt }
             : {}),
-          ...(typeof changeTrackingOptions?.schema === 'object' &&
-          changeTrackingOptions.schema !== null
+          ...(isRecord(changeTrackingOptions?.schema)
             ? { schema: changeTrackingOptions.schema }
             : {}),
         },
@@ -667,17 +756,141 @@ function toV2Formats(
     }
 
     if (format === 'attributes') {
-      return Array.isArray(attributesOptions?.selectors)
-        ? [
-            {
-              type: 'attributes',
-              selectors: attributesOptions.selectors,
-            },
-          ]
-        : [];
+      const selectors = toAttributeSelectors(attributesOptions?.selectors);
+      return selectors ? [{ type: 'attributes', selectors }] : [];
     }
 
-    return typeof format === 'string' ? [format] : [];
+    return isOneOf(format, PLAIN_FORMATS) ? [format] : [];
+  });
+}
+
+/**
+ * Proxy modes the adapter sends. The published v2 enum lists `basic`,
+ * `enhanced` and `auto`; `stealth`, offered by the scrape and crawl forms, is
+ * missing from it but still accepted by the server (checked on the self-hosted
+ * instance), so it is passed through rather than silently rewritten.
+ */
+type AdapterProxy = NonNullable<V2ScrapeOptions['proxy']> | 'stealth';
+
+/** Every proxy mode the adapter forwards. */
+const PROXY_MODES = [
+  'basic',
+  'enhanced',
+  'auto',
+  'stealth',
+] as const satisfies ReadonlyArray<AdapterProxy>;
+
+/**
+ * Convert the legacy location (a country code or a `{ country, languages }`
+ * object) to the v2 location object.
+ *
+ * @param value - The legacy location.
+ * @returns The v2 location, or `undefined` when none is set.
+ */
+function toV2Location(value: unknown): V2ScrapeOptions['location'] {
+  if (typeof value === 'string') {
+    return value ? { country: value } : undefined;
+  }
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const languages = toStringList(value.languages);
+  return {
+    ...(typeof value.country === 'string' ? { country: value.country } : {}),
+    ...(languages ? { languages } : {}),
+  };
+}
+
+/** Browser action types offered by the scrape form, checked against the v2 spec. */
+const ACTION_TYPES = [
+  'wait',
+  'screenshot',
+  'click',
+  'write',
+  'press',
+  'scroll',
+  'scrape',
+  'executeJavascript',
+] as const satisfies ReadonlyArray<V2Action['type']>;
+
+/**
+ * Keep the browser actions whose type the v2 spec knows.
+ *
+ * Only the `type` discriminant is checked here: the fields of each action are
+ * filled by the actions editor, and the server validates them and answers a
+ * malformed action with a 400.
+ *
+ * @param value - The legacy action list.
+ * @returns The actions, or `undefined` when `value` is not a list.
+ */
+function toV2Actions(value: unknown): V2Action[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  return value.filter(
+    (action): action is V2Action => isRecord(action) && isOneOf(action.type, ACTION_TYPES),
+  );
+}
+
+/** Webhook events of `POST /v2/crawl`. */
+const WEBHOOK_EVENTS = ['completed', 'page', 'failed', 'started'] as const satisfies ReadonlyArray<
+  NonNullable<V2CrawlWebhook['events']>[number]
+>;
+
+/**
+ * Convert the crawl form's webhook block to the v2 webhook object.
+ *
+ * @param value - The legacy webhook block.
+ * @returns The webhook, or `undefined` when it has no URL.
+ */
+function toV2Webhook(value: unknown): V2CrawlWebhook | undefined {
+  if (!isRecord(value) || typeof value.url !== 'string' || !value.url) {
+    return undefined;
+  }
+  const headers = toStringRecord(value.headers);
+  const events = Array.isArray(value.events)
+    ? value.events.filter((event) => isOneOf(event, WEBHOOK_EVENTS))
+    : undefined;
+  return {
+    url: value.url,
+    ...(headers ? { headers } : {}),
+    ...(isRecord(value.metadata) ? { metadata: value.metadata } : {}),
+    ...(events && events.length > 0 ? { events } : {}),
+  };
+}
+
+/** Search sources the adapter accepts, checked against the v2 spec. */
+const SEARCH_SOURCES = ['web', 'images', 'news'] as const satisfies ReadonlyArray<
+  Extract<V2SearchSource, string>
+>;
+
+/**
+ * Keep the search sources the v2 spec knows, in plain string or object form.
+ *
+ * @param value - The source list from the search form.
+ * @returns The sources, or `undefined` when `value` is not a list.
+ */
+function toV2SearchSources(value: unknown): V2SearchSource[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  return value.flatMap((entry): V2SearchSource[] => {
+    if (isOneOf(entry, SEARCH_SOURCES)) {
+      return [entry];
+    }
+    if (!isRecord(entry)) {
+      return [];
+    }
+    if (entry.type === 'web') {
+      return [
+        {
+          type: 'web',
+          ...(typeof entry.tbs === 'string' ? { tbs: entry.tbs } : {}),
+          ...(typeof entry.location === 'string' ? { location: entry.location } : {}),
+        },
+      ];
+    }
+    return entry.type === 'images' || entry.type === 'news' ? [{ type: entry.type }] : [];
   });
 }
 
@@ -748,8 +961,28 @@ export const SEARCH_REQUEST_KEYS = [
   'scrapeOptions',
 ] as const satisfies ReadonlyArray<keyof V2SearchRequest>;
 
-/** Scrape options as built by the adapter, keyed by spec field names. */
-type ScrapeRequestOptions = Partial<Record<(typeof SCRAPE_REQUEST_KEYS)[number], unknown>>;
+/**
+ * `POST /v2/search` body as built by the adapter, with the value types of the
+ * v2 spec; sources use the plain string form the spec's description allows.
+ */
+export type SearchRequestBody = Partial<
+  Omit<Pick<V2SearchRequest, (typeof SEARCH_REQUEST_KEYS)[number]>, 'sources' | 'scrapeOptions'>
+> & {
+  sources?: V2SearchSource[];
+  scrapeOptions?: ScrapeRequestOptions;
+};
+
+/**
+ * Scrape options as built by the adapter: the value types of the v2 spec, with
+ * two documented exceptions: format entries may use the plain string form the
+ * spec's description allows, and the proxy may be `stealth` (see `AdapterProxy`).
+ */
+export type ScrapeRequestOptions = Partial<
+  Omit<Pick<V2ScrapeRequest, (typeof SCRAPE_REQUEST_KEYS)[number]>, 'url' | 'formats' | 'proxy'>
+> & {
+  formats?: V2FormatEntry[];
+  proxy?: AdapterProxy;
+};
 
 /**
  * Convert the legacy scrape payload into v2 scrape options.
@@ -763,17 +996,16 @@ function toScrapeRequest(payload: Record<string, unknown>): {
 } {
   const url = typeof payload.url === 'string' ? payload.url : '';
   const formats = toV2Formats(payload.formats, payload);
-  const location =
-    typeof payload.location === 'object' && payload.location !== null
-      ? payload.location
-      : typeof payload.location === 'string' && payload.location
-        ? { country: payload.location }
-        : undefined;
+  const location = toV2Location(payload.location);
+  const includeTags = toStringList(payload.includeTags);
+  const excludeTags = toStringList(payload.excludeTags);
+  const actions = toV2Actions(payload.actions);
+  const headers = toStringRecord(payload.headers);
 
   const options: ScrapeRequestOptions = {
     ...(formats ? { formats } : {}),
-    ...(Array.isArray(payload.includeTags) ? { includeTags: payload.includeTags } : {}),
-    ...(Array.isArray(payload.excludeTags) ? { excludeTags: payload.excludeTags } : {}),
+    ...(includeTags ? { includeTags } : {}),
+    ...(excludeTags ? { excludeTags } : {}),
     ...(typeof payload.onlyMainContent === 'boolean'
       ? { onlyMainContent: payload.onlyMainContent }
       : {}),
@@ -783,7 +1015,7 @@ function toScrapeRequest(payload: Record<string, unknown>): {
     ...(typeof payload.timeout === 'number' ? { timeout: payload.timeout } : {}),
     ...(typeof payload.waitFor === 'number' ? { waitFor: payload.waitFor } : {}),
     ...(typeof payload.mobile === 'boolean' ? { mobile: payload.mobile } : {}),
-    ...(Array.isArray(payload.actions) ? { actions: payload.actions } : {}),
+    ...(actions ? { actions } : {}),
     ...(location ? { location } : {}),
     ...(typeof payload.skipTlsVerification === 'boolean'
       ? { skipTlsVerification: payload.skipTlsVerification }
@@ -792,7 +1024,7 @@ function toScrapeRequest(payload: Record<string, unknown>): {
       ? { removeBase64Images: payload.removeBase64Images }
       : {}),
     ...(typeof payload.blockAds === 'boolean' ? { blockAds: payload.blockAds } : {}),
-    ...(typeof payload.proxy === 'string' && payload.proxy ? { proxy: payload.proxy } : {}),
+    ...(isOneOf(payload.proxy, PROXY_MODES) ? { proxy: payload.proxy } : {}),
     ...(typeof payload.maxAge === 'number' ? { maxAge: payload.maxAge } : {}),
     ...(typeof payload.minAge === 'number' ? { minAge: payload.minAge } : {}),
     ...(typeof payload.storeInCache === 'boolean' ? { storeInCache: payload.storeInCache } : {}),
@@ -801,9 +1033,7 @@ function toScrapeRequest(payload: Record<string, unknown>): {
     ...(typeof payload.zeroDataRetention === 'boolean'
       ? { zeroDataRetention: payload.zeroDataRetention }
       : {}),
-    ...(typeof payload.headers === 'object' && payload.headers !== null
-      ? { headers: payload.headers }
-      : {}),
+    ...(headers ? { headers } : {}),
   };
 
   // v2 parses PDFs and images by default and turns off every parser missing
@@ -816,6 +1046,13 @@ function toScrapeRequest(payload: Record<string, unknown>): {
   return { url, options };
 }
 
+/** Crawl options as built by the adapter, with the value types of the v2 spec. */
+export type CrawlRequestOptions = Partial<
+  Omit<Pick<V2CrawlRequest, (typeof CRAWL_REQUEST_KEYS)[number]>, 'url' | 'scrapeOptions'>
+> & {
+  scrapeOptions?: ScrapeRequestOptions;
+};
+
 /**
  * Convert the crawl payload from the old UI to the v2 crawl options.
  *
@@ -824,17 +1061,17 @@ function toScrapeRequest(payload: Record<string, unknown>): {
  */
 function toCrawlRequest(payload: Record<string, unknown>): {
   url: string;
-  options: Partial<Record<(typeof CRAWL_REQUEST_KEYS)[number], unknown>>;
+  options: CrawlRequestOptions;
 } {
   const url = typeof payload.url === 'string' ? payload.url : '';
-  const scrapeOptions =
-    typeof payload.scrapeOptions === 'object' && payload.scrapeOptions !== null
-      ? (payload.scrapeOptions as Record<string, unknown>)
-      : undefined;
+  const scrapeOptions = isRecord(payload.scrapeOptions) ? payload.scrapeOptions : undefined;
+  const excludePaths = toStringList(payload.excludePaths);
+  const includePaths = toStringList(payload.includePaths);
+  const webhook = toV2Webhook(payload.webhook);
 
-  const options: Partial<Record<(typeof CRAWL_REQUEST_KEYS)[number], unknown>> = {
-    ...(Array.isArray(payload.excludePaths) ? { excludePaths: payload.excludePaths } : {}),
-    ...(Array.isArray(payload.includePaths) ? { includePaths: payload.includePaths } : {}),
+  const options: CrawlRequestOptions = {
+    ...(excludePaths ? { excludePaths } : {}),
+    ...(includePaths ? { includePaths } : {}),
     ...(typeof payload.maxDiscoveryDepth === 'number'
       ? { maxDiscoveryDepth: payload.maxDiscoveryDepth }
       : typeof payload.maxDepth === 'number'
@@ -862,9 +1099,7 @@ function toCrawlRequest(payload: Record<string, unknown>): {
     ...(typeof payload.maxConcurrency === 'number'
       ? { maxConcurrency: payload.maxConcurrency }
       : {}),
-    ...(typeof payload.webhook === 'object' && payload.webhook !== null
-      ? { webhook: payload.webhook }
-      : {}),
+    ...(webhook ? { webhook } : {}),
   };
 
   if (scrapeOptions) {
@@ -1462,9 +1697,10 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
     search: {
       async search(payload) {
         try {
-          const searchPayload: Partial<Record<(typeof SEARCH_REQUEST_KEYS)[number], unknown>> = {
+          const sources = toV2SearchSources(payload.sources);
+          const searchPayload: SearchRequestBody = {
             query: String(payload.query ?? ''),
-            ...(Array.isArray(payload.sources) ? { sources: payload.sources } : {}),
+            ...(sources ? { sources } : {}),
             ...(typeof payload.limit === 'number' ? { limit: payload.limit } : {}),
             ...(typeof payload.tbs === 'string' && payload.tbs ? { tbs: payload.tbs } : {}),
             ...(typeof payload.location === 'string' && payload.location
@@ -1473,10 +1709,10 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
             ...(typeof payload.timeout === 'number' ? { timeout: payload.timeout } : {}),
           };
 
-          if (typeof payload.scrapeOptions === 'object' && payload.scrapeOptions !== null) {
+          if (isRecord(payload.scrapeOptions)) {
             searchPayload.scrapeOptions = toScrapeRequest({
               url: 'https://example.com',
-              ...(payload.scrapeOptions as Record<string, unknown>),
+              ...payload.scrapeOptions,
             }).options;
           }
 

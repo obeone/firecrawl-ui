@@ -41,6 +41,39 @@ export type V2MapRequest = RequestBody<operations['mapUrls']>;
 /** `POST /v2/search` request body. */
 export type V2SearchRequest = RequestBody<operations['searchAndScrape']>;
 
+/**
+ * Plain `type` strings accepted in place of a `{ type }` object. Only members
+ * whose other fields are all optional qualify: `'markdown'` does, `'attributes'`
+ * (which needs `selectors`) does not.
+ */
+type PlainType<T extends { type: string }> = T extends T
+  ? { type: T['type'] } extends T
+    ? T['type']
+    : never
+  : never;
+
+/** One entry of a list that also accepts the plain `type` string form. */
+type WithPlainType<T extends { type: string }> = T | PlainType<T>;
+
+/**
+ * One entry of `formats`. The generated union only lists the object form, but
+ * the spec's own description of `Formats` also accepts plain strings such as
+ * `'markdown'`, which the adapter sends.
+ */
+export type V2FormatEntry = WithPlainType<V2Schemas['Formats'][number]>;
+
+/**
+ * One entry of the search `sources`. The spec's description also accepts the
+ * plain string form (`["web", "news"]`), which the adapter sends.
+ */
+export type V2SearchSource = WithPlainType<NonNullable<V2SearchRequest['sources']>[number]>;
+
+/** Webhook settings of `POST /v2/crawl`. */
+export type V2CrawlWebhook = NonNullable<V2CrawlRequest['webhook']>;
+
+/** Browser actions of the v2 scrape options. */
+export type V2Action = NonNullable<V2ScrapeOptions['actions']>[number];
+
 /** A scraped document, as returned by `POST /v2/scrape`. */
 export type V2Document = NonNullable<V2Schemas['ScrapeResponse']['data']>;
 
