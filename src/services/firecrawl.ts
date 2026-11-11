@@ -1,6 +1,25 @@
 import axios, { AxiosError, type AxiosInstance } from 'axios';
 import { FirecrawlApiError } from '../utils/errors';
 import { pollJob, isTerminalStatus } from '../utils/polling';
+import type {
+  V2BatchScrapeStarted,
+  V2BatchScrapeStatus,
+  V2CrawlErrors,
+  V2CrawlRequest,
+  V2CrawlStarted,
+  V2CrawlStatus,
+  V2CreditUsageResponse,
+  V2Document,
+  V2ExtractStarted,
+  V2ExtractStatus,
+  V2MapRequest,
+  V2MapResponse,
+  V2QueueStatus,
+  V2ScrapeOptions,
+  V2ScrapeRequest,
+  V2SearchRequest,
+  V2TokenUsageResponse,
+} from '../types/firecrawlApi';
 
 /**
  * Normalize a Firecrawl base URL so v2 calls are built from the service root.
@@ -20,40 +39,15 @@ export function normalizeFirecrawlBaseUrl(baseUrl?: string): string {
 }
 
 /**
- * Shared metadata structure returned by Firecrawl documents.
+ * A Firecrawl v2 document, as described by the official spec.
+ *
+ * The spec omits two fields the API does return: `json` (the `json` format
+ * output) and `images` (the `images` format output); they are added here.
  */
-interface DocumentMetadata {
-  title?: string;
-  description?: string;
-  url?: string;
-  sourceURL?: string;
-  statusCode?: number;
-  error?: string;
-  [key: string]: unknown;
-}
-
-/**
- * Minimal Firecrawl v2 document representation used by the UI.
- */
-interface Document {
-  markdown?: string;
-  html?: string;
-  rawHtml?: string;
+type Document = V2Document & {
   json?: unknown;
-  summary?: string;
-  metadata?: DocumentMetadata;
-  links?: string[];
   images?: string[];
-  screenshot?: string;
-  attributes?: Array<{
-    selector: string;
-    attribute: string;
-    values: string[];
-  }>;
-  changeTracking?: Record<string, unknown>;
-  branding?: Record<string, unknown>;
-  warning?: string;
-}
+};
 
 /**
  * Minimal Firecrawl v2 crawl status representation used by the UI.
@@ -67,23 +61,16 @@ interface CrawlJob {
 }
 
 /**
- * Minimal Firecrawl extract response representation used by the UI.
+ * Extract response used by the UI: the start response (`id`, `invalidURLs`)
+ * merged with the status response (`status`, `data`, `expiresAt`,
+ * `tokensUsed`), plus the fields the API returns but the spec omits.
  */
-export interface FirecrawlExtractResponse {
-  success?: boolean;
-  id?: string;
-  status?: 'processing' | 'completed' | 'failed' | 'cancelled';
-  data?: unknown;
-  error?: string;
-  warning?: string;
-  sources?: Record<string, unknown>;
-  /** URLs from the request that the API rejected as invalid (malformed or disallowed). */
-  invalidURLs?: string[] | null;
-  /** ISO timestamp after which the job result is no longer retrievable. */
-  expiresAt?: string;
-  /** Number of LLM tokens consumed while extracting structured data. */
-  tokensUsed?: number;
-}
+export type FirecrawlExtractResponse = V2ExtractStarted &
+  V2ExtractStatus & {
+    error?: string;
+    warning?: string;
+    sources?: Record<string, unknown>;
+  };
 
 /**
  * Legacy-shaped response wrapper used by the existing Vue views.
@@ -132,12 +119,7 @@ export interface FirecrawlScrapingApi {
 /**
  * Legacy-compatible crawling client.
  */
-export interface CrawlError {
-  id?: string;
-  timestamp?: string | null;
-  url?: string;
-  error?: string;
-}
+export type CrawlError = NonNullable<V2CrawlErrors['errors']>[number];
 
 /**
  * Crawl error report returned by the errors endpoint.
@@ -302,20 +284,12 @@ export interface FirecrawlBillingApi {
 
 /**
  * `GET /v2/team/queue-status` response: the team's scrape queue metrics.
+ *
+ * Kept exactly as the spec describes it, every counter optional: the
+ * connection check relies on missing counters to spot a server that is not a
+ * Firecrawl v2 API.
  */
-export interface QueueStatus {
-  success?: boolean;
-  /** Jobs currently in the queue. */
-  jobsInQueue: number;
-  /** Jobs currently running. */
-  activeJobsInQueue: number;
-  /** Jobs waiting for a slot. */
-  waitingJobsInQueue: number;
-  /** Maximum number of concurrent jobs. */
-  maxConcurrency: number;
-  /** Timestamp of the most recent successful job, if any. */
-  mostRecentSuccess?: string | null;
-}
+export type QueueStatus = V2QueueStatus;
 
 /**
  * Team-level endpoints.
@@ -708,6 +682,76 @@ function toV2Formats(
 }
 
 /**
+ * Scrape option keys the adapter may send. `satisfies` checks each one against
+ * the v2 spec, so a spec refresh that drops a field fails the type check.
+ */
+export const SCRAPE_OPTION_KEYS = [
+  'formats',
+  'includeTags',
+  'excludeTags',
+  'onlyMainContent',
+  'onlyCleanContent',
+  'timeout',
+  'waitFor',
+  'mobile',
+  'actions',
+  'location',
+  'skipTlsVerification',
+  'removeBase64Images',
+  'blockAds',
+  'proxy',
+  'maxAge',
+  'minAge',
+  'storeInCache',
+  'lockdown',
+  'redactPII',
+  'headers',
+  'parsers',
+] as const satisfies ReadonlyArray<keyof V2ScrapeOptions>;
+
+/**
+ * `POST /v2/scrape` body keys the adapter may send: the scrape options plus
+ * the request-level fields.
+ */
+export const SCRAPE_REQUEST_KEYS = [
+  'url',
+  ...SCRAPE_OPTION_KEYS,
+  'zeroDataRetention',
+] as const satisfies ReadonlyArray<keyof V2ScrapeRequest>;
+
+/** `POST /v2/crawl` body keys the adapter may send, checked against the v2 spec. */
+export const CRAWL_REQUEST_KEYS = [
+  'url',
+  'excludePaths',
+  'includePaths',
+  'maxDiscoveryDepth',
+  'sitemap',
+  'ignoreQueryParameters',
+  'limit',
+  'allowExternalLinks',
+  'allowSubdomains',
+  'crawlEntireDomain',
+  'delay',
+  'maxConcurrency',
+  'webhook',
+  'scrapeOptions',
+] as const satisfies ReadonlyArray<keyof V2CrawlRequest>;
+
+/** `POST /v2/search` body keys the adapter may send, checked against the v2 spec. */
+export const SEARCH_REQUEST_KEYS = [
+  'query',
+  'sources',
+  'limit',
+  'tbs',
+  'location',
+  'timeout',
+  'scrapeOptions',
+] as const satisfies ReadonlyArray<keyof V2SearchRequest>;
+
+/** Scrape options as built by the adapter, keyed by spec field names. */
+type ScrapeRequestOptions = Partial<Record<(typeof SCRAPE_REQUEST_KEYS)[number], unknown>>;
+
+/**
  * Convert the legacy scrape payload into v2 scrape options.
  *
  * @param payload - The raw legacy payload.
@@ -715,7 +759,7 @@ function toV2Formats(
  */
 function toScrapeRequest(payload: Record<string, unknown>): {
   url: string;
-  options: Record<string, unknown>;
+  options: ScrapeRequestOptions;
 } {
   const url = typeof payload.url === 'string' ? payload.url : '';
   const formats = toV2Formats(payload.formats, payload);
@@ -726,7 +770,7 @@ function toScrapeRequest(payload: Record<string, unknown>): {
         ? { country: payload.location }
         : undefined;
 
-  const options: Record<string, unknown> = {
+  const options: ScrapeRequestOptions = {
     ...(formats ? { formats } : {}),
     ...(Array.isArray(payload.includeTags) ? { includeTags: payload.includeTags } : {}),
     ...(Array.isArray(payload.excludeTags) ? { excludeTags: payload.excludeTags } : {}),
@@ -780,7 +824,7 @@ function toScrapeRequest(payload: Record<string, unknown>): {
  */
 function toCrawlRequest(payload: Record<string, unknown>): {
   url: string;
-  options: Record<string, unknown>;
+  options: Partial<Record<(typeof CRAWL_REQUEST_KEYS)[number], unknown>>;
 } {
   const url = typeof payload.url === 'string' ? payload.url : '';
   const scrapeOptions =
@@ -788,7 +832,7 @@ function toCrawlRequest(payload: Record<string, unknown>): {
       ? (payload.scrapeOptions as Record<string, unknown>)
       : undefined;
 
-  const options: Record<string, unknown> = {
+  const options: Partial<Record<(typeof CRAWL_REQUEST_KEYS)[number], unknown>> = {
     ...(Array.isArray(payload.excludePaths) ? { excludePaths: payload.excludePaths } : {}),
     ...(Array.isArray(payload.includePaths) ? { includePaths: payload.includePaths } : {}),
     ...(typeof payload.maxDiscoveryDepth === 'number'
@@ -877,26 +921,38 @@ async function waitForExtract(
 /**
  * Raw `GET /v2/crawl/{id}` response.
  */
-interface RawCrawlStatus extends RawJobPage {
-  success?: boolean;
-  status: CrawlJob['status'];
-  completed?: number;
-  total?: number;
-}
+type RawCrawlStatus = Omit<V2CrawlStatus, 'data'> & RawJobPage;
 
 /**
  * Raw `GET /v2/batch/scrape/{id}` response.
  */
-interface RawBatchStatus extends RawJobPage {
-  status?: CrawlJob['status'];
-  completed?: number;
-  total?: number;
-  creditsUsed?: number;
+type RawBatchStatus = Omit<V2BatchScrapeStatus, 'data'> & RawJobPage;
+
+/** Job statuses the UI knows how to display. */
+const JOB_STATUSES: ReadonlyArray<CrawlJob['status']> = [
+  'scraping',
+  'completed',
+  'failed',
+  'cancelled',
+];
+
+/**
+ * Narrow the free-form `status` string of the spec to a status the UI knows.
+ *
+ * The spec types the crawl and batch `status` as a plain string. An absent or
+ * unknown value is reported as still running, so the UI keeps polling instead
+ * of mistaking it for a terminal state.
+ *
+ * @param status - The raw status from the API.
+ * @returns A known job status.
+ */
+export function toJobStatus(status: string | undefined): CrawlJob['status'] {
+  return JOB_STATUSES.find((known) => known === status) ?? 'scraping';
 }
 
 function toCrawlStatus(raw: RawCrawlStatus, documents: Document[]): LegacyCrawlStatusResponse {
   return {
-    status: raw.status,
+    status: toJobStatus(raw.status),
     completed: raw.completed ?? 0,
     total: raw.total ?? 0,
     next: raw.next ?? null,
@@ -906,13 +962,30 @@ function toCrawlStatus(raw: RawCrawlStatus, documents: Document[]): LegacyCrawlS
 
 function toBatchStatus(raw: RawBatchStatus, documents: Document[]): BatchScrapeStatusResponse {
   return {
-    status: raw.status ?? 'scraping',
+    status: toJobStatus(raw.status),
     completed: raw.completed ?? 0,
     total: raw.total ?? 0,
     creditsUsed: raw.creditsUsed ?? 0,
     next: raw.next ?? null,
     data: documents.map(toLegacyDocument),
   };
+}
+
+/**
+ * Read the job ID and status URL from a crawl or batch scrape start response.
+ *
+ * @param raw - The start response.
+ * @returns The job ID and its status URL.
+ * @throws Error when the API answered without a job ID, which leaves nothing to poll.
+ */
+export function toJobStarted(raw: V2CrawlStarted | V2BatchScrapeStarted): {
+  id: string;
+  url: string;
+} {
+  if (!raw.id) {
+    throw new Error('The API did not return a job ID');
+  }
+  return { id: raw.id, url: raw.url ?? '' };
 }
 
 /**
@@ -1008,9 +1081,7 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
     billing: {
       async getCreditUsage() {
         try {
-          const response = await http.get<{ success?: boolean; data?: RawUsage }>(
-            '/v2/team/credit-usage',
-          );
+          const response = await http.get<V2CreditUsageResponse>('/v2/team/credit-usage');
 
           return { data: toCreditUsage(response.data.data) };
         } catch (error) {
@@ -1019,9 +1090,7 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
       },
       async getTokenUsage() {
         try {
-          const response = await http.get<{ success?: boolean; data?: RawUsage }>(
-            '/v2/team/token-usage',
-          );
+          const response = await http.get<V2TokenUsageResponse>('/v2/team/token-usage');
 
           return { data: toTokenUsage(response.data.data) };
         } catch (error) {
@@ -1044,15 +1113,15 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
       async scrapeAndExtractFromUrl(payload) {
         try {
           const { url, options } = toScrapeRequest(payload);
-          const response = await http.post<{ success: boolean; data: Document }>('/v2/scrape', {
+          const response = await http.post<{ success?: boolean; data?: Document }>('/v2/scrape', {
             url,
             ...options,
           });
 
           return {
             data: {
-              success: response.data.success,
-              data: toLegacyDocument(response.data.data),
+              success: response.data.success ?? false,
+              data: toLegacyDocument(response.data.data ?? {}),
             },
           };
         } catch (error) {
@@ -1064,20 +1133,12 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
       async crawlUrls(payload) {
         try {
           const { url, options } = toCrawlRequest(payload);
-          const response = await http.post<{ success: boolean; id: string; url: string }>(
-            '/v2/crawl',
-            {
-              url,
-              ...options,
-            },
-          );
+          const response = await http.post<V2CrawlStarted>('/v2/crawl', {
+            url,
+            ...options,
+          });
 
-          return {
-            data: {
-              id: response.data.id,
-              url: response.data.url,
-            },
-          };
+          return { data: toJobStarted(response.data) };
         } catch (error) {
           throw formatApiError(error, 'Crawl request failed');
         }
@@ -1115,10 +1176,7 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
       },
       async getCrawlErrors(id) {
         try {
-          const response = await http.get<{
-            errors?: CrawlError[];
-            robotsBlocked?: string[];
-          }>(`/v2/crawl/${id}/errors`);
+          const response = await http.get<V2CrawlErrors>(`/v2/crawl/${id}/errors`);
 
           return {
             data: {
@@ -1152,23 +1210,15 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
             : [];
           // Reuse the single-scrape option mapping to keep batch options in sync.
           const { options } = toScrapeRequest({ url: '', ...payload });
-          const response = await http.post<{ success: boolean; id: string; url: string }>(
-            '/v2/batch/scrape',
-            {
-              urls,
-              ...options,
-              ...(typeof payload.webhook === 'object' && payload.webhook !== null
-                ? { webhook: payload.webhook }
-                : {}),
-            },
-          );
+          const response = await http.post<V2BatchScrapeStarted>('/v2/batch/scrape', {
+            urls,
+            ...options,
+            ...(typeof payload.webhook === 'object' && payload.webhook !== null
+              ? { webhook: payload.webhook }
+              : {}),
+          });
 
-          return {
-            data: {
-              id: response.data.id,
-              url: response.data.url,
-            },
-          };
+          return { data: toJobStarted(response.data) };
         } catch (error) {
           throw formatApiError(error, 'Batch scrape request failed');
         }
@@ -1206,10 +1256,7 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
       },
       async getBatchScrapeErrors(id) {
         try {
-          const response = await http.get<{
-            errors?: CrawlError[];
-            robotsBlocked?: string[];
-          }>(`/v2/batch/scrape/${id}/errors`);
+          const response = await http.get<V2CrawlErrors>(`/v2/batch/scrape/${id}/errors`);
 
           return {
             data: {
@@ -1225,7 +1272,10 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
     extraction: {
       async extractData(payload) {
         try {
-          const response = await http.post<FirecrawlExtractResponse>('/v2/extract', payload);
+          const response = await http.post<V2ExtractStarted & FirecrawlExtractResponse>(
+            '/v2/extract',
+            payload,
+          );
           const finalResponse = await waitForExtract(http, response.data);
 
           return {
@@ -1369,10 +1419,7 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
     mapping: {
       async mapUrls(payload) {
         try {
-          const response = await http.post<{
-            success: boolean;
-            links?: Array<string | { url: string }>;
-          }>('/v2/map', {
+          const mapRequest: V2MapRequest = {
             url: String(payload.url ?? ''),
             ...(typeof payload.search === 'string' && payload.search
               ? { search: payload.search }
@@ -1394,7 +1441,11 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
               : {}),
             ...(typeof payload.limit === 'number' ? { limit: payload.limit } : {}),
             ...(typeof payload.timeout === 'number' ? { timeout: payload.timeout } : {}),
-          });
+          };
+          // Older servers answered with plain URL strings instead of link objects.
+          const response = await http.post<{
+            links?: Array<string | NonNullable<V2MapResponse['links']>[number]>;
+          }>('/v2/map', mapRequest);
 
           return {
             data: {
@@ -1411,7 +1462,7 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
     search: {
       async search(payload) {
         try {
-          const searchPayload: Record<string, unknown> = {
+          const searchPayload: Partial<Record<(typeof SEARCH_REQUEST_KEYS)[number], unknown>> = {
             query: String(payload.query ?? ''),
             ...(Array.isArray(payload.sources) ? { sources: payload.sources } : {}),
             ...(typeof payload.limit === 'number' ? { limit: payload.limit } : {}),
