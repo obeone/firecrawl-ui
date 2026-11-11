@@ -346,11 +346,14 @@ async function cancelJob(): Promise<void> {
   if (!jobId.value) {
     return;
   }
+  const id = jobId.value;
   const isCurrent = jobGuard.current();
   cancelling.value = true;
   error.value = '';
   try {
-    await api.batchScraping.cancelBatchScrape(jobId.value);
+    await api.batchScraping.cancelBatchScrape(id);
+    // The server cancelled this job whichever job is on screen now.
+    updateJob('batch', id, { status: 'cancelled' });
     if (isCurrent()) {
       stopPolling();
       status.value = 'cancelled';

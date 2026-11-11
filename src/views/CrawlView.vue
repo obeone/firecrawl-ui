@@ -548,7 +548,7 @@ import { useApi } from '../plugins/api';
 import { describeRequestError, getErrorMessage, isUnauthorized } from '@/utils/errors';
 import { checkCountryCode } from '@/utils/formValidation';
 import { isTerminalStatus } from '@/utils/polling';
-import { recordJob, updateJob } from '@/utils/jobHistory';
+import { loadJobHistory, recordJob, updateJob } from '@/utils/jobHistory';
 import { useJobPoller, useKeyedJobPoller } from '@/composables/useJobPoller';
 import {
   CRAWL_FORMAT_OPTIONS,
@@ -1594,6 +1594,7 @@ export default defineComponent({
       }
       try {
         await api.crawling.cancelCrawl(currentCrawlId.value);
+        updateJob('crawl', currentCrawlId.value, { status: 'cancelled' });
         stopCurrentPolling();
         crawlStatus.value = 'cancelled';
         crawling.value = false;
@@ -1792,6 +1793,10 @@ export default defineComponent({
       // current crawl and show its files, reusing the existing polling.
       const reopenId = route.query.job;
       if (typeof reopenId === 'string' && reopenId !== '') {
+        // Same state a fresh submission leaves, so the result pane and the
+        // downloads work even when the legacy crawl history lacks this job.
+        const recorded = loadJobHistory().find((e) => e.kind === 'crawl' && e.id === reopenId);
+        result.value = { id: reopenId, url: recorded?.sourceUrl ?? '' };
         currentCrawlId.value = reopenId;
         crawling.value = true;
         fetchCrawlStatus(reopenId);
