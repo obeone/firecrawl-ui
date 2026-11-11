@@ -4,6 +4,7 @@
     <p class="intro">
       Run an AI-powered deep research job that crawls the web and synthesises a final analysis.
     </p>
+    <DeprecationNotice path="/research" />
 
     <form class="research-form" @submit.prevent="handleSubmit">
       <div class="form-group">
@@ -202,6 +203,7 @@ import { useJobPoller } from '@/composables/useJobPoller';
 import { describeRequestError } from '@/utils/errors';
 import { createLatestGuard, type IsCurrent } from '@/utils/latestGuard';
 import { isTerminalStatus } from '@/utils/polling';
+import DeprecationNotice from '@/components/DeprecationNotice.vue';
 import type {
   FirecrawlApiVersion,
   DeepResearchStatus,
