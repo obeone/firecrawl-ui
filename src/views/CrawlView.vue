@@ -548,6 +548,7 @@ import { useApi } from '../plugins/api';
 import { describeRequestError, getErrorMessage, isUnauthorized } from '@/utils/errors';
 import { checkCountryCode } from '@/utils/formValidation';
 import { isTerminalStatus } from '@/utils/polling';
+import { recordJob, updateJob } from '@/utils/jobHistory';
 import { useJobPoller, useKeyedJobPoller } from '@/composables/useJobPoller';
 import {
   CRAWL_FORMAT_OPTIONS,
@@ -1560,6 +1561,14 @@ export default defineComponent({
             webhookOptions: { ...formData.value.webhookOptions },
           });
           saveHistory(); // Save history after adding a new job
+          recordJob({
+            kind: 'crawl',
+            id: response.data.id,
+            createdAt: new Date().toISOString(),
+            sourceUrl: formData.value.url,
+            resultCount: null,
+            status: 'started',
+          });
           fetchCrawlStatus(response.data.id);
           loading.value = false; // hide loading spinner once polling starts
         }
@@ -1679,6 +1688,7 @@ export default defineComponent({
         onUpdate: (data) => {
           crawlStatus.value = data.status;
           pagesCompleted.value = data.completed || 0;
+          updateJob('crawl', jobId, { status: data.status, resultCount: data.completed || 0 });
           totalPages.value = data.total || 0;
           // Calculate progress based on completed vs total pages
           progress.value =
@@ -1778,6 +1788,15 @@ export default defineComponent({
     };
 
     onMounted(async () => {
+      // Reopen a job from the History page (?job=<id>): track it as the
+      // current crawl and show its files, reusing the existing polling.
+      const reopenId = route.query.job;
+      if (typeof reopenId === 'string' && reopenId !== '') {
+        currentCrawlId.value = reopenId;
+        crawling.value = true;
+        fetchCrawlStatus(reopenId);
+        void selectCrawl(reopenId);
+      }
       // Load history from LocalStorage on component mount
       const savedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
       if (savedHistory) {

@@ -179,6 +179,12 @@ function toggleTheme(): void {
               <line x1="2" x2="22" y1="10" y2="10" />
             </svg>
           </RouterLink>
+          <RouterLink to="/history" class="icon-btn" aria-label="History" title="History">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 2" />
+            </svg>
+          </RouterLink>
           <RouterLink to="/about" class="icon-btn" aria-label="About" title="About">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
               <circle cx="12" cy="12" r="9" />
