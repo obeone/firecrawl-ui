@@ -15,7 +15,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "api:types": "openapi-typescript https://docs.firecrawl.dev/api-reference/v2-openapi.json --empty-objects-unknown --default-non-nullable false -o src/types/firecrawl-v2.generated.ts",
+    "api:types:check": "npm run api:types -- --check"
   },
   "dependencies": {
     "axios": "^1.20.0",
@@ -34,6 +36,7 @@
     "@vue/eslint-config-typescript": "^14.9.0",
     "eslint": "^9.28.0",
     "eslint-plugin-vue": "^9.21.0",
+    "openapi-typescript": "7.13.0",
     "prettier": "^3.9.6",
     "typescript": "^5.4.5",
     "typescript-eslint": "^8.72.2",
