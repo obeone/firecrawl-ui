@@ -81,7 +81,27 @@
           {{ docTitle(doc) }}
         </li>
       </ul>
-      <button class="download-button" type="button" @click="downloadJson">Download JSON</button>
+      <div class="export-actions">
+        <button class="download-button" type="button" @click="exportJson">Export JSON</button>
+        <button
+          class="download-button"
+          type="button"
+          :disabled="!markdownAvailable"
+          :title="markdownAvailable ? '' : markdownHint"
+          @click="exportMarkdown"
+        >
+          Export Markdown
+        </button>
+        <button
+          class="download-button"
+          type="button"
+          :disabled="!markdownAvailable"
+          :title="markdownAvailable ? '' : markdownHint"
+          @click="exportMarkdownZip"
+        >
+          Export Markdown (zip)
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -91,7 +111,15 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useApi } from '@/plugins/api';
 import type { CrawlError } from '@/services/firecrawl';
+import { saveAs } from 'file-saver';
 import { describeRequestError } from '@/utils/errors';
+import {
+  buildCompiledMarkdown,
+  buildJsonExport,
+  buildMarkdownZip,
+  exportFileBase,
+  hasMarkdown,
+} from '@/utils/jobExport';
 import { createLatestGuard, type IsCurrent } from '@/utils/latestGuard';
 import { takePendingBatchUrls } from '@/utils/batchHandoff';
 import { isTerminalStatus } from '@/utils/polling';
@@ -399,18 +427,48 @@ async function loadErrors(): Promise<void> {
   }
 }
 
+const markdownHint = 'No document has Markdown content: request the Markdown format when scraping.';
+const markdownAvailable = computed(() => hasMarkdown(results.value));
+
 /**
- * Download the scraped documents as a JSON file.
+ * Save the batch results through the browser download flow.
+ *
+ * @param build - Produces the file content and its extension suffix.
  */
-function downloadJson(): void {
-  const blob = new Blob([JSON.stringify(results.value, null, 2)], { type: 'application/json' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `batch-scrape-${jobId.value ?? 'results'}.json`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(link.href);
+async function saveExport(build: () => Promise<Blob> | Blob, suffix: string): Promise<void> {
+  try {
+    const base = exportFileBase('batch', jobId.value ?? '');
+    saveAs(await build(), `${base}${suffix}`);
+  } catch (err) {
+    error.value = `Failed to export results: ${describeRequestError(err)}`;
+  }
+}
+
+/** Export the scraped documents as a JSON file. */
+function exportJson(): Promise<void> {
+  return saveExport(
+    () =>
+      new Blob([buildJsonExport('batch', jobId.value ?? '', results.value)], {
+        type: 'application/json',
+      }),
+    '.json',
+  );
+}
+
+/** Export the scraped documents compiled into one Markdown file. */
+function exportMarkdown(): Promise<void> {
+  return saveExport(
+    () =>
+      new Blob([buildCompiledMarkdown(`Batch scrape ${jobId.value ?? ''}`.trim(), results.value)], {
+        type: 'text/markdown',
+      }),
+    '.md',
+  );
+}
+
+/** Export the scraped documents as a zip with one Markdown file per page. */
+function exportMarkdownZip(): Promise<void> {
+  return saveExport(() => buildMarkdownZip(results.value), '-markdown.zip');
 }
 
 // Ignore pending answers once the component is destroyed; the poller stops itself.
@@ -577,6 +635,12 @@ onUnmounted(() => {
   border: none;
   border-radius: 4px;
   cursor: pointer;
+}
+
+.export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .download-button:hover {
