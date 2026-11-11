@@ -126,6 +126,16 @@
       </div>
     </div>
 
+    <!-- Cancelled on the server side -->
+    <div v-if="jobStatus === 'cancelled'" class="status-section">
+      <h3>Research Cancelled</h3>
+    </div>
+
+    <!-- Status request failed: the job itself may still be running -->
+    <p v-if="jobStatus === 'unavailable' && jobId" class="api-version-notice">
+      Status unavailable for job {{ jobId }}; it may still be running on the server.
+    </p>
+
     <!-- Completed state: sources + final analysis -->
     <div v-if="jobStatus === 'completed'" class="results">
       <h3>Research Complete</h3>
@@ -188,6 +198,10 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue';
 import { useApi } from '@/plugins/api';
+import { useJobPoller } from '@/composables/useJobPoller';
+import { describeRequestError } from '@/utils/errors';
+import { createLatestGuard, type IsCurrent } from '@/utils/latestGuard';
+import { isTerminalStatus } from '@/utils/polling';
 import type {
   FirecrawlApiVersion,
   DeepResearchStatus,
@@ -236,8 +250,11 @@ const error = ref('');
 
 /** Identifier of the running research job, or null when idle. */
 const jobId = ref<string | null>(null);
-/** Current job lifecycle status. */
-const jobStatus = ref<DeepResearchStatus['status'] | null>(null);
+/**
+ * Current job lifecycle status. `unavailable` means the status could not be
+ * fetched; the job may still be running.
+ */
+const jobStatus = ref<DeepResearchStatus['status'] | 'unavailable' | null>(null);
 /** Current crawl depth reported by the server. */
 const currentDepth = ref(0);
 /** Max depth as reported by the server status response. */
@@ -259,8 +276,10 @@ const apiVersion = ref<FirecrawlApiVersion | null>(null);
 /** Deprecation notices returned by the API for this job. */
 const apiWarnings = ref<string[]>([]);
 
-/** Polling interval handle. */
-let intervalId: ReturnType<typeof setInterval> | null = null;
+/** Status poll loop; stops on its own when the view is destroyed. */
+const poller = useJobPoller();
+// Answers that arrive for a job the user has replaced are dropped.
+const jobGuard = createLatestGuard();
 
 // --- Computed ---
 
@@ -270,16 +289,6 @@ let intervalId: ReturnType<typeof setInterval> | null = null;
 const activitiesNewestFirst = computed<ResearchActivity[]>(() => [...activities.value].reverse());
 
 // --- Helpers ---
-
-/**
- * Stop the status polling loop, if any is active.
- */
-function stopPolling(): void {
-  if (intervalId) {
-    clearInterval(intervalId);
-    intervalId = null;
-  }
-}
 
 /**
  * Apply a server status response snapshot to the reactive state.
@@ -307,26 +316,30 @@ function applyStatus(data: DeepResearchStatus): void {
 }
 
 /**
- * Poll the deep research status endpoint until the job completes or fails.
+ * Poll the deep research status endpoint until the job settles.
+ *
+ * One request at a time; `completed`, `failed` and `cancelled` all end the
+ * loop. A failed status request leaves the job `unavailable` rather than
+ * `failed`, since the job itself may still be running server-side.
  *
  * @param id - The research job identifier.
+ * @param isCurrent - Token of the submit that started this job.
  */
-function pollStatus(id: string): void {
-  stopPolling();
-  intervalId = setInterval(async () => {
-    try {
-      const response = await api.research.getDeepResearchStatus(id);
-      applyStatus(response.data);
-
-      if (response.data.status === 'completed' || response.data.status === 'failed') {
-        stopPolling();
+function pollStatus(id: string, isCurrent: IsCurrent): void {
+  poller.start({
+    request: async () => (await api.research.getDeepResearchStatus(id)).data,
+    isSettled: (data) => isTerminalStatus(data.status),
+    onUpdate: applyStatus,
+    onError: (err: unknown) => {
+      if (!isCurrent()) {
+        return;
       }
-    } catch (err: unknown) {
-      error.value = err instanceof Error ? err.message : 'Failed to fetch research status.';
-      jobStatus.value = 'failed';
-      stopPolling();
-    }
-  }, 3000);
+      error.value = `Failed to fetch research status: ${describeRequestError(err)}`;
+      jobStatus.value = 'unavailable';
+    },
+    intervalMs: 3000,
+    jobId: id,
+  });
 }
 
 /**
@@ -420,6 +433,9 @@ async function handleSubmit(): Promise<void> {
     return;
   }
 
+  // Any answer still pending for the previous job is now stale.
+  const isCurrent = jobGuard.begin();
+  poller.stop();
   loading.value = true;
   error.value = '';
   jobId.value = null;
@@ -442,19 +458,28 @@ async function handleSubmit(): Promise<void> {
 
   try {
     const response = await api.research.startDeepResearch(payload);
+    if (!isCurrent()) {
+      return;
+    }
     jobId.value = response.data.id;
     apiVersion.value = response.data.apiVersion;
     jobStatus.value = 'processing';
-    pollStatus(response.data.id);
+    pollStatus(response.data.id, isCurrent);
   } catch (err: unknown) {
-    error.value = err instanceof Error ? err.message : 'Failed to start deep research.';
+    if (isCurrent()) {
+      error.value = err instanceof Error ? err.message : 'Failed to start deep research.';
+    }
   } finally {
-    loading.value = false;
+    if (isCurrent()) {
+      loading.value = false;
+    }
   }
 }
 
-// Clean up the polling loop when the component is destroyed.
-onUnmounted(stopPolling);
+// Ignore pending answers once the component is destroyed; the poller stops itself.
+onUnmounted(() => {
+  jobGuard.invalidate();
+});
 </script>
 
 <style scoped>

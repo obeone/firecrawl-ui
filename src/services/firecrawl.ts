@@ -327,7 +327,7 @@ export interface ResearchSource {
  * Status and results of a deep research job.
  */
 export interface DeepResearchStatus {
-  status: 'processing' | 'completed' | 'failed';
+  status: 'processing' | 'completed' | 'failed' | 'cancelled';
   finalAnalysis: string;
   json: Record<string, unknown> | null;
   activities: ResearchActivity[];
@@ -354,7 +354,7 @@ export interface FirecrawlResearchApi {
  * Status and results of an LLMs.txt generation job.
  */
 export interface LlmsTxtStatus {
-  status: 'processing' | 'completed' | 'failed';
+  status: 'processing' | 'completed' | 'failed' | 'cancelled';
   llmstxt: string;
   llmsfulltxt: string;
   apiVersion: FirecrawlApiVersion;

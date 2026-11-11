@@ -47,6 +47,14 @@
       Generation failed. Please try again.
     </div>
 
+    <!-- Cancelled on the server side -->
+    <div v-if="generationStatus === 'cancelled'" class="error">Generation was cancelled.</div>
+
+    <!-- Status request failed: the job itself may still be running -->
+    <p v-if="generationStatus === 'unavailable' && jobId" class="api-version-notice">
+      Status unavailable for job {{ jobId }}; it may still be running on the server.
+    </p>
+
     <!-- Results once the job completes -->
     <div v-if="generationStatus === 'completed'" class="results">
       <div class="result-block">
@@ -84,6 +92,10 @@
 import { ref, onUnmounted } from 'vue';
 import { useApi } from '@/plugins/api';
 import type { FirecrawlApiVersion, LlmsTxtStatus } from '@/services/firecrawl';
+import { useJobPoller } from '@/composables/useJobPoller';
+import { describeRequestError } from '@/utils/errors';
+import { createLatestGuard, type IsCurrent } from '@/utils/latestGuard';
+import { isTerminalStatus } from '@/utils/polling';
 
 /**
  * LlmsTxtView Component
@@ -112,8 +124,11 @@ const error = ref('');
 
 /** Identifier of the running generation job, or null when idle. */
 const jobId = ref<string | null>(null);
-/** Current job status, or null when no job has been started. */
-const generationStatus = ref<LlmsTxtStatus['status'] | null>(null);
+/**
+ * Current job status, or null when no job has been started. `unavailable`
+ * means the status could not be fetched; the job may still be running.
+ */
+const generationStatus = ref<LlmsTxtStatus['status'] | 'unavailable' | null>(null);
 /** Generated llms.txt content. */
 const llmstxt = ref('');
 /** Generated llms-full.txt content, empty when not requested or unavailable. */
@@ -125,47 +140,44 @@ const apiVersion = ref<FirecrawlApiVersion | null>(null);
 /** Deprecation notices returned by the API for this job. */
 const apiWarnings = ref<string[]>([]);
 
-/** Polling interval handle. */
-let intervalId: ReturnType<typeof setInterval> | null = null;
+/** Status poll loop; stops on its own when the view is destroyed. */
+const poller = useJobPoller();
+// Answers that arrive for a job the user has replaced are dropped.
+const jobGuard = createLatestGuard();
 
 /**
- * Stop the status polling loop, if any is active.
- */
-function stopPolling(): void {
-  if (intervalId) {
-    clearInterval(intervalId);
-    intervalId = null;
-  }
-}
-
-/**
- * Poll the LLMs.txt status endpoint until the job completes or fails.
+ * Poll the LLMs.txt status endpoint until the job settles.
+ *
+ * One request at a time; `completed`, `failed` and `cancelled` all end the
+ * loop. A failed status request leaves the job `unavailable` rather than
+ * `failed`, since the job itself may still be running server-side.
  *
  * @param id - The generation job identifier.
+ * @param isCurrent - Token of the submit that started this job.
  */
-function pollStatus(id: string): void {
-  stopPolling();
-  intervalId = setInterval(async () => {
-    try {
-      const response = await api.llmsTxt.getLlmsTxtStatus(id);
-      const data = response.data;
+function pollStatus(id: string, isCurrent: IsCurrent): void {
+  poller.start({
+    request: async () => (await api.llmsTxt.getLlmsTxtStatus(id)).data,
+    isSettled: (data) => isTerminalStatus(data.status),
+    onUpdate: (data) => {
       generationStatus.value = data.status;
       apiVersion.value = data.apiVersion;
       apiWarnings.value = data.warnings;
-
       if (data.status === 'completed') {
         llmstxt.value = data.llmstxt;
         llmsfulltxt.value = data.llmsfulltxt;
-        stopPolling();
-      } else if (data.status === 'failed') {
-        stopPolling();
       }
-    } catch (err: unknown) {
-      error.value = err instanceof Error ? err.message : 'Failed to fetch generation status.';
-      generationStatus.value = 'failed';
-      stopPolling();
-    }
-  }, 3000);
+    },
+    onError: (err: unknown) => {
+      if (!isCurrent()) {
+        return;
+      }
+      error.value = `Failed to fetch generation status: ${describeRequestError(err)}`;
+      generationStatus.value = 'unavailable';
+    },
+    intervalMs: 3000,
+    jobId: id,
+  });
 }
 
 /**
@@ -179,6 +191,9 @@ async function handleSubmit(): Promise<void> {
     return;
   }
 
+  // Any answer still pending for the previous job is now stale.
+  const isCurrent = jobGuard.begin();
+  poller.stop();
   loading.value = true;
   error.value = '';
   jobId.value = null;
@@ -193,14 +208,21 @@ async function handleSubmit(): Promise<void> {
       maxUrls: maxUrls.value,
       showFullText: showFullText.value,
     });
+    if (!isCurrent()) {
+      return;
+    }
     jobId.value = response.data.id;
     apiVersion.value = response.data.apiVersion;
     generationStatus.value = 'processing';
-    pollStatus(response.data.id);
+    pollStatus(response.data.id, isCurrent);
   } catch (err: unknown) {
-    error.value = err instanceof Error ? err.message : 'Failed to start LLMs.txt generation.';
+    if (isCurrent()) {
+      error.value = err instanceof Error ? err.message : 'Failed to start LLMs.txt generation.';
+    }
   } finally {
-    loading.value = false;
+    if (isCurrent()) {
+      loading.value = false;
+    }
   }
 }
 
@@ -232,8 +254,10 @@ function downloadLlmsFullTxt(): void {
   URL.revokeObjectURL(link.href);
 }
 
-// Clean up the polling loop when the component is destroyed.
-onUnmounted(stopPolling);
+// Ignore pending answers once the component is destroyed; the poller stops itself.
+onUnmounted(() => {
+  jobGuard.invalidate();
+});
 </script>
 
 <style scoped>

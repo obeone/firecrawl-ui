@@ -105,7 +105,8 @@ import { useApi } from '@/plugins/api';
 import type { CrawlError } from '@/services/firecrawl';
 import { describeRequestError } from '@/utils/errors';
 import { createLatestGuard, type IsCurrent } from '@/utils/latestGuard';
-import { isTerminalStatus, pollJob, type PollHandle } from '@/utils/polling';
+import { isTerminalStatus } from '@/utils/polling';
+import { useJobPoller } from '@/composables/useJobPoller';
 
 /**
  * BatchScrapeView Component
@@ -157,8 +158,8 @@ const batchRobotsBlocked = ref<string[]>([]);
 /** Whether the error report has been fetched at least once for the current job. */
 const errorsLoaded = ref(false);
 
-/** Running status poll loop, if any. */
-let poll: PollHandle<unknown> | null = null;
+/** Status poll loop; stops on its own when the view is destroyed. */
+const poller = useJobPoller();
 // Answers that arrive for a job the user has replaced are dropped.
 const jobGuard = createLatestGuard();
 
@@ -194,8 +195,7 @@ function docTitle(doc: Record<string, unknown>): string {
  * Stop the status polling loop, if any is active.
  */
 function stopPolling(): void {
-  poll?.stop();
-  poll = null;
+  poller.stop();
 }
 
 /**
@@ -210,8 +210,7 @@ function stopPolling(): void {
  *   late answers are ignored.
  */
 function pollStatus(id: string, isCurrent: IsCurrent): void {
-  stopPolling();
-  const current = pollJob({
+  poller.start({
     request: async () => (await api.batchScraping.getBatchScrapeStatus(id)).data,
     isSettled: (data) => isTerminalStatus(data.status),
     onUpdate: (data) => {
@@ -221,20 +220,10 @@ function pollStatus(id: string, isCurrent: IsCurrent): void {
       creditsUsed.value = data.creditsUsed;
       progress.value = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
     },
-    intervalMs: 3000,
-    jobId: id,
-  });
-  poll = current;
-
-  current.result.then(
-    async (data) => {
-      if (data === undefined) {
-        return; // Stopped: cancelled by the user, replaced, or unmounted.
-      }
+    onSettled: async (data) => {
       if (!isCurrent()) {
         return;
       }
-      poll = null;
       if (data.status === 'completed' || data.status === 'failed') {
         // The results can span many pages; another job may start meanwhile.
         try {
@@ -249,15 +238,16 @@ function pollStatus(id: string, isCurrent: IsCurrent): void {
         }
       }
     },
-    (err: unknown) => {
+    onError: (err: unknown) => {
       if (!isCurrent()) {
         return;
       }
-      poll = null;
       error.value = `Failed to fetch batch status: ${describeRequestError(err)}`;
       status.value = 'unavailable';
     },
-  );
+    intervalMs: 3000,
+    jobId: id,
+  });
 }
 
 /**
@@ -391,10 +381,9 @@ function downloadJson(): void {
   URL.revokeObjectURL(link.href);
 }
 
-// Clean up the polling loop, and ignore pending answers, when the component is destroyed.
+// Ignore pending answers once the component is destroyed; the poller stops itself.
 onUnmounted(() => {
   jobGuard.invalidate();
-  stopPolling();
 });
 </script>
 
