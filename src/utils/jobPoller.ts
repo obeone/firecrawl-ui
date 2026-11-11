@@ -5,21 +5,46 @@ import { pollJob, type PollHandle, type PollJobOptions } from './polling';
  * what to do once the loop ends.
  */
 export interface StartPollOptions<T> extends PollJobOptions<T> {
-  /** Called once with the final state, unless the loop was stopped or replaced first. */
-  onSettled?: (value: T) => void;
+  /**
+   * Called once with the final state, unless the loop was stopped or replaced
+   * first. It may be async; a throw or a rejection is logged, never left unhandled.
+   */
+  onSettled?: (value: T) => void | Promise<void>;
   /**
    * Called once when a status request fails or the timeout elapses, unless the
    * loop was stopped or replaced first. A failed status request says nothing
-   * about the job itself, which may still be running server-side.
+   * about the job itself, which may still be running server-side. It may be
+   * async; a throw or a rejection is logged, never left unhandled.
    */
-  onError?: (error: unknown) => void;
+  onError?: (error: unknown) => void | Promise<void>;
+}
+
+/**
+ * Run a settle or error callback so that its failure cannot escape as an
+ * unhandled rejection: a throw or a rejected promise is logged instead. The
+ * poller's own state is already final when it runs.
+ *
+ * @param callback - The callback to run.
+ */
+function runCallback(callback: () => void | Promise<void>): void {
+  const report = (error: unknown): void => {
+    console.error('Job poller callback failed:', error);
+  };
+  try {
+    Promise.resolve(callback()).catch(report);
+  } catch (error) {
+    report(error);
+  }
 }
 
 /**
  * Runs at most one {@link pollJob} loop at a time.
  */
 export interface JobPoller {
-  /** Stop the running loop, if any, and start a new one. */
+  /**
+   * Stop the running loop, if any, and start a new one. Stopping the returned
+   * handle is the same as {@link JobPoller.stop} while that loop is current.
+   */
   start<T>(options: StartPollOptions<T>): PollHandle<T>;
   /** Stop the running loop; its callbacks are never called afterwards. */
   stop(): void;
@@ -56,17 +81,31 @@ export function createJobPoller(): JobPoller {
             return; // Stopped or replaced: nobody is listening any more.
           }
           handle = null;
-          options.onSettled?.(value);
+          const { onSettled } = options;
+          if (onSettled) {
+            runCallback(() => onSettled(value));
+          }
         },
         (error: unknown) => {
           if (handle !== current) {
             return;
           }
           handle = null;
-          options.onError?.(error);
+          const { onError } = options;
+          if (onError) {
+            runCallback(() => onError(error));
+          }
         },
       );
-      return current;
+      return {
+        result: current.result,
+        stop: () => {
+          current.stop();
+          if (handle === current) {
+            handle = null; // A newer loop is left alone.
+          }
+        },
+      };
     },
     stop,
     isActive: () => handle !== null,
@@ -110,17 +149,24 @@ export function createKeyedJobPoller(): KeyedJobPoller {
           pollers.delete(key);
         }
       };
-      return poller.start({
+      const started = poller.start({
         ...options,
         onSettled: (value) => {
           forget();
-          options.onSettled?.(value);
+          return options.onSettled?.(value);
         },
         onError: (error) => {
           forget();
-          options.onError?.(error);
+          return options.onError?.(error);
         },
       });
+      return {
+        result: started.result,
+        stop: () => {
+          started.stop();
+          forget();
+        },
+      };
     },
     stop,
     stopAll() {

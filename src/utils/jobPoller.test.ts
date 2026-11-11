@@ -171,6 +171,79 @@ describe('createJobPoller', () => {
     expect(onError).not.toHaveBeenCalled();
     expect(request).toHaveBeenCalledTimes(1);
   });
+  it('is idle once the handle returned by start is stopped', async () => {
+    const { request, pending } = manualRequest<{ status: string }>();
+    const onSettled = vi.fn();
+    const poller = createJobPoller();
+    const handle = poller.start({
+      request,
+      isSettled: () => true,
+      onSettled,
+      intervalMs: 0,
+      wait: instantWait,
+    });
+    await flush();
+
+    handle.stop();
+    pending[0].resolve({ status: 'completed' });
+    await flush();
+
+    expect(poller.isActive()).toBe(false);
+    expect(onSettled).not.toHaveBeenCalled();
+  });
+
+  it('leaves a newer loop running when an old handle is stopped', async () => {
+    const first = manualRequest<{ status: string }>();
+    const second = manualRequest<{ status: string }>();
+    const poller = createJobPoller();
+    const options = { isSettled: () => true, intervalMs: 0, wait: instantWait };
+    const oldHandle = poller.start({ ...options, request: first.request });
+    poller.start({ ...options, request: second.request });
+    await flush();
+
+    oldHandle.stop();
+
+    expect(poller.isActive()).toBe(true);
+  });
+
+  it('logs a throwing onSettled instead of leaving it unhandled', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const poller = createJobPoller();
+    poller.start({
+      request: async () => ({ status: 'completed' }),
+      isSettled: () => true,
+      onSettled: () => {
+        throw new Error('render failed');
+      },
+      intervalMs: 0,
+      wait: instantWait,
+    });
+    await flush();
+
+    expect(poller.isActive()).toBe(false);
+    expect(consoleError).toHaveBeenCalledWith('Job poller callback failed:', expect.any(Error));
+    consoleError.mockRestore();
+  });
+
+  it('logs a rejected async onError instead of leaving it unhandled', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const poller = createJobPoller();
+    poller.start({
+      request: async () => {
+        throw new Error('502');
+      },
+      isSettled: () => false,
+      onError: async () => {
+        throw new Error('toast failed');
+      },
+      intervalMs: 0,
+      wait: instantWait,
+    });
+    await flush();
+
+    expect(consoleError).toHaveBeenCalledWith('Job poller callback failed:', expect.any(Error));
+    consoleError.mockRestore();
+  });
 });
 
 describe('createKeyedJobPoller', () => {
@@ -205,6 +278,23 @@ describe('createKeyedJobPoller', () => {
     expect(bSettled).toHaveBeenCalledExactlyOnceWith({ status: 'failed' });
     expect(poller.isActive('a')).toBe(false);
     expect(poller.isActive('b')).toBe(false);
+  });
+
+  it('forgets a key once the handle returned by start is stopped', async () => {
+    const first = manualRequest<{ status: string }>();
+    const second = manualRequest<{ status: string }>();
+    const poller = createKeyedJobPoller();
+    const options = { isSettled: () => true, intervalMs: 0, wait: instantWait };
+    const handle = poller.start('a', { ...options, request: first.request });
+    await flush();
+
+    handle.stop();
+    expect(poller.isActive('a')).toBe(false);
+
+    poller.start('a', { ...options, request: second.request });
+    handle.stop(); // A stale handle must not stop the newer loop for the same key.
+    expect(poller.isActive('a')).toBe(true);
+    poller.stopAll();
   });
 
   it('stopAll stops every loop', async () => {
