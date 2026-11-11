@@ -24,6 +24,10 @@
           <span class="credit-label">Remaining tokens (Extract)</span>
           <span class="credit-value">{{ formatNumber(tokenUsage.remainingTokens) }}</span>
         </div>
+        <div v-if="tokenUsage?.planTokens != null" class="credit-card">
+          <span class="credit-label">Plan tokens (Extract)</span>
+          <span class="credit-value">{{ formatNumber(tokenUsage.planTokens) }}</span>
+        </div>
       </div>
 
       <div v-if="usage.billingPeriodStart || usage.billingPeriodEnd" class="billing-period">
