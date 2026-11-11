@@ -79,7 +79,13 @@ Create a `.env` file in the project root. These are optional — the app also st
 
 Multi-stage build: Node 26 slim for building (major version pinned in `.nvmrc`, `package.json` `engines` and the `Dockerfile`), `nginxinc/nginx-unprivileged:stable-alpine` for serving. Nginx listens on port 8080. Custom `nginx.conf` routes all unknown paths to `index.html` for client-side routing and sends the security headers (see above).
 
-`.github/workflows/docker.yml` is a reusable workflow called by `ci.yml` after the `node` job: pull requests only build the image (amd64), pushes to `main` and `v*` tags publish it, tagged `latest` (main only), `sha-<commit>` and the semver version.
+`.github/workflows/docker.yml` is a reusable workflow called by `ci.yml` after the `node` job: pull requests only build the image (amd64), pushes to `main` and `v*` tags publish it, tagged `latest` (main only), `sha-<commit>`, and `YYYY.M.REV` plus `YYYY.M` on a release tag. GitHub Pages is deployed on pushes to `main` and on release tags.
+
+### Versioning and releases
+
+- The version is never written by hand (`package.json` stays `0.0.0`). The `node` job of `ci.yml` computes it with `git describe --tags --match 'v[0-9]*'` and passes it as `APP_VERSION` to the Pages build and the image (`--build-arg`, since `.git` is not in the Docker context). Vite inlines it as `__APP_VERSION__` (`src/config/version.ts`), shown on the About page: `2026.11.1` on a release, `2026.11.1-3-gabc1234` after it, `dev` outside Git.
+- Releases are CalVer tags `vYYYY.M.REV`: no leading zeros (the tags must stay valid semver for `docker/metadata-action`), `REV` counts the releases of the month from 1. Pushing the tag is the whole release: CI runs on it, publishes the images and deploys Pages.
+- **Remind the user to release.** When a pull request with user-visible changes (feature, fix, UI, dependency affecting the build) is merged, or when reporting such work as done, tell the user that `main` is ahead of the last release and propose the next tag (`git describe --tags --abbrev=0`, then increment `REV`, or start at `.1` in a new month). Do not push a release tag without the user's go-ahead.
 
 ## Code Conventions
 
