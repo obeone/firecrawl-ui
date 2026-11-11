@@ -813,12 +813,107 @@ const ACTION_TYPES = [
   'executeJavascript',
 ] as const satisfies ReadonlyArray<V2Action['type']>;
 
+/** Scroll directions of the v2 `scroll` action. */
+const SCROLL_DIRECTIONS = ['up', 'down'] as const satisfies ReadonlyArray<
+  NonNullable<Extract<V2Action, { type: 'scroll' }>['direction']>
+>;
+
 /**
- * Keep the browser actions whose type the v2 spec knows.
+ * A non-empty string, or `undefined`.
  *
- * Only the `type` discriminant is checked here: the fields of each action are
- * filled by the actions editor, and the server validates them and answers a
- * malformed action with a 400.
+ * @param value - The value to check.
+ * @returns The string when it is non-empty.
+ */
+function nonEmptyString(value: unknown): string | undefined {
+  return typeof value === 'string' && value !== '' ? value : undefined;
+}
+
+/**
+ * A finite number, or `undefined`.
+ *
+ * @param value - The value to check.
+ * @returns The number when it is finite.
+ */
+function finiteNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+/**
+ * Build one v2 browser action from an action editor row.
+ *
+ * Each variant is rebuilt field by field, so fields left over from another
+ * action type are not sent, and an action missing a required field, or with a
+ * field of the wrong type, is dropped. A `wait` row with both fields set waits
+ * for the duration, matching the first variant of the spec.
+ *
+ * @param value - The legacy action row.
+ * @returns The action, or `undefined` when it does not match the spec.
+ */
+function toV2Action(value: unknown): V2Action | undefined {
+  if (!isRecord(value) || !isOneOf(value.type, ACTION_TYPES)) {
+    return undefined;
+  }
+  switch (value.type) {
+    case 'wait': {
+      const milliseconds = finiteNumber(value.milliseconds);
+      if (milliseconds !== undefined) {
+        return { type: 'wait', milliseconds };
+      }
+      const selector = nonEmptyString(value.selector);
+      return selector ? { type: 'wait', selector } : undefined;
+    }
+    case 'screenshot': {
+      const quality = finiteNumber(value.quality);
+      const viewport = isRecord(value.viewport) ? value.viewport : undefined;
+      const width = finiteNumber(viewport?.width);
+      const height = finiteNumber(viewport?.height);
+      return {
+        type: 'screenshot',
+        ...(typeof value.fullPage === 'boolean' ? { fullPage: value.fullPage } : {}),
+        ...(quality !== undefined ? { quality } : {}),
+        ...(width !== undefined && height !== undefined ? { viewport: { width, height } } : {}),
+      };
+    }
+    case 'click': {
+      const selector = nonEmptyString(value.selector);
+      if (!selector) {
+        return undefined;
+      }
+      return {
+        type: 'click',
+        selector,
+        ...(typeof value.all === 'boolean' ? { all: value.all } : {}),
+      };
+    }
+    case 'write':
+      return typeof value.text === 'string' ? { type: 'write', text: value.text } : undefined;
+    case 'press': {
+      const key = nonEmptyString(value.key);
+      return key ? { type: 'press', key } : undefined;
+    }
+    case 'scroll': {
+      if (value.direction !== undefined && !isOneOf(value.direction, SCROLL_DIRECTIONS)) {
+        return undefined;
+      }
+      const selector = nonEmptyString(value.selector);
+      return {
+        type: 'scroll',
+        ...(value.direction !== undefined ? { direction: value.direction } : {}),
+        ...(selector ? { selector } : {}),
+      };
+    }
+    case 'scrape':
+      return { type: 'scrape' };
+    case 'executeJavascript': {
+      const script = nonEmptyString(value.script);
+      return script ? { type: 'executeJavascript', script } : undefined;
+    }
+  }
+}
+
+/**
+ * Convert the action editor rows to v2 browser actions, dropping the rows
+ * that do not match the spec.
  *
  * @param value - The legacy action list.
  * @returns The actions, or `undefined` when `value` is not a list.
@@ -827,9 +922,7 @@ function toV2Actions(value: unknown): V2Action[] | undefined {
   if (!Array.isArray(value)) {
     return undefined;
   }
-  return value.filter(
-    (action): action is V2Action => isRecord(action) && isOneOf(action.type, ACTION_TYPES),
-  );
+  return value.map(toV2Action).filter((action): action is V2Action => action !== undefined);
 }
 
 /** Webhook events of `POST /v2/crawl`. */

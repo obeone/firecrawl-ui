@@ -187,6 +187,38 @@ describe('request values match the v2 spec', () => {
     expect(body.headers).toEqual({ 'x-ok': 'yes' });
   });
 
+  it('drops browser actions with missing or mistyped fields', async () => {
+    const body = await sentBody('/v2/scrape', { success: true, data: {} }, (api) =>
+      api.scraping.scrapeAndExtractFromUrl({
+        url: 'https://site.test/',
+        actions: [
+          { type: 'wait', milliseconds: 'not-a-number' },
+          { type: 'wait', milliseconds: '' },
+          { type: 'click' },
+          { type: 'click', selector: '' },
+          { type: 'scroll', direction: 'sideways' },
+          { type: 'press', key: 13 },
+          { type: 'write' },
+          { type: 'executeJavascript', script: '' },
+          { type: 'wait', selector: '#ready' },
+          { type: 'click', selector: '#more', all: 'yes', milliseconds: 5 },
+          { type: 'scroll', direction: 'up', selector: '' },
+          { type: 'screenshot', fullPage: true, quality: 'high' },
+          { type: 'write', text: '' },
+          { type: 'scrape', selector: '#stale' },
+        ],
+      }),
+    );
+    expect(body.actions).toEqual([
+      { type: 'wait', selector: '#ready' },
+      { type: 'click', selector: '#more' },
+      { type: 'scroll', direction: 'up' },
+      { type: 'screenshot', fullPage: true },
+      { type: 'write', text: '' },
+      { type: 'scrape' },
+    ]);
+  });
+
   it('sends the crawl webhook and scrape options in their v2 shape', async () => {
     const body = await sentBody('/v2/crawl', { success: true, id: 'c1' }, (api) =>
       api.crawling.crawlUrls({
@@ -277,6 +309,16 @@ describe('request values match the v2 spec', () => {
       // @ts-expect-error: webhook header values are strings
       webhook: { url: 'https://hook.test/', headers: { retries: 3 } },
     };
+    // @ts-expect-error: a click action needs its selector
+    const badClick: ScrapeRequestOptions = { actions: [{ type: 'click' }] };
+    const badWait: ScrapeRequestOptions = {
+      // @ts-expect-error: a wait duration is a number
+      actions: [{ type: 'wait', milliseconds: '10' }],
+    };
+    const badScroll: ScrapeRequestOptions = {
+      // @ts-expect-error: scroll directions are up and down
+      actions: [{ type: 'scroll', direction: 'sideways' }],
+    };
     // @ts-expect-error: unknown search source
     const badSource: SearchRequestBody = { sources: ['videos'] };
     const plainMarkdown: ScrapeRequestOptions = { formats: ['markdown', { type: 'summary' }] };
@@ -295,8 +337,11 @@ describe('request values match the v2 spec', () => {
       badEvent,
       badHeader,
       badSource,
+      badClick,
+      badWait,
+      badScroll,
       plainMarkdown,
-    ]).toHaveLength(9);
+    ]).toHaveLength(12);
   });
 });
 
