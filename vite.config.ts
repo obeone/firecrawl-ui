@@ -2,6 +2,7 @@
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import { injectCspMeta } from './src/config/csp';
 
 /**
  * Vite configuration file.
@@ -13,6 +14,16 @@ export default defineConfig({
   plugins: [
     // Vue plugin for Vite, enabling Vue 3 SFC support.
     vue(),
+    // Content Security Policy <meta> tag, for builds only: the dev server
+    // injects inline styles for HMR, which the policy would block.
+    {
+      name: 'firecrawl-ui:csp-meta',
+      apply: 'build',
+      transformIndexHtml: {
+        order: 'post',
+        handler: (html: string) => injectCspMeta(html),
+      },
+    },
   ],
   resolve: {
     /**

@@ -136,7 +136,11 @@ Precedence is `localStorage` > `VITE_*` env > default. Any trailing `/v1` or
 | `docker run -p 8080:8080 firecrawl-ui` | Serve via Nginx on port 8080 |
 
 The image is a multi-stage build (Node 26, then `nginx-unprivileged`). A custom
-`nginx.conf` rewrites unknown paths to `index.html` for client-side routing.
+`nginx.conf` rewrites unknown paths to `index.html` for client-side routing and
+sends a strict Content-Security-Policy with the usual security headers
+(`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`,
+`Permissions-Policy`). The policy is also embedded as a `<meta>` tag in the
+build, so it applies behind any static host.
 
 Published images (`ghcr.io/obeone/firecrawl-ui`, `obeoneorg/firecrawl-ui`) are
 built only after CI passes. Tags: `latest` follows `main`, `sha-<commit>` pins a
