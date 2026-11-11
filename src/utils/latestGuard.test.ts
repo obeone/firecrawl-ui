@@ -45,6 +45,51 @@ describe('createLatestGuard', () => {
     expect(shown).toEqual({ job: 'job-B', results: ['doc from B'] });
   });
 
+  it('keeps a late cancel of job A from unlocking or relocking job B', async () => {
+    const guard = createLatestGuard();
+    const view = { job: '', status: '', cancelling: false };
+
+    // Same shape as the batch view: a submit resets the cancel flag, and a
+    // cancel only touches the view while its job is still the current one.
+    const submit = (job: string) => {
+      guard.begin();
+      Object.assign(view, { job, status: 'scraping', cancelling: false });
+    };
+    const cancel = async (request: Promise<void>) => {
+      const isCurrent = guard.current();
+      view.cancelling = true;
+      try {
+        await request;
+        if (isCurrent()) {
+          view.status = 'cancelled';
+        }
+      } finally {
+        if (isCurrent()) {
+          view.cancelling = false;
+        }
+      }
+    };
+
+    submit('job-A');
+    const cancelA = deferred<void>();
+    const cancelling = cancel(cancelA.promise);
+    expect(view.cancelling).toBe(true);
+
+    submit('job-B');
+    expect(view).toEqual({ job: 'job-B', status: 'scraping', cancelling: false });
+
+    const cancelB = cancel(Promise.resolve());
+    await cancelB;
+    expect(view).toEqual({ job: 'job-B', status: 'cancelled', cancelling: false });
+
+    // A's cancel answers last: it must leave B's state alone.
+    view.status = 'scraping';
+    view.cancelling = true;
+    cancelA.resolve();
+    await cancelling;
+    expect(view).toEqual({ job: 'job-B', status: 'scraping', cancelling: true });
+  });
+
   it('keeps a current() token valid until another job begins', () => {
     const guard = createLatestGuard();
     guard.begin();

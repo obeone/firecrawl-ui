@@ -284,6 +284,8 @@ async function handleSubmit(): Promise<void> {
   const isCurrent = jobGuard.begin();
   stopPolling();
   loading.value = true;
+  // A cancel still pending for the previous job must not lock this one.
+  cancelling.value = false;
   error.value = '';
   results.value = [];
   jobId.value = null;
@@ -339,7 +341,9 @@ async function cancelJob(): Promise<void> {
       error.value = err instanceof Error ? err.message : 'Failed to cancel batch scrape job.';
     }
   } finally {
-    cancelling.value = false;
+    if (isCurrent()) {
+      cancelling.value = false;
+    }
   }
 }
 
