@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
+import { deprecationFor } from '@/config/deprecations';
 
 const storedTheme = localStorage.getItem('theme');
 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -149,6 +150,11 @@ function toggleTheme(): void {
               <path v-for="(d, i) in tool.paths" :key="i" :d="d" />
             </svg>
             <span>{{ tool.label }}</span>
+            <!-- Legacy v1 tools Firecrawl is removing from its cloud API -->
+            <span v-if="deprecationFor(tool.to)" class="tab-badge" title="Deprecated v1 endpoint">
+              {{ deprecationFor(tool.to)?.badge }}
+              <span class="visually-hidden">(deprecated)</span>
+            </span>
           </RouterLink>
         </nav>
 
@@ -486,6 +492,30 @@ function toggleTheme(): void {
 
 .tab.router-link-active .tab-icon {
   opacity: 1;
+}
+
+/* Marks a deprecated v1 tool; muted so it reads as a caveat, not a feature. */
+.tab-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-soft);
+  border: 1px solid var(--color-border);
+  padding: 0.05rem 0.3rem;
+  border-radius: var(--radius-pill);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Actions */

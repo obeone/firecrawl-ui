@@ -2,6 +2,7 @@
   <div class="page-container llms-txt-view">
     <h2>LLMs.txt Generator</h2>
     <p class="intro">Generate an LLMs.txt (and optionally full-text) file from any website.</p>
+    <DeprecationNotice path="/llmstxt" />
 
     <form class="llms-form" @submit.prevent="handleSubmit">
       <div class="form-group">
@@ -91,6 +92,7 @@
 <script setup lang="ts">
 import { ref, onUnmounted } from 'vue';
 import { useApi } from '@/plugins/api';
+import DeprecationNotice from '@/components/DeprecationNotice.vue';
 import type { FirecrawlApiVersion, LlmsTxtStatus } from '@/services/firecrawl';
 import { useJobPoller } from '@/composables/useJobPoller';
 import { describeRequestError } from '@/utils/errors';

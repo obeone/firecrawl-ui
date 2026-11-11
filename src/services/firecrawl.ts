@@ -455,9 +455,12 @@ export type FirecrawlApiVersion = (typeof API_VERSION_PREFERENCE)[number];
 /**
  * Features whose endpoints are not served by every Firecrawl deployment.
  *
- * Firecrawl Cloud exposes deep research and LLMs.txt generation under `/v2`;
- * self-hosted installs only serve them under `/v1` and answer `/v2` with a
- * 404. Every other endpoint this adapter uses exists under `/v2` on both.
+ * Deep research and LLMs.txt generation are legacy `/v1` endpoints: the
+ * official v2 OpenAPI spec does not define them, and Firecrawl deprecated both
+ * and removes them from its cloud API on 2026-12-10 (see
+ * `src/config/deprecations.ts`). `/v2` is still tried first, since a
+ * deployment answering there is preferred, and a 404 falls back to `/v1`.
+ * Every other endpoint this adapter uses exists under `/v2`.
  */
 type VersionedFeature = 'deep-research' | 'llmstxt';
 
