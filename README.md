@@ -153,8 +153,23 @@ adapter in `src/services/firecrawl.ts`. See the
 [Firecrawl v2 API reference](https://docs.firecrawl.dev/api-reference/v2-introduction)
 for the endpoints and payloads.
 
-> Firecrawl still exposes the legacy **v1** API alongside v2, so existing v1
-> integrations keep working, and this UI just builds its requests against v2.
+### Compatibility
+
+| Tool                                    | API                 | Status                                                        |
+| :-------------------------------------- | :------------------ | :------------------------------------------------------------ |
+| Scrape, Batch Scrape, Crawl, Extract    | `/v2`               | Supported                                                     |
+| Map, Search, API configuration, Billing | `/v2`               | Supported                                                     |
+| **Deep Research** (`/research`)         | `/v1` (tries `/v2`) | **Deprecated v1**, removed from Firecrawl Cloud on 2026-12-10 |
+| **LLMs.txt** (`/llmstxt`)               | `/v1` (tries `/v2`) | **Deprecated v1**, removed from Firecrawl Cloud on 2026-12-10 |
+
+Deep Research and LLMs.txt generation are not part of the v2 API. Firecrawl
+deprecated both legacy v1 endpoints and removes them from its cloud API on
+10 December 2026, 15:00 UTC. The UI keeps both tools, labelled `v1` in the top
+bar and with a notice on their pages, for self-hosted installs that still serve
+them. Upstream replacements: the Agent endpoint or a loop on Search for Deep
+Research ([migration guide](https://docs.firecrawl.dev/migrating-from-deep-research)),
+Map then Batch Scrape for LLMs.txt
+([migration guide](https://docs.firecrawl.dev/migrating-from-llmstxt)).
 
 ## 🧭 Architecture
 
