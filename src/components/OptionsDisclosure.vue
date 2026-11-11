@@ -13,8 +13,13 @@
  *
  * Bind the folded state with `v-model:collapsed`. The default slot is the body;
  * the optional `hint` slot renders a short note at the top of the body.
+ *
+ * A folded body is hidden, and browsers cannot point at a hidden invalid
+ * field, so form validation would block the submit without saying why. When a
+ * field inside a folded card fails validation the card unfolds and, if that
+ * field is the first invalid one of its form, reports it once visible.
  */
-import { computed, useId } from 'vue';
+import { computed, nextTick, useId } from 'vue';
 
 const props = withDefaults(
   defineProps<{
@@ -41,12 +46,42 @@ const isOpen = computed<boolean>(() => !props.collapsible || !collapsed.value);
 function toggle(): void {
   collapsed.value = !collapsed.value;
 }
+
+/** Whether a report of an invalid field is already scheduled for this card. */
+let reportPending = false;
+
+/**
+ * Unfold the card when one of its fields fails form validation.
+ *
+ * `invalid` does not bubble, so it is caught in the capture phase on the
+ * fieldset. The browser's own message is skipped for hidden fields, so the
+ * first invalid field of the form is reported again once the body is shown.
+ *
+ * @param event - The `invalid` event of a field inside the card.
+ */
+function onInvalid(event: Event): void {
+  if (isOpen.value) {
+    return;
+  }
+  collapsed.value = false;
+  const field = event.target as HTMLInputElement;
+  const firstInvalid = field.form?.querySelector('input:invalid, select:invalid, textarea:invalid');
+  if (reportPending || (firstInvalid && firstInvalid !== field)) {
+    return;
+  }
+  reportPending = true;
+  void nextTick(() => {
+    reportPending = false;
+    field.reportValidity();
+  });
+}
 </script>
 
 <template>
   <fieldset
     class="disclosure"
     :class="{ 'disclosure--open': isOpen, 'disclosure--static': !collapsible }"
+    @invalid.capture="onInvalid"
   >
     <legend class="disclosure__legend">
       <button

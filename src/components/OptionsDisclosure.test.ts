@@ -120,4 +120,44 @@ describe('OptionsDisclosure', () => {
     expect(ids).toHaveLength(2);
     expect(ids[0]).not.toBe(ids[1]);
   });
+
+  it('unfolds when a field inside fails form validation', async () => {
+    const collapsed = ref(true);
+    const submitted: Event[] = [];
+    const root = mountRender(() =>
+      h('form', { onSubmit: (event: Event) => submitted.push(event) }, [
+        h(
+          OptionsDisclosure,
+          {
+            title: 'Advanced Options',
+            collapsed: collapsed.value,
+            'onUpdate:collapsed': (value: boolean) => {
+              collapsed.value = value;
+            },
+          },
+          { default: () => h('input', { id: 'limit', type: 'number', max: '100', value: '101' }) },
+        ),
+      ]),
+    );
+    const form = root.querySelector('form') as HTMLFormElement;
+
+    expect(form.checkValidity()).toBe(false);
+    await nextTick();
+    await nextTick();
+
+    expect(submitted).toHaveLength(0);
+    expect(collapsed.value).toBe(false);
+    expect(root.querySelector('.disclosure__toggle')?.getAttribute('aria-expanded')).toBe('true');
+    expect(body(root).style.display).not.toBe('none');
+  });
+
+  it('stays folded when its fields are valid', async () => {
+    const { root, collapsed } = mount();
+    const form = document.createElement('form');
+    root.parentElement?.insertBefore(form, root);
+    form.appendChild(root);
+    expect(form.checkValidity()).toBe(true);
+    await nextTick();
+    expect(collapsed.value).toBe(true);
+  });
 });
