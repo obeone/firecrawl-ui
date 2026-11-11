@@ -1,7 +1,7 @@
 <template>
   <PlaygroundLayout
     title="Extract Data"
-    subtitle="Pull structured data from one or more URLs using a prompt or JSON schema."
+    subtitle="Pull structured data from one or more pages using a prompt or JSON schema."
     :tabs="responseTabs"
     :running="loading"
     :error="error || null"
@@ -9,28 +9,22 @@
     :status="statusLabel"
     :status-type="statusType"
     :duration="durationMs"
-    empty-hint="Provide a URL or prompt and click Extract to see structured results."
+    empty-hint="Provide a URL and a prompt or schema, then click Extract to see structured results."
   >
     <!-- ── REQUEST pane ─────────────────────────────────────── -->
     <template #request>
-      <div class="deprecation-warning" role="alert">
-        <strong>/v2/extract is deprecated.</strong>
-        Use
-        <router-link :to="{ name: 'scrape' }">Scrape</router-link>
-        with a <code>json</code> output format instead. On the Scrape page, select the
-        <code>JSON (Structured Extraction)</code> format and provide a prompt and/or JSON schema to
-        extract structured data.
-      </div>
-
       <form class="extract-form" @submit.prevent="runExtraction">
         <div class="form-group">
-          <label for="url-input">URLs (optional, one per line)</label>
-          <small class="hint">Leave blank when providing only a prompt.</small>
+          <label for="url-input">URLs (one per line)</label>
+          <small class="hint">
+            Each URL is scraped on its own with the <code>json</code> format of
+            <code>/v2/scrape</code>, and billed as one scrape.
+          </small>
           <textarea
             id="url-input"
             v-model="urlInput"
             rows="4"
-            placeholder="https://example.com/blog/*"
+            placeholder="https://example.com/pricing"
           ></textarea>
         </div>
 
@@ -59,35 +53,7 @@
           <small v-if="schemaError" class="schema-error">{{ schemaError }}</small>
         </div>
 
-        <div class="options">
-          <label>
-            <input v-model="options.enableWebSearch" type="checkbox" />
-            Enable Web Search
-          </label>
-          <label>
-            <input v-model="options.showSources" type="checkbox" />
-            Show Sources
-          </label>
-          <label>
-            <input v-model="options.allowExternalLinks" type="checkbox" />
-            Allow External Links
-          </label>
-          <label>
-            <input v-model="options.ignoreSitemap" type="checkbox" />
-            Ignore Sitemap
-          </label>
-          <label>
-            <input v-model="options.includeSubdomains" type="checkbox" />
-            Include Subdomains
-          </label>
-          <label>
-            <input v-model="options.ignoreInvalidURLs" type="checkbox" />
-            Ignore Invalid URLs
-          </label>
-        </div>
-
-        <!-- Scrape Options: controls forwarded as `scrapeOptions` to /v2/extract,
-             mirroring how ScrapeView groups its own page/scrape options. -->
+        <!-- Scrape Options: forwarded with the json format to /v2/scrape. -->
         <fieldset class="form-group options-fieldset">
           <legend
             class="collapsible-header"
@@ -96,20 +62,6 @@
             Scrape Options
           </legend>
           <div v-show="!isScrapeOptionsCollapsed">
-            <div class="form-group">
-              <label>Formats</label>
-              <div class="checkbox-grid">
-                <label
-                  v-for="format in availableFormats"
-                  :key="format.value"
-                  class="checkbox-label"
-                >
-                  <input v-model="scrapeOptions.formats" type="checkbox" :value="format.value" />
-                  {{ format.label }}
-                </label>
-              </div>
-            </div>
-
             <label class="checkbox-label">
               <input v-model="scrapeOptions.onlyMainContent" type="checkbox" />
               Only Main Content
@@ -168,6 +120,7 @@
                 <select id="proxy-select" v-model="scrapeOptions.proxy">
                   <option value="auto">Auto</option>
                   <option value="basic">Basic</option>
+                  <option value="enhanced">Enhanced</option>
                   <option value="stealth">Stealth</option>
                 </select>
               </div>
@@ -203,6 +156,7 @@
                   type="text"
                   placeholder="e.g. US"
                 />
+                <small v-if="countryError" class="error-message">{{ countryError }}</small>
               </div>
               <div class="form-group">
                 <label for="location-languages-input">Location Languages (comma separated)</label>
@@ -228,34 +182,10 @@
           </div>
         </fieldset>
 
-        <button
-          type="submit"
-          class="run-button"
-          :disabled="loading || !!schemaError || !!headersError"
-        >
-          {{ loading ? 'Running…' : 'Extract' }}
+        <button type="submit" class="run-button" :disabled="loading || !!formError">
+          {{ loading ? progressLabel : 'Extract' }}
         </button>
       </form>
-
-      <!-- Resume: /v2/extract jobs are addressable by id, so a result produced
-           in an earlier session can be pulled back without re-running (and
-           re-paying for) the extraction. Kept outside the form so pressing
-           Enter in the field does not submit a new extraction. -->
-      <div class="form-group resume-group">
-        <label for="resume-id-input">Resume by Job ID</label>
-        <small class="hint">Fetch the result of an extract job submitted earlier.</small>
-        <div class="resume-row">
-          <input id="resume-id-input" v-model="resumeId" type="text" placeholder="Extract job ID" />
-          <button
-            type="button"
-            class="action-button"
-            :disabled="loading || !resumeId.trim()"
-            @click="resumeExtraction"
-          >
-            Fetch Result
-          </button>
-        </div>
-      </div>
     </template>
 
     <!-- ── RESPONSE actions (download button) ──────────────── -->
@@ -267,26 +197,24 @@
 
     <!-- ── RESPONSE pane ────────────────────────────────────── -->
     <template #response="{ activeTab }">
-      <!-- Invalid URLs warning: shown above the result whenever the API rejected
-           one or more requested URLs. Reuses the deprecation banner's warning-hue
-           styling instead of introducing a new color token. -->
-      <div v-if="invalidUrls.length" class="deprecation-warning invalid-urls-warning" role="alert">
-        <strong>{{ invalidUrls.length }} invalid URL(s) were rejected by the API:</strong>
+      <!-- Failed URLs: pages that returned no data while others succeeded. -->
+      <div
+        v-if="hasResult && failedPages.length"
+        class="warning-strip failed-urls-warning"
+        role="alert"
+      >
+        <strong>{{ failedPages.length }} URL(s) returned no data:</strong>
         <ul>
-          <li v-for="url in invalidUrls" :key="url">{{ url }}</li>
+          <li v-for="page in failedPages" :key="page.url">{{ page.url }}: {{ page.error }}</li>
         </ul>
       </div>
 
       <!-- Result tab: a human-readable key/value view of the extracted data -->
       <div v-if="activeTab === 'result'" class="result-view">
-        <template v-if="resultIsObject">
-          <div
-            v-for="(value, key) in result as Record<string, unknown>"
-            :key="String(key)"
-            class="result-row"
-          >
-            <span class="result-key">{{ key }}</span>
-            <span class="result-value">{{ formatValue(value) }}</span>
+        <template v-if="resultRows">
+          <div v-for="row in resultRows" :key="row.key" class="result-row">
+            <span class="result-key">{{ row.key }}</span>
+            <span class="result-value">{{ row.value }}</span>
           </div>
         </template>
         <template v-else>
@@ -297,40 +225,41 @@
 
       <!-- JSON tab: raw pretty-printed output via CodeBlock -->
       <CodeBlock v-else-if="activeTab === 'json'" :json="result" label="JSON" />
-
-      <!-- Sources tab: per-key list of source URLs used to build the result. -->
-      <div v-else-if="activeTab === 'sources'" class="result-view sources-view">
-        <div v-for="(urls, key) in sourcesMap" :key="String(key)" class="sources-group">
-          <span class="result-key">{{ key }}</span>
-          <ul class="sources-list">
-            <li v-for="url in urls" :key="url">
-              <a :href="url" target="_blank" rel="noopener noreferrer">{{ url }}</a>
-            </li>
-          </ul>
-        </div>
-      </div>
     </template>
   </PlaygroundLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useApi } from '@/plugins/api';
-import { PollTimeoutError, getErrorMessage } from '@/utils/errors';
-import { useRoute } from 'vue-router';
-import type { FirecrawlExtractResponse } from '@/services/firecrawl';
+import { describeRequestError, getErrorMessage, isUnauthorized } from '@/utils/errors';
+import { checkCountryCode, firstFormError } from '@/utils/formValidation';
+import { createLatestGuard } from '@/utils/latestGuard';
+import {
+  buildExtractScrapePayload,
+  combineExtractResults,
+  defaultExtractScrapeOptions,
+  parseExtractUrls,
+  toExtractPageResult,
+  toResultRows,
+  type ExtractPageResult,
+} from '@/utils/extractRequest';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
 import CodeBlock from '../components/playground/CodeBlock.vue';
 
-/**
- * Injection of the API client. The apiPlugin must provide an `extraction` instance.
- */
+/** The Firecrawl adapter clients; extraction goes through `scraping`. */
 const api = useApi();
-
-const urlInput = ref(''); // Stores the URLs entered by the user.
-const promptInput = ref(''); // Stores the prompt for data extraction.
-
 const route = useRoute();
+const router = useRouter();
+
+/** Drops answers from a run the user has already replaced or left. */
+const guard = createLatestGuard();
+onBeforeUnmount(() => guard.invalidate());
+
+const urlInput = ref(''); // Newline-separated URLs typed by the user.
+const promptInput = ref(''); // Prompt describing the data to extract.
+const schemaString = ref(''); // JSON schema text typed by the user.
 
 // Pre-fill the URL textarea from the ?url= query parameter (passed by the
 // home-page launcher when the user picks a tool with a URL already typed).
@@ -341,102 +270,55 @@ onMounted(() => {
     urlInput.value = String(initialUrl);
   }
 });
-const schemaString = ref(''); // Stores the JSON schema string provided by the user.
-/**
- * Top-level /v2/extract options. Defaults mirror the API's own defaults
- * (`includeSubdomains` and `ignoreInvalidURLs` default to true server-side)
- * so the payload builder below can detect and omit unchanged values.
- */
-const options = ref({
-  enableWebSearch: false,
-  showSources: false,
-  allowExternalLinks: false,
-  ignoreSitemap: false,
-  includeSubdomains: true,
-  ignoreInvalidURLs: true,
-});
-const loading = ref(false); // Indicates if an extraction request is in progress.
-const error = ref(''); // Stores any error messages from the extraction process.
-const result = ref<FirecrawlExtractResponse['data'] | null>(null); // Stores the successful extraction result.
-const schemaError = ref<string | null>(null); // Stores error messages related to JSON schema parsing.
-const parsedSchema = ref<object | null | undefined>(undefined); // Holds the parsed schema object.
-const durationMs = ref<number | null>(null); // Request round-trip duration in milliseconds.
 
-/**
- * The full, final /v2/extract response (post-polling), kept alongside `result`
- * so the response pane can surface fields other than `data` — namely
- * `invalidURLs` and `sources` — without disturbing the existing success/error
- * handling that only ever looked at `data`.
- */
-const fullResponse = ref<FirecrawlExtractResponse | null>(null);
+const loading = ref(false); // Whether an extraction is running.
+const error = ref(''); // Error shown in the response pane.
+const result = ref<unknown>(null); // Combined extracted data, `null` when none.
+const pages = ref<ExtractPageResult[]>([]); // Per-URL outcome of the last run.
+const progress = ref({ done: 0, total: 0 }); // Pages processed in the current run.
+const durationMs = ref<number | null>(null); // Round-trip duration of the whole run.
 
-/** Checkbox options for the `scrapeOptions.formats` field. */
-const availableFormats = [
-  { value: 'markdown', label: 'Markdown' },
-  { value: 'html', label: 'HTML' },
-  { value: 'rawHtml', label: 'Raw HTML' },
-  { value: 'links', label: 'Links' },
-  { value: 'summary', label: 'Summary' },
-] as const;
+const schemaError = ref<string | null>(null); // Schema JSON parse error.
+const parsedSchema = ref<Record<string, unknown> | undefined>(undefined); // Parsed schema.
 
-/**
- * `scrapeOptions` sub-object forwarded to /v2/extract. Values are seeded with
- * the API's own defaults so the payload builder can send only the fields the
- * user actually changed, keeping the request body readable.
- */
-const scrapeOptions = ref({
-  formats: ['markdown'] as string[],
-  onlyMainContent: true,
-  includeTags: '',
-  excludeTags: '',
-  waitFor: 0,
-  timeout: 60000,
-  maxAge: 172800000,
-  mobile: false,
-  blockAds: true,
-  removeBase64Images: false,
-  skipTlsVerification: false,
-  storeInCache: true,
-  proxy: 'auto' as 'auto' | 'basic' | 'stealth',
-  locationCountry: '',
-  locationLanguages: '',
-});
+/** Scrape options sent with the json format, seeded with the v2 defaults. */
+const scrapeOptions = ref(defaultExtractScrapeOptions());
 
 /** Whether the "Scrape Options" fieldset is collapsed, matching ScrapeView's pattern. */
 const isScrapeOptionsCollapsed = ref(true);
 
-const resumeId = ref(''); // Job ID typed by the user to resume a previous extract job.
-
-const headersString = ref(''); // Stores the HTTP headers JSON string provided by the user.
-const headersError = ref<string | null>(null); // Stores error messages related to headers JSON parsing.
-const parsedHeaders = ref<Record<string, string> | undefined>(undefined); // Holds the parsed headers object.
+const headersString = ref(''); // HTTP headers JSON text typed by the user.
+const headersError = ref<string | null>(null); // Headers JSON parse error.
+const parsedHeaders = ref<Record<string, string> | undefined>(undefined); // Parsed headers.
 
 /**
- * Watcher to parse the schema string and update the parsed schema.
- * Sets an error message if parsing fails.
+ * Parse the schema text, keeping an error when it is not a JSON object.
  */
 watch(
   schemaString,
   (newVal) => {
+    parsedSchema.value = undefined;
     if (!newVal.trim()) {
       schemaError.value = null;
-      parsedSchema.value = undefined;
       return;
     }
     try {
-      parsedSchema.value = JSON.parse(newVal);
+      const parsed: unknown = JSON.parse(newVal);
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        schemaError.value = 'The schema must be a JSON object.';
+        return;
+      }
+      parsedSchema.value = parsed as Record<string, unknown>;
       schemaError.value = null;
     } catch (e) {
       schemaError.value = getErrorMessage(e);
-      parsedSchema.value = null;
     }
   },
   { immediate: true },
 );
 
 /**
- * Watcher to parse the headers string and update the parsed headers.
- * Sets an error message if parsing fails, mirroring the schema watcher above.
+ * Parse the headers text, keeping an error when it is not valid JSON.
  */
 watch(
   headersString,
@@ -457,20 +339,38 @@ watch(
   { immediate: true },
 );
 
-/** Format result as pretty JSON. */
-const formattedResult = computed(() => (result.value ? JSON.stringify(result.value, null, 2) : ''));
-
-/** True when the result is a plain object (enables the key/value view). */
-const resultIsObject = computed(
-  () => result.value !== null && typeof result.value === 'object' && !Array.isArray(result.value),
+/** Error of the location country field, if any. */
+const countryError = computed<string | undefined>(
+  () => checkCountryCode(scrapeOptions.value.locationCountry).error,
 );
+
+/** First field error of the form; submission is blocked while one is set. */
+const formError = computed<string | undefined>(() =>
+  firstFormError([schemaError.value, headersError.value, countryError.value]),
+);
+
+/** Label of the run button while a run is in progress. */
+const progressLabel = computed<string>(() =>
+  progress.value.total > 1 ? `Running… ${progress.value.done}/${progress.value.total}` : 'Running…',
+);
+
+/** Pretty-printed result, for scalar and array results. */
+const formattedResult = computed(() =>
+  result.value === null ? '' : JSON.stringify(result.value, null, 2),
+);
+
+/** Key/value rows of the Result tab, or `null` for a scalar or array result. */
+const resultRows = computed(() => toResultRows(result.value));
 
 /** Whether a result is available to display. */
 const hasResult = computed(() => result.value !== null);
 
+/** Pages of the last run that returned no data. */
+const failedPages = computed(() => pages.value.filter((page) => !page.ok));
+
 /** Status label shown in the PlaygroundLayout status bar. */
 const statusLabel = computed<string | null>(() => {
-  if (result.value !== null) return 'Success';
+  if (result.value !== null) return failedPages.value.length ? 'Partial' : 'Success';
   if (error.value) return 'Failed';
   return null;
 });
@@ -483,252 +383,81 @@ const statusType = computed<'success' | 'error' | 'idle'>(() => {
 });
 
 /** Response tabs shown in the PlaygroundLayout tab bar. */
-const responseTabs = computed(() => {
-  const tabs = [
-    { key: 'result', label: 'Result' },
-    { key: 'json', label: 'JSON' },
-  ];
-  // Only offer the Sources tab when the response actually carries sources —
-  // it is empty unless the request set `showSources: true`.
-  if (Object.keys(sourcesMap.value).length > 0) {
-    tabs.push({ key: 'sources', label: 'Sources' });
-  }
-  return tabs;
-});
+const responseTabs = [
+  { key: 'result', label: 'Result' },
+  { key: 'json', label: 'JSON' },
+];
 
 /**
- * URLs from the request that the API rejected as invalid. Empty when the
- * response carries none, which also hides the warning strip in the template.
- */
-const invalidUrls = computed<string[]>(() => fullResponse.value?.invalidURLs ?? []);
-
-/**
- * Normalize a single `sources` entry into a flat list of URL strings. Entries
- * may be plain URL strings or objects carrying a `url` field, similarly to
- * how `mapUrls` normalizes its own link entries in the adapter layer.
+ * Extract the data from every URL, one `/v2/scrape` request at a time.
  *
- * @param value - A single value from the `sources` response map.
- * @returns The URLs found in that value.
- */
-function toSourceUrls(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((entry) => {
-      if (typeof entry === 'string') return entry;
-      if (entry && typeof entry === 'object') {
-        const { url } = entry as { url?: unknown };
-        if (typeof url === 'string') return url;
-      }
-      return undefined;
-    })
-    .filter((url): url is string => Boolean(url));
-}
-
-/**
- * The response's `sources` map normalized to `Record<string, string[]>` for
- * the Sources tab. Empty when the response has no non-empty sources.
- */
-const sourcesMap = computed<Record<string, string[]>>(() => {
-  const sources = fullResponse.value?.sources;
-  if (!sources || typeof sources !== 'object') return {};
-  const entries = Object.entries(sources)
-    .map(([key, value]) => [key, toSourceUrls(value)] as const)
-    .filter(([, urls]) => urls.length > 0);
-  return Object.fromEntries(entries);
-});
-
-/**
- * Format a single value for display in the result key/value view.
+ * A page that fails is recorded and the run moves on to the next URL; the
+ * run fails as a whole only when no page returns data. A 401 sends the user
+ * to the API settings, like the Scrape view.
  *
- * @param value - The value to format.
- * @returns A human-readable string representation.
- */
-function formatValue(value: unknown): string {
-  if (value === null || value === undefined) return '—';
-  if (typeof value === 'object') return JSON.stringify(value);
-  return String(value);
-}
-
-/**
- * Build the `scrapeOptions` sub-object for the /v2/extract payload.
- *
- * This is a playground UI, so the request body should stay readable: rather
- * than echoing every field back at its current value, only fields that
- * differ from the API's own documented default are included. When nothing
- * deviates, `undefined` is returned so the caller omits `scrapeOptions`
- * entirely, matching the "send only what changed" rule for the whole payload.
- *
- * @returns The scrapeOptions object to forward, or undefined when every field
- * still matches its API default.
- */
-function buildScrapeOptions(): Record<string, unknown> | undefined {
-  const opts = scrapeOptions.value;
-  const scrapeOptionsPayload: Record<string, unknown> = {};
-
-  // formats: default is exactly ["markdown"]. Any other selection (including
-  // additional formats, or none at all) is sent explicitly.
-  const isDefaultFormats = opts.formats.length === 1 && opts.formats[0] === 'markdown';
-  if (!isDefaultFormats && opts.formats.length > 0) {
-    scrapeOptionsPayload.formats = opts.formats;
-  }
-
-  if (opts.onlyMainContent === false) scrapeOptionsPayload.onlyMainContent = false;
-
-  const includeTags = opts.includeTags
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter((tag) => tag);
-  if (includeTags.length) scrapeOptionsPayload.includeTags = includeTags;
-
-  const excludeTags = opts.excludeTags
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter((tag) => tag);
-  if (excludeTags.length) scrapeOptionsPayload.excludeTags = excludeTags;
-
-  if (opts.waitFor !== 0) scrapeOptionsPayload.waitFor = opts.waitFor;
-  if (opts.timeout !== 60000) scrapeOptionsPayload.timeout = opts.timeout;
-  if (opts.maxAge !== 172800000) scrapeOptionsPayload.maxAge = opts.maxAge;
-  if (opts.mobile === true) scrapeOptionsPayload.mobile = true;
-  if (opts.blockAds === false) scrapeOptionsPayload.blockAds = false;
-  if (opts.removeBase64Images === true) scrapeOptionsPayload.removeBase64Images = true;
-  if (opts.skipTlsVerification === true) scrapeOptionsPayload.skipTlsVerification = true;
-  if (opts.storeInCache === false) scrapeOptionsPayload.storeInCache = false;
-  if (opts.proxy !== 'auto') scrapeOptionsPayload.proxy = opts.proxy;
-
-  const languages = opts.locationLanguages
-    .split(',')
-    .map((lang) => lang.trim())
-    .filter((lang) => lang);
-  const location: Record<string, unknown> = {
-    ...(opts.locationCountry.trim() && { country: opts.locationCountry.trim() }),
-    ...(languages.length && { languages }),
-  };
-  if (Object.keys(location).length) scrapeOptionsPayload.location = location;
-
-  if (parsedHeaders.value && Object.keys(parsedHeaders.value).length) {
-    scrapeOptionsPayload.headers = parsedHeaders.value;
-  }
-
-  return Object.keys(scrapeOptionsPayload).length ? scrapeOptionsPayload : undefined;
-}
-
-/**
- * Send the extraction request to the API.
+ * @returns A promise that resolves once every URL has been processed.
  */
 const runExtraction = async (): Promise<void> => {
-  if (schemaError.value || headersError.value) return;
+  if (formError.value) return;
 
-  const urls = urlInput.value
-    .split('\n')
-    .map((u) => u.trim())
-    .filter((u) => u);
-  if (!urls.length && !promptInput.value.trim()) {
-    error.value = 'Please provide at least one URL or a prompt.';
+  const urls = parseExtractUrls(urlInput.value);
+  if (!urls.length) {
+    error.value = 'Please provide at least one URL.';
+    return;
+  }
+  const prompt = promptInput.value.trim();
+  if (!prompt && !parsedSchema.value) {
+    error.value = 'Please provide a prompt or a JSON schema.';
     return;
   }
 
-  const scrapeOptionsPayload = buildScrapeOptions();
-
-  const payload = {
-    ...(urls.length && { urls }),
-    ...(promptInput.value && { prompt: promptInput.value }),
-    ...(parsedSchema.value && { schema: parsedSchema.value }),
-    ...(options.value.enableWebSearch && { enableWebSearch: true }),
-    ...(options.value.showSources && { showSources: true }),
-    ...(options.value.allowExternalLinks && { allowExternalLinks: true }),
-    // ignoreSitemap and allowExternalLinks default to false, so only send them
-    // when the user turned them on.
-    ...(options.value.ignoreSitemap && { ignoreSitemap: true }),
-    // includeSubdomains and ignoreInvalidURLs default to true API-side, so
-    // only send them when the user turned them off.
-    ...(options.value.includeSubdomains === false && { includeSubdomains: false }),
-    ...(options.value.ignoreInvalidURLs === false && { ignoreInvalidURLs: false }),
-    ...(scrapeOptionsPayload && { scrapeOptions: scrapeOptionsPayload }),
-  };
+  const isCurrent = guard.begin();
+  loading.value = true;
+  error.value = '';
+  result.value = null;
+  pages.value = [];
+  durationMs.value = null;
+  progress.value = { done: 0, total: urls.length };
+  const startedAt = performance.now();
+  const outcomes: ExtractPageResult[] = [];
 
   try {
-    loading.value = true;
-    error.value = '';
-    durationMs.value = null;
-    fullResponse.value = null;
-    const t0 = performance.now();
-    const response = await api.extraction.extractData(payload);
-    durationMs.value = performance.now() - t0;
-    const respData = response.data;
-    // Keep the full response around (invalidURLs, sources, ...) regardless of
-    // outcome, so the response pane can surface it alongside the error state.
-    fullResponse.value = respData;
-    if (respData.success && respData.data) {
-      result.value = respData.data;
-    } else {
-      throw new Error(respData.error || 'Extraction failed');
+    for (const url of urls) {
+      const payload = buildExtractScrapePayload({
+        url,
+        prompt,
+        schema: parsedSchema.value,
+        headers: parsedHeaders.value,
+        options: scrapeOptions.value,
+      });
+      try {
+        const response = await api.scraping.scrapeAndExtractFromUrl(payload);
+        if (!isCurrent()) return;
+        outcomes.push(toExtractPageResult(url, response.data.data));
+      } catch (err) {
+        if (!isCurrent()) return;
+        if (isUnauthorized(err)) {
+          router.push({ name: 'api-config' });
+          return;
+        }
+        outcomes.push({ url, ok: false, error: describeRequestError(err) });
+      }
+      progress.value = { done: outcomes.length, total: urls.length };
     }
-  } catch (err) {
-    // A local wait timeout is not a failure: the job keeps running, so offer
-    // its ID for "resume" instead of reporting the extraction as failed.
-    if (err instanceof PollTimeoutError && err.jobId) {
-      resumeId.value = err.jobId;
+
+    pages.value = outcomes;
+    result.value = combineExtractResults(outcomes);
+    if (result.value === null) {
+      error.value =
+        outcomes.length === 1
+          ? (outcomes[0].error ?? 'Extraction failed')
+          : outcomes.map((page) => `${page.url}: ${page.error}`).join('\n');
     }
-    error.value = getErrorMessage(err, 'Request failed');
-    result.value = null;
   } finally {
-    loading.value = false;
-  }
-};
-
-/**
- * Fetch the result of a previously submitted extract job by its job ID.
- *
- * Mirrors `runExtraction`'s state handling so the response pane behaves
- * identically whether the data came from a fresh run or from a resumed job:
- * the full response is kept for the invalid-URLs strip and the Sources tab,
- * and `result` only ever holds the `data` payload.
- *
- * A job that is still processing is reported back to the user rather than
- * treated as a result, since /v2/extract returns no `data` until it finishes.
- *
- * @returns A promise that resolves once the status fetch and the state update
- * are complete.
- */
-const resumeExtraction = async (): Promise<void> => {
-  const id = resumeId.value.trim();
-  if (!id) {
-    error.value = 'Please enter an extract job ID.';
-    return;
-  }
-
-  try {
-    loading.value = true;
-    error.value = '';
-    result.value = null;
-    fullResponse.value = null;
-    durationMs.value = null;
-
-    const t0 = performance.now();
-    const response = await api.extraction.getExtractStatus(id);
-    durationMs.value = performance.now() - t0;
-    const respData = response.data;
-    // Keep the full response regardless of outcome so invalidURLs and sources
-    // stay visible even when the job itself ended in an error state.
-    fullResponse.value = respData;
-
-    if (respData.status === 'processing') {
-      error.value = 'Job is still processing. Try again in a moment.';
-    } else if (respData.status === 'failed' || respData.status === 'cancelled') {
-      throw new Error(respData.error || `Extract job ${respData.status}`);
-    } else if (respData.data !== undefined && respData.data !== null) {
-      // Either an explicitly completed job, or an older response shape that
-      // carries data without a status field.
-      result.value = respData.data as FirecrawlExtractResponse['data'];
-    } else {
-      throw new Error(respData.error || 'No data returned for this job ID.');
+    if (isCurrent()) {
+      durationMs.value = performance.now() - startedAt;
+      loading.value = false;
     }
-  } catch (err) {
-    error.value = getErrorMessage(err, 'Request failed');
-    result.value = null;
-  } finally {
-    loading.value = false;
   }
 };
 
@@ -736,7 +465,7 @@ const resumeExtraction = async (): Promise<void> => {
  * Download the JSON result to a file.
  */
 const downloadResult = (): void => {
-  if (!result.value) return;
+  if (result.value === null) return;
   const blob = new Blob([JSON.stringify(result.value, null, 2)], {
     type: 'application/json',
   });
@@ -752,10 +481,10 @@ const downloadResult = (): void => {
 /* ── Form layout ──────────────────────────────────────────────── */
 
 /*
- * Deprecation banner: glass card tinted with the warning hue, pointing users
- * to the Scrape page + JSON format as the supported replacement for /v2/extract.
+ * Warning strip: glass card tinted with the warning hue, listing the URLs
+ * that returned no data while others succeeded.
  */
-.deprecation-warning {
+.warning-strip {
   margin-bottom: 1rem;
   padding: 0.75rem 1rem;
   border: 1px solid var(--hue-warning);
@@ -767,20 +496,6 @@ const downloadResult = (): void => {
   color: var(--color-text);
   font-size: 0.85rem;
   line-height: 1.55;
-}
-
-.deprecation-warning a {
-  color: var(--hue-warning);
-  font-weight: 700;
-  text-decoration: underline;
-}
-
-.deprecation-warning code {
-  padding: 0.05rem 0.3rem;
-  border-radius: var(--radius-sm);
-  background: var(--color-background-soft);
-  font-family: var(--font-mono);
-  font-size: 0.82em;
 }
 
 .extract-form {
@@ -841,30 +556,6 @@ const downloadResult = (): void => {
   color: var(--hue-danger);
 }
 
-/* ── Options checkboxes ───────────────────────────────────────── */
-
-.options {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.options label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.88rem;
-  color: var(--color-text);
-  cursor: pointer;
-}
-
-/* Checkbox accent in violet to match the aurora brand. */
-.options input[type='checkbox'] {
-  accent-color: var(--violet-500);
-  width: 15px;
-  height: 15px;
-}
-
 /* ── Scrape Options fieldset ──────────────────────────────────── */
 
 /*
@@ -895,12 +586,6 @@ const downloadResult = (): void => {
 
 .collapsible-header:hover {
   color: var(--brand-strong);
-}
-
-.checkbox-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0.45rem;
 }
 
 .checkbox-label {
@@ -984,65 +669,6 @@ const downloadResult = (): void => {
 .run-button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
-}
-
-/* ── Resume by job ID ─────────────────────────────────────────── */
-
-/*
- * Separated from the form above by a hairline rule: resuming a job is a
- * distinct entry point, not another field of the extraction request.
- */
-.resume-group {
-  margin-top: 0.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--color-border);
-}
-
-.resume-row {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-/* Job IDs are opaque tokens, so the field gets the same mono treatment as
-   the JSON textareas above it. */
-.resume-row input[type='text'] {
-  flex: 1;
-  min-width: 0;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: 0.84rem;
-  background: var(--color-background-soft);
-  color: var(--color-text);
-  box-sizing: border-box;
-  transition:
-    border-color var(--transition-fast),
-    box-shadow var(--transition-fast);
-}
-
-.resume-row input[type='text']:focus {
-  outline: none;
-  border-color: var(--violet-500);
-  box-shadow: var(--shadow-ring);
-}
-
-.resume-row .action-button {
-  flex-shrink: 0;
-}
-
-.resume-row .action-button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-/* Keep the disabled button visually inert instead of lighting up on hover. */
-.resume-row .action-button:disabled:hover {
-  border-color: var(--glass-border);
-  color: var(--color-heading);
-  background: var(--glass-fill);
-  box-shadow: none;
 }
 
 /* ── Response-actions Download button ─────────────────────────── */
@@ -1130,53 +756,24 @@ const downloadResult = (): void => {
   word-break: break-word;
 }
 
-/* ── Invalid URLs warning strip ───────────────────────────────── */
+/* ── Failed URLs warning strip ────────────────────────────────── */
 
 /*
- * Reuses .deprecation-warning's glass + warning-hue treatment so the response
- * pane's invalid-URLs notice reads as the same visual language as the
- * request pane's deprecation banner, rather than introducing a new hue.
+ * Placement of the .warning-strip card inside the response pane, above the
+ * result, with the failed URLs listed in mono.
  */
-.invalid-urls-warning {
+.failed-urls-warning {
   margin: 1rem 1rem 0;
 }
 
-.invalid-urls-warning ul {
+.failed-urls-warning ul {
   margin: 0.4rem 0 0;
   padding-left: 1.2rem;
 }
 
-.invalid-urls-warning li {
+.failed-urls-warning li {
   font-family: var(--font-mono);
   font-size: 0.8em;
   word-break: break-all;
-}
-
-/* ── Sources tab ──────────────────────────────────────────────── */
-
-.sources-group {
-  padding: 0.6rem 0;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.sources-group:last-child {
-  border-bottom: none;
-}
-
-.sources-list {
-  margin: 0.4rem 0 0;
-  padding-left: 1.2rem;
-}
-
-.sources-list a {
-  color: var(--brand-strong);
-  font-family: var(--font-mono);
-  font-size: 0.84rem;
-  word-break: break-all;
-  text-decoration: underline;
-}
-
-.sources-list a:hover {
-  text-decoration: none;
 }
 </style>
