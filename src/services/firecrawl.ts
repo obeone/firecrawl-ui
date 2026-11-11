@@ -1,4 +1,6 @@
 import axios, { AxiosError, type AxiosInstance } from 'axios';
+import { FirecrawlApiError } from '../utils/errors';
+import { pollJob, isTerminalStatus } from '../utils/polling';
 
 /**
  * Normalize a Firecrawl base URL so v2 calls are built from the service root.
@@ -383,18 +385,38 @@ export interface FirecrawlApiClients {
 }
 
 /**
- * Convert an Axios error to a readable message.
+ * Firecrawl error response body (`{ success: false, error, code?, details? }`).
+ */
+interface FirecrawlErrorBody {
+  error?: string;
+  message?: string;
+  code?: string;
+  details?: unknown;
+}
+
+/**
+ * Convert a failed request into a {@link FirecrawlApiError}.
  *
- * @param error - The Axios error thrown by a request.
+ * The HTTP status, the API error code and the details from the body are kept
+ * so callers can react to a 401 or a 404 without parsing the message.
+ *
+ * @param error - The error thrown by a request.
  * @param fallback - The default error message.
- * @returns A user-facing error message.
+ * @returns A typed error, or the original error when it did not come from Axios.
  */
 function formatApiError(error: unknown, fallback: string): Error {
   if (error instanceof AxiosError) {
-    const responseMessage =
-      (error.response?.data as { error?: string; message?: string } | undefined)?.error ||
-      (error.response?.data as { error?: string; message?: string } | undefined)?.message;
-    return new Error(responseMessage || error.message || fallback);
+    const body =
+      error.response?.data && typeof error.response.data === 'object'
+        ? (error.response.data as FirecrawlErrorBody)
+        : undefined;
+    return new FirecrawlApiError(body?.error || body?.message || error.message || fallback, {
+      status: error.response?.status,
+      code: body?.code,
+      details: body?.details,
+      network: !error.response,
+      cause: error,
+    });
   }
 
   return error instanceof Error ? error : new Error(fallback);
@@ -505,16 +527,6 @@ async function requestWithVersionFallback<T>(
   }
 
   throw lastError;
-}
-
-/**
- * Pause execution for a small amount of time while polling long-running jobs.
- *
- * @param milliseconds - The delay duration in milliseconds.
- * @returns A promise resolved after the delay.
- */
-function sleep(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 /**
@@ -800,12 +812,18 @@ function toCrawlRequest(payload: Record<string, unknown>): {
   return { url, options };
 }
 
+/** Delay between two extract status checks, in milliseconds. */
+const EXTRACT_POLL_INTERVAL_MS = 1000;
+/** How long the UI waits for an extract job before handing back its ID, in milliseconds. */
+const EXTRACT_POLL_TIMEOUT_MS = 120_000;
+
 /**
  * Poll the extract endpoint until the job is complete.
  *
  * @param http - The configured Axios client.
  * @param initialResponse - The first extract response.
  * @returns The final extract response.
+ * @throws {PollTimeoutError} When the job is still running after the wait limit.
  */
 async function waitForExtract(
   http: AxiosInstance,
@@ -818,25 +836,17 @@ async function waitForExtract(
     return initialResponse;
   }
 
-  // Terminal job states: stop polling as soon as one of these is reached.
-  const terminalStatuses = new Set(['completed', 'failed', 'cancelled']);
-  // Bound the loop (~2 minutes at 1s interval) so a job that never settles
-  // cannot hang the UI indefinitely.
-  const maxAttempts = 120;
-
-  let response = initialResponse;
-  let attempts = 0;
-
-  while (!terminalStatuses.has(response.status ?? '') && attempts < maxAttempts) {
-    await sleep(1000);
-    const pollResponse = await http.get<FirecrawlExtractResponse>(
-      `/v2/extract/${initialResponse.id}`,
-    );
-    response = pollResponse.data;
-    attempts += 1;
-  }
-
-  return response;
+  // Bound the wait (~2 minutes) so a job that never settles cannot hang the
+  // UI; running out raises a PollTimeoutError, not a server failure.
+  const jobId = initialResponse.id;
+  const handle = pollJob({
+    request: async () => (await http.get<FirecrawlExtractResponse>(`/v2/extract/${jobId}`)).data,
+    isSettled: (value) => isTerminalStatus(value.status),
+    intervalMs: EXTRACT_POLL_INTERVAL_MS,
+    timeoutMs: EXTRACT_POLL_TIMEOUT_MS,
+    jobId,
+  });
+  return (await handle.result) as FirecrawlExtractResponse;
 }
 
 /**

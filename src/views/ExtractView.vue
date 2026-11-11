@@ -316,7 +316,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useApi } from '@/plugins/api';
-import { getErrorMessage } from '@/utils/errors';
+import { PollTimeoutError, getErrorMessage } from '@/utils/errors';
 import { useRoute } from 'vue-router';
 import type { FirecrawlExtractResponse } from '@/services/firecrawl';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
@@ -665,6 +665,11 @@ const runExtraction = async (): Promise<void> => {
       throw new Error(respData.error || 'Extraction failed');
     }
   } catch (err) {
+    // A local wait timeout is not a failure: the job keeps running, so offer
+    // its ID for "resume" instead of reporting the extraction as failed.
+    if (err instanceof PollTimeoutError && err.jobId) {
+      resumeId.value = err.jobId;
+    }
     error.value = getErrorMessage(err, 'Request failed');
     result.value = null;
   } finally {

@@ -103,6 +103,9 @@
 import { ref, computed, onUnmounted } from 'vue';
 import { useApi } from '@/plugins/api';
 import type { CrawlError } from '@/services/firecrawl';
+import { describeRequestError } from '@/utils/errors';
+import { createLatestGuard, type IsCurrent } from '@/utils/latestGuard';
+import { isTerminalStatus, pollJob, type PollHandle } from '@/utils/polling';
 
 /**
  * BatchScrapeView Component
@@ -154,8 +157,10 @@ const batchRobotsBlocked = ref<string[]>([]);
 /** Whether the error report has been fetched at least once for the current job. */
 const errorsLoaded = ref(false);
 
-/** Polling interval handle. */
-let intervalId: ReturnType<typeof setInterval> | null = null;
+/** Running status poll loop, if any. */
+let poll: PollHandle<unknown> | null = null;
+// Answers that arrive for a job the user has replaced are dropped.
+const jobGuard = createLatestGuard();
 
 /**
  * True while the job is actively scraping or processing (i.e. not yet in a
@@ -189,40 +194,70 @@ function docTitle(doc: Record<string, unknown>): string {
  * Stop the status polling loop, if any is active.
  */
 function stopPolling(): void {
-  if (intervalId) {
-    clearInterval(intervalId);
-    intervalId = null;
-  }
+  poll?.stop();
+  poll = null;
 }
 
 /**
- * Poll the batch scrape status endpoint until the job completes or fails.
+ * Poll the batch scrape status endpoint until the job settles.
+ *
+ * One request at a time; `completed`, `failed` and `cancelled` all end the
+ * loop. A failed status request leaves the job state `unavailable` rather than
+ * `failed`, since the job itself may still be running server-side.
  *
  * @param id - The batch job identifier.
+ * @param isCurrent - Token of the submit that started this job; once stale,
+ *   late answers are ignored.
  */
-function pollStatus(id: string): void {
+function pollStatus(id: string, isCurrent: IsCurrent): void {
   stopPolling();
-  intervalId = setInterval(async () => {
-    try {
-      const response = await api.batchScraping.getBatchScrapeStatus(id);
-      const data = response.data;
+  const current = pollJob({
+    request: async () => (await api.batchScraping.getBatchScrapeStatus(id)).data,
+    isSettled: (data) => isTerminalStatus(data.status),
+    onUpdate: (data) => {
       status.value = data.status;
       completed.value = data.completed;
       total.value = data.total;
       creditsUsed.value = data.creditsUsed;
       progress.value = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
+    },
+    intervalMs: 3000,
+    jobId: id,
+  });
+  poll = current;
 
-      if (data.status === 'completed' || data.status === 'failed') {
-        stopPolling();
-        const all = await api.batchScraping.getBatchScrapeResults(id);
-        results.value = all.data.data;
+  current.result.then(
+    async (data) => {
+      if (data === undefined) {
+        return; // Stopped: cancelled by the user, replaced, or unmounted.
       }
-    } catch (err: unknown) {
-      error.value = err instanceof Error ? err.message : 'Failed to fetch batch status.';
-      status.value = 'failed';
-      stopPolling();
-    }
-  }, 3000);
+      if (!isCurrent()) {
+        return;
+      }
+      poll = null;
+      if (data.status === 'completed' || data.status === 'failed') {
+        // The results can span many pages; another job may start meanwhile.
+        try {
+          const all = await api.batchScraping.getBatchScrapeResults(id);
+          if (isCurrent()) {
+            results.value = all.data.data;
+          }
+        } catch (err: unknown) {
+          if (isCurrent()) {
+            error.value = describeRequestError(err, 'Failed to fetch batch results.');
+          }
+        }
+      }
+    },
+    (err: unknown) => {
+      if (!isCurrent()) {
+        return;
+      }
+      poll = null;
+      error.value = `Failed to fetch batch status: ${describeRequestError(err)}`;
+      status.value = 'unavailable';
+    },
+  );
 }
 
 /**
@@ -245,7 +280,12 @@ async function handleSubmit(): Promise<void> {
     return;
   }
 
+  // Any answer still pending for the previous job is now stale.
+  const isCurrent = jobGuard.begin();
+  stopPolling();
   loading.value = true;
+  // A cancel still pending for the previous job must not lock this one.
+  cancelling.value = false;
   error.value = '';
   results.value = [];
   jobId.value = null;
@@ -258,13 +298,20 @@ async function handleSubmit(): Promise<void> {
       formats: selectedFormats.value,
       onlyMainContent: onlyMainContent.value,
     });
+    if (!isCurrent()) {
+      return;
+    }
     jobId.value = response.data.id;
     status.value = 'scraping';
-    pollStatus(response.data.id);
+    pollStatus(response.data.id, isCurrent);
   } catch (err: unknown) {
-    error.value = err instanceof Error ? err.message : 'Failed to start batch scrape.';
+    if (isCurrent()) {
+      error.value = err instanceof Error ? err.message : 'Failed to start batch scrape.';
+    }
   } finally {
-    loading.value = false;
+    if (isCurrent()) {
+      loading.value = false;
+    }
   }
 }
 
@@ -280,16 +327,23 @@ async function cancelJob(): Promise<void> {
   if (!jobId.value) {
     return;
   }
+  const isCurrent = jobGuard.current();
   cancelling.value = true;
   error.value = '';
   try {
     await api.batchScraping.cancelBatchScrape(jobId.value);
-    stopPolling();
-    status.value = 'cancelled';
+    if (isCurrent()) {
+      stopPolling();
+      status.value = 'cancelled';
+    }
   } catch (err: unknown) {
-    error.value = err instanceof Error ? err.message : 'Failed to cancel batch scrape job.';
+    if (isCurrent()) {
+      error.value = err instanceof Error ? err.message : 'Failed to cancel batch scrape job.';
+    }
   } finally {
-    cancelling.value = false;
+    if (isCurrent()) {
+      cancelling.value = false;
+    }
   }
 }
 
@@ -306,14 +360,20 @@ async function loadErrors(): Promise<void> {
   if (!jobId.value) {
     return;
   }
+  const isCurrent = jobGuard.current();
   error.value = '';
   try {
     const response = await api.batchScraping.getBatchScrapeErrors(jobId.value);
+    if (!isCurrent()) {
+      return;
+    }
     batchErrors.value = response.data.errors;
     batchRobotsBlocked.value = response.data.robotsBlocked;
     errorsLoaded.value = true;
   } catch (err: unknown) {
-    error.value = err instanceof Error ? err.message : 'Failed to fetch batch scrape errors.';
+    if (isCurrent()) {
+      error.value = err instanceof Error ? err.message : 'Failed to fetch batch scrape errors.';
+    }
   }
 }
 
@@ -331,8 +391,11 @@ function downloadJson(): void {
   URL.revokeObjectURL(link.href);
 }
 
-// Clean up the polling loop when the component is destroyed.
-onUnmounted(stopPolling);
+// Clean up the polling loop, and ignore pending answers, when the component is destroyed.
+onUnmounted(() => {
+  jobGuard.invalidate();
+  stopPolling();
+});
 </script>
 
 <style scoped>
