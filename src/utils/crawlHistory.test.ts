@@ -92,6 +92,25 @@ describe('crawlHistory', () => {
     expectNoSecret(s.raw());
   });
 
+  it('never persists tokens carried by the URL query string or fragment', () => {
+    const s = memoryStorage();
+    saveCrawlHistory(
+      [
+        { ...legacyEntry('a'), url: 'https://example.com/docs?access_token=query-secret' },
+        { ...legacyEntry('b'), url: 'https://example.com/docs#access_token=hash-secret' },
+      ],
+      s,
+    );
+    expect(s.raw()).not.toContain('query-secret');
+    expect(s.raw()).not.toContain('hash-secret');
+
+    const legacy = memoryStorage(
+      JSON.stringify([{ ...legacyEntry('c'), url: 'https://example.com/?sig=legacy-secret' }]),
+    );
+    expect(loadCrawlHistory(legacy)[0].url).toBe('https://example.com/');
+    expect(legacy.raw()).not.toContain('legacy-secret');
+  });
+
   it('keeps the fields the Crawl view reads back', () => {
     expect(sanitizeCrawlHistoryItem(legacyEntry('a'))).toEqual({
       id: 'a',

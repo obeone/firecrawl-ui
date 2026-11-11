@@ -8,7 +8,8 @@
  * view reads back, so none of those can reach storage again, and rewrites
  * entries saved by older versions the first time they are loaded.
  *
- * Kept per entry: job ID, crawled URL (without user:password@), creation date,
+ * Kept per entry: job ID, crawled URL (without user:password@, query string or
+ * fragment, which can carry tokens), creation date,
  * status, the include/exclude path filters, and the scrape fields the history
  * tab restores (formats, include/exclude tags, location languages, JSON and
  * change-tracking schemas, change-tracking modes). Everything else is dropped,
@@ -16,7 +17,7 @@
  * URLs often embed their own secret (Slack, Discord, signed URLs).
  */
 
-import { stripUserinfo, type StorageLike } from './jobHistory';
+import { historyUrl, type StorageLike } from './jobHistory';
 
 /** localStorage key of the legacy crawl history. */
 export const CRAWL_HISTORY_STORAGE_KEY = 'crawlHistory';
@@ -54,7 +55,7 @@ export interface StoredScrapeOptions {
 export interface CrawlHistoryItem {
   /** Server-side crawl job ID. */
   id: string;
-  /** Crawled URL, without credentials. */
+  /** Crawled URL, without credentials, query or fragment. */
   url: string;
   /** Creation time, ISO 8601. */
   createdAt: string;
@@ -207,7 +208,7 @@ export function sanitizeCrawlHistoryItem(input: unknown): CrawlHistoryItem | nul
   }
   const item: CrawlHistoryItem = {
     id: input.id.slice(0, MAX_ID_LENGTH),
-    url: typeof input.url === 'string' ? stripUserinfo(input.url).slice(0, MAX_URL_LENGTH) : '',
+    url: typeof input.url === 'string' ? historyUrl(input.url).slice(0, MAX_URL_LENGTH) : '',
     createdAt: typeof input.createdAt === 'string' ? input.createdAt.slice(0, MAX_DATE_LENGTH) : '',
     status: typeof input.status === 'string' ? input.status.slice(0, MAX_STATUS_LENGTH) : '',
   };
