@@ -306,25 +306,9 @@
         <pre v-else>{{ previewContent }}</pre>
       </div>
 
-      <!-- Markdown: raw markdown via CodeBlock -->
-      <CodeBlock v-else-if="activeTab === 'markdown'" :content="markdownContent" label="Markdown" />
-
-      <!-- HTML: raw html string via CodeBlock -->
-      <CodeBlock v-else-if="activeTab === 'html'" :content="htmlContent" label="HTML" />
-
-      <!-- Links: list of discovered links via CodeBlock -->
-      <CodeBlock v-else-if="activeTab === 'links'" :content="linksContent" label="Links" />
-
-      <!-- Screenshot: rendered image -->
-      <div v-else-if="activeTab === 'screenshot'" class="screenshot-pane">
-        <img :src="screenshotContent" alt="Page screenshot" />
-      </div>
-
-      <!-- Metadata: page metadata object as JSON -->
-      <CodeBlock v-else-if="activeTab === 'metadata'" :json="metadataContent" label="Metadata" />
-
-      <!-- JSON: the full result object -->
-      <CodeBlock v-else :json="result" label="JSON" />
+      <!-- Other tabs: raw markdown/HTML/links, screenshot, metadata, or the
+           full result object as JSON -->
+      <ResultViewer v-else :doc="resultData" :tab="activeTab" :json="result" />
     </template>
 
     <!-- Response actions: copy current tab payload + download menu -->
@@ -345,9 +329,16 @@ import { describeRequestError, getErrorMessage, isUnauthorized } from '@/utils/e
 import { checkCountryCode, firstFormError } from '@/utils/formValidation';
 import { renderMarkdown } from '@/utils/sanitize';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
-import CodeBlock from '../components/playground/CodeBlock.vue';
 import CopyButton from '../components/playground/CopyButton.vue';
+import ResultViewer from '@/components/ResultViewer.vue';
 import ScrapeOptionsForm from '@/components/ScrapeOptionsForm.vue';
+import {
+  buildDocumentTabs,
+  getDocumentHtml,
+  getDocumentLinks,
+  getDocumentMarkdown,
+  type ResultTab,
+} from '@/utils/resultDocument';
 import {
   SCRAPE_FORMAT_OPTIONS,
   buildTagFilters,
@@ -460,8 +451,8 @@ export default defineComponent({
   name: 'ScrapeView',
   components: {
     PlaygroundLayout,
-    CodeBlock,
     CopyButton,
+    ResultViewer,
     ScrapeOptionsForm,
   },
   /**
@@ -583,46 +574,19 @@ export default defineComponent({
      * Raw markdown string from the result, when present.
      * @returns {string}
      */
-    const markdownContent = computed<string>(() => {
-      const md = resultData.value?.markdown;
-      return typeof md === 'string' ? md : '';
-    });
+    const markdownContent = computed<string>(() => getDocumentMarkdown(resultData.value));
 
     /**
      * Raw HTML string from the result (prefers `html`, falls back to `rawHtml`).
      * @returns {string}
      */
-    const htmlContent = computed<string>(() => {
-      const html = resultData.value?.html ?? resultData.value?.rawHtml;
-      return typeof html === 'string' ? html : '';
-    });
+    const htmlContent = computed<string>(() => getDocumentHtml(resultData.value));
 
     /**
      * Newline-joined list of discovered links, when present.
      * @returns {string}
      */
-    const linksContent = computed<string>(() => {
-      const links = resultData.value?.links;
-      return Array.isArray(links) ? links.join('\n') : '';
-    });
-
-    /**
-     * Screenshot data URL from the result, when present.
-     * @returns {string}
-     */
-    const screenshotContent = computed<string>(() => {
-      const shot = resultData.value?.screenshot;
-      return typeof shot === 'string' ? shot : '';
-    });
-
-    /**
-     * Page metadata object from the result, when present.
-     * @returns {Record<string, unknown> | null}
-     */
-    const metadataContent = computed<Record<string, unknown> | null>(() => {
-      const meta = resultData.value?.metadata;
-      return meta && typeof meta === 'object' ? (meta as Record<string, unknown>) : null;
-    });
+    const linksContent = computed<string>(() => getDocumentLinks(resultData.value));
 
     /**
      * Text shown in the Preview tab: rendered markdown if available, otherwise
@@ -653,19 +617,9 @@ export default defineComponent({
      * Only tabs backed by real data are shown; JSON is always available.
      * @returns {{ key: string; label: string }[]}
      */
-    const responseTabs = computed<{ key: string; label: string }[]>(() => {
-      const tabs: { key: string; label: string }[] = [];
-      if (markdownContent.value || htmlContent.value) {
-        tabs.push({ key: 'preview', label: 'Preview' });
-      }
-      if (markdownContent.value) tabs.push({ key: 'markdown', label: 'Markdown' });
-      if (htmlContent.value) tabs.push({ key: 'html', label: 'HTML' });
-      if (linksContent.value) tabs.push({ key: 'links', label: 'Links' });
-      if (screenshotContent.value) tabs.push({ key: 'screenshot', label: 'Screenshot' });
-      if (metadataContent.value) tabs.push({ key: 'metadata', label: 'Metadata' });
-      tabs.push({ key: 'json', label: 'JSON' });
-      return tabs;
-    });
+    const responseTabs = computed<ResultTab[]>(() =>
+      buildDocumentTabs(resultData.value, { includePreview: true }),
+    );
 
     /**
      * Status label for the playground status bar: reflects success, error, or idle.
@@ -1076,10 +1030,9 @@ export default defineComponent({
       markdownContent,
       htmlContent,
       linksContent,
-      screenshotContent,
-      metadataContent,
       previewContent,
       previewHtml,
+      resultData,
       formatOptions: SCRAPE_FORMAT_OPTIONS,
     };
   },
@@ -1404,28 +1357,5 @@ export default defineComponent({
 .markdown-body th {
   font-weight: 700;
   background: var(--color-background-soft);
-}
-
-/* ---------------------------------------------------------------------------
- * Screenshot pane — centered, scrollable image surface.
- * Same glass fill treatment as the preview pane for visual cohesion.
- * --------------------------------------------------------------------------- */
-.screenshot-pane {
-  height: 100%;
-  overflow: auto;
-  padding: 1rem;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  /* Glass fill keeps the aurora visible behind the screenshot. */
-  background: var(--glass-fill);
-}
-
-.screenshot-pane img {
-  max-width: 100%;
-  height: auto;
-  /* Glass-bordered image frame matches the panel language. */
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
 }
 </style>
