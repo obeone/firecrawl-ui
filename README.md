@@ -10,13 +10,16 @@
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)
 [![License](https://img.shields.io/github/license/obeone/firecrawl-ui)](LICENSE)
 [![CI](https://github.com/obeone/firecrawl-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/obeone/firecrawl-ui/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/tag/obeone/firecrawl-ui?label=release&sort=date)](https://github.com/obeone/firecrawl-ui/tags)
+[![Docker Pulls](https://img.shields.io/docker/pulls/obeoneorg/firecrawl-ui?logo=docker&logoColor=white)](https://hub.docker.com/r/obeoneorg/firecrawl-ui)
 
 </div>
 
 ---
 
-Firecrawl UI is a single-page Vue 3 app that puts the [Firecrawl API](https://firecrawl.dev/)
-tools behind a simple request/response interface. You don't need to write any
+Firecrawl UI is a single-page Vue 3 app that puts the
+[Firecrawl API](https://firecrawl.dev/) tools behind a simple
+request/response interface. You don't need to write any
 integration code: open the app, drop in a URL, and read the scraped content,
 crawl results, or extracted data right in the browser. Your API key and data
 stay local, and you can point it at the hosted Firecrawl service or your own
@@ -28,10 +31,12 @@ self-hosted instance.
 | :-: | :--------------- | :------------------------------------------------------------------------ |
 | 🔗  | **URL launcher** | Paste a URL on the home, pick an action, land in the tool pre-filled      |
 | 📄  | **Scrape**       | Turn a single page into clean markdown, HTML, links or structured data    |
+| 📚  | **Batch scrape** | Scrape a list of URLs in one job and export the results together          |
 | 🕷️  | **Crawl**        | Traverse a whole site with depth, include/exclude rules and live progress |
 | 🧠  | **Extract**      | Pull structured fields from URLs with a prompt or schema (AI)             |
 | 🗺️  | **Map**          | List every reachable URL of a site to understand its structure            |
 | 🔍  | **Search**       | Query the web and get ranked results with optional page content           |
+| 🕘  | **History**      | Reopen past jobs by ID; only metadata is kept, in your browser            |
 | 🌗  | **Light / dark** | Glass + aurora theme, dark by default, remembered across sessions         |
 | 🔑  | **Local config** | API key and base URL stored in your browser, never sent anywhere else     |
 | 🏠  | **Self-hosting** | Point the base URL at your own Firecrawl instance (with or without a key) |
@@ -74,12 +79,13 @@ Open <http://localhost:8080/>. Prebuilt images:
 | :-------------------------------: | :-----------------------------: |
 | ![Scrape](screenshots/scrape.png) | ![Crawl](screenshots/crawl.png) |
 
-|               Extract               |
-| :---------------------------------: |
-| ![Extract](screenshots/extract.png) |
+|               Extract               |             Map             |
+| :---------------------------------: | :-------------------------: |
+| ![Extract](screenshots/extract.png) | ![Map](screenshots/map.png) |
 
 Each tool is a two-pane playground: build the request on the left, read the
-response (preview, JSON, links, …) on the right.
+response (preview, JSON, links and more) on the right. Option groups fold
+away so long forms stay readable.
 
 ## ⚙️ Configuration
 
@@ -143,8 +149,20 @@ sends a strict Content-Security-Policy with the usual security headers
 build, so it applies behind any static host.
 
 Published images (`ghcr.io/obeone/firecrawl-ui`, `obeoneorg/firecrawl-ui`) are
-built only after CI passes. Tags: `latest` follows `main`, `sha-<commit>` pins a
-commit, and a `vX.Y.Z` git tag also publishes `X.Y.Z` and `X.Y`.
+built only after CI passes and signed with cosign.
+
+| Image tag      | Points to                           |
+| :------------- | :---------------------------------- |
+| `latest`       | The last commit on `main`           |
+| `sha-<commit>` | One exact commit                    |
+| `YYYY.M.D`     | A CalVer release, e.g. `2026.11.11` |
+| `YYYY.M`       | The latest release of that month    |
+
+Releases use CalVer. Run the **Release** workflow from the Actions tab on
+`main`: it tags the commit as `vYYYY.M.D` (UTC) and publishes the images
+above. The version is never written by hand: it is injected at build time
+and shown on the About page (`sha-<commit>` between releases, `dev` for a
+build outside Git).
 
 ## 🔌 API
 
@@ -155,12 +173,14 @@ for the endpoints and payloads.
 
 ### Compatibility
 
-| Tool                                    | API                 | Status                                                        |
-| :-------------------------------------- | :------------------ | :------------------------------------------------------------ |
-| Scrape, Batch Scrape, Crawl, Extract    | `/v2`               | Supported                                                     |
-| Map, Search, API configuration, Billing | `/v2`               | Supported                                                     |
-| **Deep Research** (`/research`)         | `/v1` (tries `/v2`) | **Deprecated v1**, removed from Firecrawl Cloud on 2026-12-10 |
-| **LLMs.txt** (`/llmstxt`)               | `/v1` (tries `/v2`) | **Deprecated v1**, removed from Firecrawl Cloud on 2026-12-10 |
+| Tool                                    | API    | Status          |
+| :-------------------------------------- | :----- | :-------------- |
+| Scrape, Batch Scrape, Crawl, Extract    | `/v2`  | Supported       |
+| Map, Search, API configuration, Billing | `/v2`  | Supported       |
+| **Deep Research** (`/research`)         | `/v1`¹ | Deprecated (v1) |
+| **LLMs.txt** (`/llmstxt`)               | `/v1`¹ | Deprecated (v1) |
+
+¹ Tries `/v2` first, then falls back to `/v1`.
 
 Deep Research and LLMs.txt generation are not part of the v2 API. Firecrawl
 deprecated both legacy v1 endpoints and removes them from its cloud API on
@@ -185,8 +205,8 @@ flowchart TB
 ## 🤝 Contributing
 
 Contributions are welcome. Run `npm run format:check`, `npm run lint`,
-`npm run typecheck` and `npm test` before opening a pull request; CI blocks on
-each of them. PR titles follow `[firecrawl-ui] <Title>`.
+`npm run typecheck` and `npm test` before opening a pull request; CI blocks
+on each of them. PR titles follow `[firecrawl-ui] <Title>`.
 
 ## 📝 License
 
