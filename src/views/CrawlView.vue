@@ -590,8 +590,9 @@ import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
 import CodeBlock from '../components/playground/CodeBlock.vue';
 import { type ActiveCrawl, type CrawlError } from '../services/firecrawl';
 import { useApi } from '../plugins/api';
-import { getErrorMessage } from '@/utils/errors';
+import { describeRequestError, getErrorMessage, isUnauthorized } from '@/utils/errors';
 import { checkCountryCode } from '@/utils/formValidation';
+import { isTerminalStatus, pollJob, type PollHandle } from '@/utils/polling';
 
 /**
  * Interface for Crawler Options section of the form.
@@ -1081,10 +1082,7 @@ export default defineComponent({
      * Clear the crawl history and remove the stored data.
      */
     const clearHistory = () => {
-      for (const id in historyIntervalIds) {
-        clearInterval(historyIntervalIds[id]);
-        delete historyIntervalIds[id];
-      }
+      stopAllHistoryPolling();
       crawlHistory.value = [];
       selectedCrawlId.value = null;
       localStorage.removeItem(HISTORY_STORAGE_KEY);
@@ -1591,22 +1589,14 @@ export default defineComponent({
           loading.value = false; // hide loading spinner once polling starts
         }
       } catch (err: unknown) {
-        if (err instanceof Error) {
-          if (err.message.includes('401')) {
-            router.push({ name: 'ApiConfig' });
-            return;
-          }
-          error.value = err.message.includes('404')
-            ? 'Resource not found (404)'
-            : err.message.includes('Network Error')
-              ? 'Network connection failed'
-              : err.message;
-        } else {
-          error.value = 'An unexpected error occurred';
-        }
         loading.value = false; // Stop loading on error
         crawling.value = false; // Stop crawling animation on error
         currentCrawlId.value = null;
+        if (isUnauthorized(err)) {
+          router.push({ name: 'api-config' });
+          return;
+        }
+        error.value = describeRequestError(err);
       }
     };
 
@@ -1620,10 +1610,7 @@ export default defineComponent({
       }
       try {
         await api.crawling.cancelCrawl(currentCrawlId.value);
-        if (intervalId) {
-          clearInterval(intervalId);
-          intervalId = null;
-        }
+        stopCurrentPolling();
         crawlStatus.value = 'cancelled';
         crawling.value = false;
         const historyItem = crawlHistory.value.find((c) => c.id === currentCrawlId.value);
@@ -1688,75 +1675,77 @@ export default defineComponent({
       }
     };
 
-    // Interval ID for polling crawl status
-    let intervalId: ReturnType<typeof setInterval> | null = null;
-    const historyIntervalIds: Record<string, ReturnType<typeof setInterval>> = {};
+    // Running poll loops: the current crawl, and history entries still in progress.
+    let currentPoll: PollHandle<unknown> | null = null;
+    const historyPolls: Record<string, PollHandle<unknown>> = {};
 
     /**
-     * Fetch crawl status and progress periodically from the API.
-     * Clears any existing interval before starting a new one.
-     * Updates reactive variables with the latest status, completed pages, and total pages.
-     * Stops polling when the crawl job is completed or failed.
+     * Stop polling the current crawl, if a poll loop is running.
+     */
+    const stopCurrentPolling = () => {
+      currentPoll?.stop();
+      currentPoll = null;
+    };
+
+    /**
+     * Poll the crawl status until the job settles.
+     *
+     * One request at a time: the next status check is scheduled only once the
+     * previous one has returned. `completed`, `failed` and `cancelled` all end
+     * the loop. A failed status request is reported as such and marks the
+     * history entry `unavailable`, since the job itself may still be running.
+     *
      * @param {string} jobId - The ID of the crawl job.
      */
-    const fetchCrawlStatus = async (jobId: string) => {
-      // Clear any existing interval before starting a new one
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
+    const fetchCrawlStatus = (jobId: string) => {
+      stopCurrentPolling();
 
-      intervalId = setInterval(async () => {
-        try {
-          // Call the actual API endpoint to get the crawl status
-          const response = await api.crawling.getCrawlStatus(jobId);
-          const data = response.data;
-
-          // Update reactive variables with real data
+      const poll = pollJob({
+        request: async () => (await api.crawling.getCrawlStatus(jobId)).data,
+        isSettled: (data) => isTerminalStatus(data.status),
+        onUpdate: (data) => {
           crawlStatus.value = data.status;
           pagesCompleted.value = data.completed || 0;
           totalPages.value = data.total || 0;
           // Calculate progress based on completed vs total pages
-          if (
-            data.total !== undefined &&
-            data.total > 0 &&
-            data.completed !== undefined &&
-            data.completed >= 0
-          ) {
-            progress.value = Math.round((data.completed / data.total) * 100);
-          } else {
-            progress.value = 0; // Or handle as appropriate if total is 0 or completed is undefined/negative
-          }
+          progress.value =
+            data.total > 0 && data.completed >= 0
+              ? Math.round((data.completed / data.total) * 100)
+              : 0;
 
           const historyItem = crawlHistory.value.find((c) => c.id === jobId);
           if (historyItem) {
             historyItem.status = data.status;
             saveHistory();
           }
+        },
+        intervalMs: statusCheckInterval.value * 1000,
+        jobId,
+      });
+      currentPoll = poll;
 
-          // Stop polling when completed or failed
-          if (data.status === 'completed' || data.status === 'failed') {
-            if (intervalId) clearInterval(intervalId);
-            intervalId = null; // Clear intervalId after clearing interval
-            crawling.value = false; // Update crawling state
-            currentCrawlId.value = null;
-            saveHistory(); // Save history when status changes to completed or failed
+      poll.result.then(
+        (data) => {
+          if (data === undefined) {
+            return; // Stopped: cancelled by the user, replaced, or unmounted.
           }
-        } catch (err) {
-          console.error('Failed to fetch crawl status:', err);
-          // Stop polling on error
-          if (intervalId) clearInterval(intervalId);
-          intervalId = null;
+          currentPoll = null;
           crawling.value = false;
-          crawlStatus.value = 'failed'; // Indicate failure in UI
           currentCrawlId.value = null;
-          error.value = `Failed to fetch crawl status: ${getErrorMessage(err)}`;
+        },
+        (err: unknown) => {
+          console.error('Failed to fetch crawl status:', err);
+          currentPoll = null;
+          crawling.value = false;
+          currentCrawlId.value = null;
+          error.value = `Failed to fetch crawl status: ${describeRequestError(err)}`;
           const historyItem = crawlHistory.value.find((c) => c.id === jobId);
           if (historyItem) {
-            historyItem.status = 'failed';
+            historyItem.status = 'unavailable';
             saveHistory();
           }
-        }
-      }, statusCheckInterval.value * 1000);
+        },
+      );
     };
 
     /**
@@ -1769,7 +1758,7 @@ export default defineComponent({
         const response = await api.crawling.getCrawlStatus(crawl.id);
         crawl.status = response.data.status;
         saveHistory();
-        if (crawl.status !== 'completed' && crawl.status !== 'failed') {
+        if (!isTerminalStatus(crawl.status)) {
           startHistoryPolling(crawl.id);
         }
       } catch (err) {
@@ -1780,31 +1769,42 @@ export default defineComponent({
     };
 
     /**
-     * Start polling status for a specific history entry.
+     * Start polling status for a specific history entry, one request at a time.
      * @param id - Crawl job identifier.
      */
     const startHistoryPolling = (id: string) => {
       stopHistoryPolling(id);
-      historyIntervalIds[id] = setInterval(async () => {
-        const crawl = crawlHistory.value.find((c) => c.id === id);
-        if (!crawl) {
-          stopHistoryPolling(id);
-          return;
-        }
-        try {
-          const response = await api.crawling.getCrawlStatus(id);
-          crawl.status = response.data.status;
-          saveHistory();
-          if (crawl.status === 'completed' || crawl.status === 'failed') {
+      const poll = pollJob({
+        request: async () => (await api.crawling.getCrawlStatus(id)).data,
+        isSettled: (data) => isTerminalStatus(data.status),
+        onUpdate: (data) => {
+          const crawl = crawlHistory.value.find((c) => c.id === id);
+          if (!crawl) {
             stopHistoryPolling(id);
+            return;
           }
-        } catch (err) {
-          console.error(`Polling failed for crawl ${id}:`, err);
-          crawl.status = 'unavailable';
+          crawl.status = data.status;
           saveHistory();
-          stopHistoryPolling(id);
-        }
-      }, statusCheckInterval.value * 1000);
+        },
+        intervalMs: statusCheckInterval.value * 1000,
+        jobId: id,
+      });
+      historyPolls[id] = poll;
+
+      poll.result
+        .catch((err: unknown) => {
+          console.error(`Polling failed for crawl ${id}:`, err);
+          const crawl = crawlHistory.value.find((c) => c.id === id);
+          if (crawl) {
+            crawl.status = 'unavailable';
+            saveHistory();
+          }
+        })
+        .finally(() => {
+          if (historyPolls[id] === poll) {
+            delete historyPolls[id];
+          }
+        });
     };
 
     /**
@@ -1812,10 +1812,16 @@ export default defineComponent({
      * @param id - Crawl job identifier.
      */
     const stopHistoryPolling = (id: string) => {
-      const intId = historyIntervalIds[id];
-      if (intId) {
-        clearInterval(intId);
-        delete historyIntervalIds[id];
+      historyPolls[id]?.stop();
+      delete historyPolls[id];
+    };
+
+    /**
+     * Stop every history poll loop.
+     */
+    const stopAllHistoryPolling = () => {
+      for (const id of Object.keys(historyPolls)) {
+        stopHistoryPolling(id);
       }
     };
 
@@ -1839,14 +1845,8 @@ export default defineComponent({
 
     // Cleanup polling interval when the component unmounts
     onUnmounted(() => {
-      if (intervalId) {
-        clearInterval(intervalId);
-        intervalId = null;
-      }
-      for (const id in historyIntervalIds) {
-        clearInterval(historyIntervalIds[id]);
-        delete historyIntervalIds[id];
-      }
+      stopCurrentPolling();
+      stopAllHistoryPolling();
     });
 
     return {

@@ -103,6 +103,8 @@
 import { ref, computed, onUnmounted } from 'vue';
 import { useApi } from '@/plugins/api';
 import type { CrawlError } from '@/services/firecrawl';
+import { describeRequestError } from '@/utils/errors';
+import { isTerminalStatus, pollJob, type PollHandle } from '@/utils/polling';
 
 /**
  * BatchScrapeView Component
@@ -154,8 +156,8 @@ const batchRobotsBlocked = ref<string[]>([]);
 /** Whether the error report has been fetched at least once for the current job. */
 const errorsLoaded = ref(false);
 
-/** Polling interval handle. */
-let intervalId: ReturnType<typeof setInterval> | null = null;
+/** Running status poll loop, if any. */
+let poll: PollHandle<unknown> | null = null;
 
 /**
  * True while the job is actively scraping or processing (i.e. not yet in a
@@ -189,40 +191,57 @@ function docTitle(doc: Record<string, unknown>): string {
  * Stop the status polling loop, if any is active.
  */
 function stopPolling(): void {
-  if (intervalId) {
-    clearInterval(intervalId);
-    intervalId = null;
-  }
+  poll?.stop();
+  poll = null;
 }
 
 /**
- * Poll the batch scrape status endpoint until the job completes or fails.
+ * Poll the batch scrape status endpoint until the job settles.
+ *
+ * One request at a time; `completed`, `failed` and `cancelled` all end the
+ * loop. A failed status request leaves the job state `unavailable` rather than
+ * `failed`, since the job itself may still be running server-side.
  *
  * @param id - The batch job identifier.
  */
 function pollStatus(id: string): void {
   stopPolling();
-  intervalId = setInterval(async () => {
-    try {
-      const response = await api.batchScraping.getBatchScrapeStatus(id);
-      const data = response.data;
+  const current = pollJob({
+    request: async () => (await api.batchScraping.getBatchScrapeStatus(id)).data,
+    isSettled: (data) => isTerminalStatus(data.status),
+    onUpdate: (data) => {
       status.value = data.status;
       completed.value = data.completed;
       total.value = data.total;
       creditsUsed.value = data.creditsUsed;
       progress.value = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
+    },
+    intervalMs: 3000,
+    jobId: id,
+  });
+  poll = current;
 
-      if (data.status === 'completed' || data.status === 'failed') {
-        stopPolling();
-        const all = await api.batchScraping.getBatchScrapeResults(id);
-        results.value = all.data.data;
+  current.result.then(
+    async (data) => {
+      if (data === undefined) {
+        return; // Stopped: cancelled by the user, replaced, or unmounted.
       }
-    } catch (err: unknown) {
-      error.value = err instanceof Error ? err.message : 'Failed to fetch batch status.';
-      status.value = 'failed';
-      stopPolling();
-    }
-  }, 3000);
+      poll = null;
+      if (data.status === 'completed' || data.status === 'failed') {
+        try {
+          const all = await api.batchScraping.getBatchScrapeResults(id);
+          results.value = all.data.data;
+        } catch (err: unknown) {
+          error.value = describeRequestError(err, 'Failed to fetch batch results.');
+        }
+      }
+    },
+    (err: unknown) => {
+      poll = null;
+      error.value = `Failed to fetch batch status: ${describeRequestError(err)}`;
+      status.value = 'unavailable';
+    },
+  );
 }
 
 /**
