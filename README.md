@@ -103,6 +103,18 @@ VITE_FIRECRAWL_API_BASE_URL=https://api.firecrawl.dev
 | `VITE_FIRECRAWL_API_KEY`      | Firecrawl API key      | _(empty)_                   |
 | `VITE_FIRECRAWL_API_BASE_URL` | Firecrawl service root | `https://api.firecrawl.dev` |
 
+> [!WARNING]
+> `VITE_*` variables are inlined into the JavaScript bundle at build time.
+> A `VITE_FIRECRAWL_API_KEY` set when building is readable by anyone who can
+> load the app, so only use it for a private deployment. For a shared or
+> public deployment, leave it empty and let each user enter a key in the
+> settings page, where it stays in their own browser's `localStorage`.
+>
+> A self-hosted instance without authentication needs no key: set only the
+> base URL. The settings page has a **Test connection** button (it calls
+> `GET /v2/team/queue-status`, which uses no credits) and a **Forget key**
+> button that removes the key saved in the browser.
+
 Precedence is `localStorage` > `VITE_*` env > default. Any trailing `/v1` or
 `/v2` on the base URL is stripped automatically; the adapter targets **v2**.
 
