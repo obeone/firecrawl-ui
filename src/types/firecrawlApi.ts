@@ -92,12 +92,6 @@ export type V2BatchScrapeStatus = V2Schemas['BatchScrapeStatusResponseObj'];
 /** `GET /v2/crawl/{id}/errors` and `GET /v2/batch/scrape/{id}/errors` response. */
 export type V2CrawlErrors = V2Schemas['CrawlErrorsResponseObj'];
 
-/** `POST /v2/extract` response. */
-export type V2ExtractStarted = V2Schemas['ExtractResponse'];
-
-/** `GET /v2/extract/{id}` response. */
-export type V2ExtractStatus = V2Schemas['ExtractStatusResponse'];
-
 /** `POST /v2/map` response. */
 export type V2MapResponse = V2Schemas['MapResponse'];
 

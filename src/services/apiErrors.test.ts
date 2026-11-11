@@ -1,13 +1,8 @@
 import axios, { AxiosError } from 'axios';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { createFirecrawlApiClients } from './firecrawl';
 import { stubHttp } from '@/test/httpStub';
-import {
-  FirecrawlApiError,
-  PollTimeoutError,
-  describeRequestError,
-  isUnauthorized,
-} from '@/utils/errors';
+import { FirecrawlApiError, describeRequestError, isUnauthorized } from '@/utils/errors';
 
 const BASE = 'https://firecrawl.example.test';
 let restore: (() => void) | undefined;
@@ -15,7 +10,6 @@ let restore: (() => void) | undefined;
 afterEach(() => {
   restore?.();
   restore = undefined;
-  vi.useRealTimers();
 });
 
 /**
@@ -102,45 +96,5 @@ describe('API errors', () => {
     expect((offline as FirecrawlApiError).network).toBe(true);
     expect((offline as FirecrawlApiError).status).toBeUndefined();
     expect(describeRequestError(offline)).toBe('Network connection failed: Network Error');
-  });
-});
-
-describe('extract polling', () => {
-  it('raises a PollTimeoutError, not a server error, when the job outlives the wait', async () => {
-    vi.useFakeTimers();
-    const stub = stubHttp({
-      [`${BASE}/v2/extract`]: { data: { success: true, id: 'ext-1' } },
-      [`${BASE}/v2/extract/ext-1`]: { data: { success: true, status: 'processing' } },
-    });
-    restore = stub.restore;
-    const api = createFirecrawlApiClients('', BASE);
-
-    const pending = thrown(() => api.extraction.extractData({ urls: ['https://site.test'] }));
-    await vi.advanceTimersByTimeAsync(121_000);
-    const error = await pending;
-
-    expect(error).toBeInstanceOf(PollTimeoutError);
-    expect((error as PollTimeoutError).jobId).toBe('ext-1');
-    expect(error).not.toBeInstanceOf(FirecrawlApiError);
-  });
-
-  it('stops polling on a cancelled extract job', async () => {
-    vi.useFakeTimers();
-    const stub = stubHttp({
-      [`${BASE}/v2/extract`]: { data: { success: true, id: 'ext-2' } },
-      [`${BASE}/v2/extract/ext-2`]: {
-        data: { success: false, status: 'cancelled', error: 'Job cancelled' },
-      },
-    });
-    restore = stub.restore;
-    const api = createFirecrawlApiClients('', BASE);
-
-    const pending = api.extraction.extractData({ urls: ['https://site.test'] });
-    await vi.advanceTimersByTimeAsync(5_000);
-    const response = await pending;
-
-    expect(response.data.status).toBe('cancelled');
-    const polls = stub.requests.filter((r) => r.url.endsWith('/v2/extract/ext-2'));
-    expect(polls).toHaveLength(1);
   });
 });
