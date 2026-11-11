@@ -124,4 +124,26 @@ describe('map request mapping', () => {
       limit: 100000,
     });
   });
+
+  it('keeps title and description and still accepts plain-string links', async () => {
+    const stub = stubHttp({
+      [`${BASE}/v2/map`]: {
+        data: {
+          success: true,
+          links: [
+            { url: 'https://site.test/a', title: 'A', description: 'About A' },
+            'https://site.test/b',
+          ],
+        },
+      },
+    });
+    restore = stub.restore;
+    const result = await createFirecrawlApiClients('', BASE).mapping.mapUrls({
+      url: 'https://site.test/',
+    });
+    expect(result.data.links).toEqual([
+      { url: 'https://site.test/a', title: 'A', description: 'About A' },
+      { url: 'https://site.test/b' },
+    ]);
+  });
 });
