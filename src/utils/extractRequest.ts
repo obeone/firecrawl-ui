@@ -219,8 +219,8 @@ export function toExtractPageResult(url: string, document: unknown): ExtractPage
 /**
  * Combine the page results into the value shown and downloaded by the view.
  *
- * With one URL the result is that page's JSON, exactly as `/v2/extract` used
- * to return it. With several URLs it is an object keyed by URL, holding the
+ * With one URL the result is that page's JSON, exactly as the retired extract
+ * endpoint used to return it. With several URLs it is an object keyed by URL, holding the
  * JSON of each page that succeeded.
  *
  * @param pages - The page results, in request order.

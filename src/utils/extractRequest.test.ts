@@ -129,7 +129,7 @@ describe('buildExtractScrapePayload through the adapter', () => {
     }
   });
 
-  it('never sends the /v2/extract-only fields', async () => {
+  it('never sends the extract-endpoint-only fields', async () => {
     const { body } = await extractThroughAdapter(
       { url: 'https://example.com', prompt: 'p', options: defaultExtractScrapeOptions() },
       { json: {} },
