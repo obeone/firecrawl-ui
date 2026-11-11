@@ -66,9 +66,14 @@ VITE_FIRECRAWL_API_BASE_URL=https://api.firecrawl.dev
 
 Create a `.env` file in the project root. These are optional — the app also stores config in `localStorage` via the settings page.
 
+### Security: CSP and HTML sanitizing
+
+- **Untrusted HTML** (scraped Markdown, page content) reaches the DOM only through `src/utils/sanitize.ts`: `renderMarkdown()` (marked + DOMPurify) or `sanitizeHtml()`. Never call `marked` or `DOMPurify` directly before a `v-html`. The DOMPurify config is an explicit allowlist (`MARKDOWN_SANITIZE_CONFIG`): Markdown elements only, no `style`/`class`/`id`/`data-*`/`aria-*`, absolute `http(s)`/`mailto:` URLs only (plus `data:` images); links get `target="_blank" rel="noopener noreferrer nofollow"`. Widening it needs a test in `sanitize.test.ts` (runs under jsdom).
+- **Content Security Policy** lives in `src/config/csp.ts`, the single source of truth. A build-only Vite plugin injects it as a `<meta>` tag into `dist/index.html` (the dev server is exempt: HMR injects inline styles), and `nginx.conf` sends it as a header with `frame-ancestors 'none'` and the companion headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`). `src/config/csp.test.ts` fails if the nginx value drifts from the TypeScript one, so change both together. Scripts and styles are `'self'` only: no inline `<script>`, no `<style>` blocks or static `style="..."` attributes in templates (`:style` bindings are fine, Vue applies them through the CSSOM). `npm run build && npm run preview` serves the build with the policy for a browser check.
+
 ### Docker
 
-Multi-stage build: Node 26 slim for building (major version pinned in `.nvmrc`, `package.json` `engines` and the `Dockerfile`), `nginxinc/nginx-unprivileged:stable-alpine` for serving. Nginx listens on port 8080. Custom `nginx.conf` routes all unknown paths to `index.html` for client-side routing.
+Multi-stage build: Node 26 slim for building (major version pinned in `.nvmrc`, `package.json` `engines` and the `Dockerfile`), `nginxinc/nginx-unprivileged:stable-alpine` for serving. Nginx listens on port 8080. Custom `nginx.conf` routes all unknown paths to `index.html` for client-side routing and sends the security headers (see above).
 
 `.github/workflows/docker.yml` is a reusable workflow called by `ci.yml` after the `node` job: pull requests only build the image (amd64), pushes to `main` and `v*` tags publish it, tagged `latest` (main only), `sha-<commit>` and the semver version.
 
