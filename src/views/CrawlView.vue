@@ -581,7 +581,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, onUnmounted, computed, watch } from 'vue';
+import { defineComponent, ref, onMounted, computed, watch } from 'vue';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import axios from 'axios';
@@ -592,7 +592,8 @@ import { type ActiveCrawl, type CrawlError } from '../services/firecrawl';
 import { useApi } from '../plugins/api';
 import { describeRequestError, getErrorMessage, isUnauthorized } from '@/utils/errors';
 import { checkCountryCode } from '@/utils/formValidation';
-import { isTerminalStatus, pollJob, type PollHandle } from '@/utils/polling';
+import { isTerminalStatus } from '@/utils/polling';
+import { useJobPoller, useKeyedJobPoller } from '@/composables/useJobPoller';
 
 /**
  * Interface for Crawler Options section of the form.
@@ -1675,16 +1676,16 @@ export default defineComponent({
       }
     };
 
-    // Running poll loops: the current crawl, and history entries still in progress.
-    let currentPoll: PollHandle<unknown> | null = null;
-    const historyPolls: Record<string, PollHandle<unknown>> = {};
+    // Poll loops for the current crawl and for history entries still in
+    // progress; both stop on their own when the view is destroyed.
+    const currentPoller = useJobPoller();
+    const historyPoller = useKeyedJobPoller();
 
     /**
      * Stop polling the current crawl, if a poll loop is running.
      */
     const stopCurrentPolling = () => {
-      currentPoll?.stop();
-      currentPoll = null;
+      currentPoller.stop();
     };
 
     /**
@@ -1698,9 +1699,7 @@ export default defineComponent({
      * @param {string} jobId - The ID of the crawl job.
      */
     const fetchCrawlStatus = (jobId: string) => {
-      stopCurrentPolling();
-
-      const poll = pollJob({
+      currentPoller.start({
         request: async () => (await api.crawling.getCrawlStatus(jobId)).data,
         isSettled: (data) => isTerminalStatus(data.status),
         onUpdate: (data) => {
@@ -1719,23 +1718,12 @@ export default defineComponent({
             saveHistory();
           }
         },
-        intervalMs: statusCheckInterval.value * 1000,
-        jobId,
-      });
-      currentPoll = poll;
-
-      poll.result.then(
-        (data) => {
-          if (data === undefined) {
-            return; // Stopped: cancelled by the user, replaced, or unmounted.
-          }
-          currentPoll = null;
+        onSettled: () => {
           crawling.value = false;
           currentCrawlId.value = null;
         },
-        (err: unknown) => {
+        onError: (err: unknown) => {
           console.error('Failed to fetch crawl status:', err);
-          currentPoll = null;
           crawling.value = false;
           currentCrawlId.value = null;
           error.value = `Failed to fetch crawl status: ${describeRequestError(err)}`;
@@ -1745,7 +1733,9 @@ export default defineComponent({
             saveHistory();
           }
         },
-      );
+        intervalMs: statusCheckInterval.value * 1000,
+        jobId,
+      });
     };
 
     /**
@@ -1773,8 +1763,7 @@ export default defineComponent({
      * @param id - Crawl job identifier.
      */
     const startHistoryPolling = (id: string) => {
-      stopHistoryPolling(id);
-      const poll = pollJob({
+      historyPoller.start(id, {
         request: async () => (await api.crawling.getCrawlStatus(id)).data,
         isSettled: (data) => isTerminalStatus(data.status),
         onUpdate: (data) => {
@@ -1786,25 +1775,17 @@ export default defineComponent({
           crawl.status = data.status;
           saveHistory();
         },
-        intervalMs: statusCheckInterval.value * 1000,
-        jobId: id,
-      });
-      historyPolls[id] = poll;
-
-      poll.result
-        .catch((err: unknown) => {
+        onError: (err: unknown) => {
           console.error(`Polling failed for crawl ${id}:`, err);
           const crawl = crawlHistory.value.find((c) => c.id === id);
           if (crawl) {
             crawl.status = 'unavailable';
             saveHistory();
           }
-        })
-        .finally(() => {
-          if (historyPolls[id] === poll) {
-            delete historyPolls[id];
-          }
-        });
+        },
+        intervalMs: statusCheckInterval.value * 1000,
+        jobId: id,
+      });
     };
 
     /**
@@ -1812,17 +1793,14 @@ export default defineComponent({
      * @param id - Crawl job identifier.
      */
     const stopHistoryPolling = (id: string) => {
-      historyPolls[id]?.stop();
-      delete historyPolls[id];
+      historyPoller.stop(id);
     };
 
     /**
      * Stop every history poll loop.
      */
     const stopAllHistoryPolling = () => {
-      for (const id of Object.keys(historyPolls)) {
-        stopHistoryPolling(id);
-      }
+      historyPoller.stopAll();
     };
 
     onMounted(async () => {
@@ -1841,12 +1819,6 @@ export default defineComponent({
         // the user hits Refresh; failures stay inside that section.
         loadActiveCrawls(),
       ]);
-    });
-
-    // Cleanup polling interval when the component unmounts
-    onUnmounted(() => {
-      stopCurrentPolling();
-      stopAllHistoryPolling();
     });
 
     return {
