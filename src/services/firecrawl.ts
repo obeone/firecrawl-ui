@@ -1,5 +1,6 @@
 import axios, { AxiosError, type AxiosInstance } from 'axios';
 import { FirecrawlApiError } from '../utils/errors';
+import { normalizeMapLinks, type MapLink } from '../utils/mapLinks';
 import { pollJob, isTerminalStatus } from '../utils/polling';
 import type {
   V2BatchScrapeStarted,
@@ -195,7 +196,7 @@ export interface FirecrawlExtractionApi {
  * Legacy-compatible mapping client.
  */
 export interface FirecrawlMappingApi {
-  mapUrls(payload: Record<string, unknown>): Promise<WrappedResponse<{ links: string[] }>>;
+  mapUrls(payload: Record<string, unknown>): Promise<WrappedResponse<{ links: MapLink[] }>>;
 }
 
 /**
@@ -1778,13 +1779,7 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
             links?: Array<string | NonNullable<V2MapResponse['links']>[number]>;
           }>('/v2/map', mapRequest);
 
-          return {
-            data: {
-              links: (response.data.links ?? []).map((entry) =>
-                typeof entry === 'string' ? entry : entry.url,
-              ),
-            },
-          };
+          return { data: { links: normalizeMapLinks(response.data.links) } };
         } catch (error) {
           throw formatApiError(error, 'Map request failed');
         }

@@ -14,6 +14,10 @@
           required
         ></textarea>
         <small>Each non-empty line is treated as a URL to scrape.</small>
+        <small v-if="importedCount > 0" class="imported-note">
+          {{ importedCount }} {{ importedCount === 1 ? 'URL' : 'URLs' }} imported from Map — choose
+          scrape options, then start.
+        </small>
       </div>
 
       <ScrapeOptionsForm v-model="scrapeOptions" :format-options="BATCH_FORMAT_OPTIONS" />
@@ -83,11 +87,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useApi } from '@/plugins/api';
 import type { CrawlError } from '@/services/firecrawl';
 import { describeRequestError } from '@/utils/errors';
 import { createLatestGuard, type IsCurrent } from '@/utils/latestGuard';
+import { takePendingBatchUrls } from '@/utils/batchHandoff';
 import { isTerminalStatus } from '@/utils/polling';
 import { useJobPoller } from '@/composables/useJobPoller';
 import ScrapeOptionsForm from '@/components/ScrapeOptionsForm.vue';
@@ -113,6 +118,18 @@ const api = useApi();
 
 /** Raw multiline textarea content holding one URL per line. */
 const urlsInput = ref('');
+
+/** Number of URLs imported from the Map view, shown until the user submits. */
+const importedCount = ref(0);
+
+// Pick up URLs selected in the Map view (in-memory handoff, consumed once).
+onMounted(() => {
+  const pending = takePendingBatchUrls();
+  if (pending?.length) {
+    urlsInput.value = pending.join('\n');
+    importedCount.value = pending.length;
+  }
+});
 /** Scrape options applied to every URL: formats, main content, tag filters. */
 const scrapeOptions = ref<ScrapeOptionsFormValue>(defaultScrapeOptionsFormValue());
 
@@ -244,6 +261,7 @@ function pollStatus(id: string, isCurrent: IsCurrent): void {
  * @returns {Promise<void>} Resolves once the job has been submitted.
  */
 async function handleSubmit(): Promise<void> {
+  importedCount.value = 0;
   const urls = urlsInput.value
     .split('\n')
     .map((line) => line.trim())
@@ -374,6 +392,11 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.imported-note {
+  color: var(--brand-strong);
+  font-weight: 600;
+}
+
 .batch-scrape-view {
   max-width: 700px;
   margin: 1rem auto;

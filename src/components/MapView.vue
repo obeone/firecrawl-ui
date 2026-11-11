@@ -70,17 +70,59 @@
     <template #response="{ activeTab }">
       <!-- Links tab: rendered list with per-item copy + open affordance -->
       <div v-if="activeTab === 'links'" class="links-pane">
+        <div class="links-toolbar">
+          <div class="filter-group">
+            <label for="linkFilter">Filter</label>
+            <input
+              id="linkFilter"
+              v-model="filterQuery"
+              type="text"
+              placeholder="Filter by URL, title or description"
+            />
+          </div>
+          <div class="selection-bar">
+            <span class="selection-count">{{ filterStatus }} · {{ selected.size }} selected</span>
+            <button type="button" class="mini-btn" @click="selectAllShown">Select all shown</button>
+            <button
+              type="button"
+              class="mini-btn"
+              :disabled="selected.size === 0"
+              @click="clearSelection"
+            >
+              Clear selection
+            </button>
+            <button
+              type="button"
+              class="download-btn"
+              :disabled="selected.size === 0"
+              @click="sendToBatch"
+            >
+              Batch scrape selected ({{ selected.size }})
+            </button>
+          </div>
+        </div>
         <ul class="url-list">
-          <li v-for="(url, index) in urls" :key="index" class="url-item">
-            <span class="url-text" :title="url">{{ url }}</span>
+          <li v-for="link in filteredLinks" :key="link.url" class="url-item">
+            <input
+              type="checkbox"
+              class="select-box"
+              :checked="selected.has(link.url)"
+              :aria-label="link.url"
+              @change="toggleSelected(link.url)"
+            />
+            <div class="url-body">
+              <span v-if="link.title" class="link-title">{{ link.title }}</span>
+              <span class="url-text" :title="link.url">{{ link.url }}</span>
+              <span v-if="link.description" class="link-description">{{ link.description }}</span>
+            </div>
             <div class="url-actions">
-              <CopyButton :text="url" label="Copy URL" />
+              <CopyButton :text="link.url" label="Copy URL" />
               <a
-                :href="url"
+                :href="link.url"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="open-link"
-                :aria-label="`Open ${url} in a new tab`"
+                :aria-label="`Open ${link.url} in a new tab`"
               >
                 <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
                   <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -95,7 +137,7 @@
       </div>
 
       <!-- JSON tab: raw result dump -->
-      <CodeBlock v-else-if="activeTab === 'json'" :json="urls" label="JSON" />
+      <CodeBlock v-else-if="activeTab === 'json'" :json="links" label="JSON" />
     </template>
 
     <!-- ── Response actions: copy + download buttons in tab bar ───────── -->
@@ -112,7 +154,9 @@
 import { ref, computed, onMounted } from 'vue';
 import { useApi } from '@/plugins/api';
 import { getErrorMessage } from '@/utils/errors';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+import { filterMapLinks, type MapLink } from '@/utils/mapLinks';
+import { setPendingBatchUrls } from '@/utils/batchHandoff';
 import PlaygroundLayout from './playground/PlaygroundLayout.vue';
 import CodeBlock from './playground/CodeBlock.vue';
 import CopyButton from './playground/CopyButton.vue';
@@ -138,6 +182,7 @@ const api = useApi();
 const baseUrl = ref('');
 
 const route = useRoute();
+const router = useRouter();
 
 // Pre-fill the URL field from the ?url= query parameter (passed by the
 // home-page launcher when the user picks a tool with a URL already typed).
@@ -188,10 +233,54 @@ const limit = ref(5000);
 const timeout = ref<number | null>(null);
 
 /**
- * Reactive variable to store the list of URLs returned by the API.
- * @type {Ref<string[]>}
+ * Links returned by the API, with title and description when the server provides them.
  */
-const urls = ref<string[]>([]);
+const links = ref<MapLink[]>([]);
+
+/** Plain URL list derived from `links`. */
+const urls = computed<string[]>(() => links.value.map((link) => link.url));
+
+/** Free-text filter applied to the displayed links. */
+const filterQuery = ref('');
+
+/** Links matching the current filter. */
+const filteredLinks = computed<MapLink[]>(() => filterMapLinks(links.value, filterQuery.value));
+
+/** Selected URLs; always replaced with a new Set so reactivity triggers. */
+const selected = ref<Set<string>>(new Set());
+
+/** "N of M links" while filtering, otherwise the plain count. */
+const filterStatus = computed<string>(() =>
+  filteredLinks.value.length === links.value.length
+    ? `${links.value.length} link${links.value.length === 1 ? '' : 's'}`
+    : `${filteredLinks.value.length} of ${links.value.length} links`,
+);
+
+/** Toggle one URL in the selection. */
+function toggleSelected(url: string): void {
+  const next = new Set(selected.value);
+  if (!next.delete(url)) next.add(url);
+  selected.value = next;
+}
+
+/** Add every currently shown link to the selection (hidden selections are kept). */
+function selectAllShown(): void {
+  const next = new Set(selected.value);
+  for (const link of filteredLinks.value) next.add(link.url);
+  selected.value = next;
+}
+
+/** Empty the selection. */
+function clearSelection(): void {
+  selected.value = new Set();
+}
+
+/** Hand the selected URLs (in list order) to Batch scrape and navigate there. */
+function sendToBatch(): void {
+  if (selected.value.size === 0) return;
+  setPendingBatchUrls(urls.value.filter((url) => selected.value.has(url)));
+  void router.push({ name: 'batch-scrape' });
+}
 
 /**
  * Reactive variable indicating whether an API request is currently in progress.
@@ -217,7 +306,7 @@ const durationMs = ref<number | null>(null);
  * Whether a non-empty result is currently held, used to drive the hasResult prop
  * and the visibility of the download button.
  */
-const hasResult = computed<boolean>(() => urls.value.length > 0);
+const hasResult = computed<boolean>(() => links.value.length > 0);
 
 /**
  * The result as plain text, one URL per line, ready to be dropped in a .txt
@@ -230,8 +319,7 @@ const urlListText = computed<string>(() => urls.value.join('\n'));
  */
 const statusText = computed<string | null>(() => {
   if (error.value) return 'Error';
-  if (urls.value.length > 0)
-    return `${urls.value.length} link${urls.value.length === 1 ? '' : 's'}`;
+  if (links.value.length > 0) return filterStatus.value;
   return null;
 });
 
@@ -240,7 +328,7 @@ const statusText = computed<string | null>(() => {
  */
 const statusType = computed<'success' | 'error' | 'idle'>(() => {
   if (error.value) return 'error';
-  if (urls.value.length > 0) return 'success';
+  if (links.value.length > 0) return 'success';
   return 'idle';
 });
 
@@ -264,13 +352,15 @@ async function handleSubmit(): Promise<void> {
 
   loading.value = true;
   error.value = '';
+  selected.value = new Set();
+  filterQuery.value = '';
   const t0 = performance.now();
   try {
     const response = await api.mapping.mapUrls(payload);
-    urls.value = response.data.links ?? [];
+    links.value = response.data.links ?? [];
   } catch (err) {
     error.value = getErrorMessage(err, 'Failed to map URLs. Please check the URL and try again.');
-    urls.value = [];
+    links.value = [];
   } finally {
     durationMs.value = performance.now() - t0;
     loading.value = false;
@@ -279,14 +369,14 @@ async function handleSubmit(): Promise<void> {
 
 /**
  * Initiates the download of the found URLs as a JSON file.
- * Creates a Blob from the `urls` array and triggers a download via a temporary anchor element.
+ * Creates a Blob from the `links` array and triggers a download via a temporary anchor element.
  * The temporary link element is appended to the document body and then removed after the click
  * to ensure compatibility across different browsers and to clean up the DOM.
  * The Object URL is also revoked to free up resources.
  * @returns {void}
  */
 function downloadJson(): void {
-  const blob = new Blob([JSON.stringify(urls.value, null, 2)], {
+  const blob = new Blob([JSON.stringify(links.value, null, 2)], {
     type: 'application/json',
   });
   const link = document.createElement('a');
@@ -467,8 +557,109 @@ function downloadJson(): void {
   border-bottom: none;
 }
 
-.url-text {
+.url-body {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.link-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-description {
+  font-size: 0.76rem;
+  color: var(--color-text-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-box {
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.links-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 1rem 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.filter-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-soft);
+}
+
+.filter-group input {
+  padding: 0.4rem 0.65rem;
+  font-size: 0.88rem;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+
+.filter-group input:focus {
+  border-color: var(--violet-500);
+  box-shadow: var(--shadow-ring);
+}
+
+.selection-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.selection-count {
+  font-size: 0.8rem;
+  color: var(--color-text-soft);
+  margin-right: auto;
+}
+
+.mini-btn {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-soft);
+  background: var(--color-background-mute);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.mini-btn:hover:not(:disabled) {
+  color: var(--brand-strong);
+  border-color: var(--violet-500);
+  background: var(--brand-soft);
+}
+
+.mini-btn:disabled,
+.download-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.url-text {
   min-width: 0;
   font-size: 0.84rem;
   font-family: var(--font-mono);
