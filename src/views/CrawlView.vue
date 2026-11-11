@@ -547,6 +547,7 @@ import { type ActiveCrawl, type CrawlError } from '../services/firecrawl';
 import { useApi } from '../plugins/api';
 import { describeRequestError, getErrorMessage, isUnauthorized } from '@/utils/errors';
 import { checkCountryCode } from '@/utils/formValidation';
+import { buildCompiledMarkdown } from '@/utils/jobExport';
 import { isTerminalStatus } from '@/utils/polling';
 import { loadJobHistory, recordJob, updateJob } from '@/utils/jobHistory';
 import { useJobPoller, useKeyedJobPoller } from '@/composables/useJobPoller';
@@ -1318,40 +1319,6 @@ export default defineComponent({
     };
 
     /**
-     * Increase markdown heading levels.
-     *
-     * @param markdown - The markdown string to modify.
-     * @param increment - How many levels to increase.
-     * @returns The adjusted markdown string.
-     */
-    const incrementHeadings = (markdown: string, increment: number): string => {
-      return markdown.replace(/^(#{1,6})(?=\s)/gm, (match) => {
-        const newLevel = Math.min(6, match.length + increment);
-        return '#'.repeat(newLevel);
-      });
-    };
-
-    /**
-     * Compile all markdown pages into a single document.
-     *
-     * @param pages - Array of page objects containing markdown.
-     * @param title - Title for the compiled document.
-     * @returns The compiled markdown string.
-     */
-    const compileMarkdown = (pages: CrawlPage[], title: string): string => {
-      const sections: string[] = [`# ${title}`];
-      pages.forEach((page, index) => {
-        const pageTitle =
-          page.metadata?.title || page.metadata?.sourceURL || page.url || `Page ${index + 1}`;
-        sections.push(`\n## ${pageTitle}\n`);
-        if (page.markdown) {
-          sections.push(incrementHeadings(page.markdown, 1));
-        }
-      });
-      return sections.join('\n');
-    };
-
-    /**
      * Download all markdown files compiled into a single document.
      *
      * @param jobIdParam - Optional job ID for history downloads.
@@ -1365,7 +1332,7 @@ export default defineComponent({
       }
       try {
         const pages = await fetchAllCrawlData(jobId);
-        const compiled = compileMarkdown(pages, 'Compiled Crawl Results');
+        const compiled = buildCompiledMarkdown('Compiled Crawl Results', pages);
         const blob = new Blob([compiled], { type: 'text/markdown' });
         saveAs(blob, `crawl-compiled-${jobId}.md`);
       } catch (err) {
