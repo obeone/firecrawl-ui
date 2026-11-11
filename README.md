@@ -151,18 +151,25 @@ build, so it applies behind any static host.
 Published images (`ghcr.io/obeone/firecrawl-ui`, `obeoneorg/firecrawl-ui`) are
 built only after CI passes and signed with cosign.
 
-| Image tag      | Points to                           |
-| :------------- | :---------------------------------- |
-| `latest`       | The last commit on `main`           |
-| `sha-<commit>` | One exact commit                    |
-| `YYYY.M.D`     | A CalVer release, e.g. `2026.11.11` |
-| `YYYY.M`       | The latest release of that month    |
+| Image tag      | Points to                        |
+| :------------- | :------------------------------- |
+| `latest`       | The last commit on `main`        |
+| `sha-<commit>` | One exact commit                 |
+| `YYYY.M.REV`   | A release, e.g. `2026.11.1`      |
+| `YYYY.M`       | The latest release of that month |
 
-Releases use CalVer. Run the **Release** workflow from the Actions tab on
-`main`: it tags the commit as `vYYYY.M.D` (UTC) and publishes the images
-above. The version is never written by hand: it is injected at build time
-and shown on the About page (`sha-<commit>` between releases, `dev` for a
-build outside Git).
+Releases use CalVer `vYYYY.M.REV`, where `REV` counts the releases of the
+month from 1. Pushing such a tag runs CI, which publishes the images above
+and deploys the site:
+
+```sh
+git tag v2026.11.1
+git push origin v2026.11.1
+```
+
+The version is never written by hand: CI derives it from `git describe` and
+shows it on the About page (`2026.11.1-3-gabc1234` for commits after a
+release, `dev` for a build outside Git).
 
 ## 🔌 API
 
