@@ -1589,23 +1589,31 @@ export default defineComponent({
      * Stops status polling and updates the UI state accordingly.
      */
     const cancelCurrentCrawl = async (): Promise<void> => {
-      if (!currentCrawlId.value) {
+      const id = currentCrawlId.value;
+      if (!id) {
         return;
       }
       try {
-        await api.crawling.cancelCrawl(currentCrawlId.value);
-        updateJob('crawl', currentCrawlId.value, { status: 'cancelled' });
-        stopCurrentPolling();
-        crawlStatus.value = 'cancelled';
-        crawling.value = false;
-        const historyItem = crawlHistory.value.find((c) => c.id === currentCrawlId.value);
+        await api.crawling.cancelCrawl(id);
+        // The server cancelled this job, whichever crawl is current by now.
+        updateJob('crawl', id, { status: 'cancelled' });
+        const historyItem = crawlHistory.value.find((c) => c.id === id);
         if (historyItem) {
           historyItem.status = 'cancelled';
           saveHistory();
         }
+        // Leave the UI and the poller alone if another crawl started meanwhile.
+        if (currentCrawlId.value !== id) {
+          return;
+        }
+        stopCurrentPolling();
+        crawlStatus.value = 'cancelled';
+        crawling.value = false;
         currentCrawlId.value = null;
       } catch (err) {
-        error.value = `Failed to cancel crawl: ${getErrorMessage(err)}`;
+        if (currentCrawlId.value === id) {
+          error.value = `Failed to cancel crawl: ${getErrorMessage(err)}`;
+        }
       }
     };
 
