@@ -5,6 +5,9 @@ on:
     branches: [main]
     tags: ['v*']
   pull_request:
+  # Run by the Release workflow on the tag it creates: a tag pushed with
+  # GITHUB_TOKEN does not trigger the push event above.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -30,7 +33,15 @@ jobs:
       - name: Unit tests
         run: npm test
       - name: Build
-        run: npm run build
+        # APP_VERSION is computed as in docker.yml, so Pages and the image
+        # show the same version.
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = tag ]; then
+            export APP_VERSION="${GITHUB_REF_NAME#v}"
+          else
+            export APP_VERSION="sha-${GITHUB_SHA::7}"
+          fi
+          npm run build
       - name: Copy 404 page
         run: cp public/404.html dist/404.html
       - name: Upload artifact
@@ -39,7 +50,8 @@ jobs:
           path: ./dist
 
   # Build the container image after CI passes. Pushes to main and version
-  # tags publish it; pull requests only check that it builds.
+  # tags (pushed or released) publish it; pull requests only check that it
+  # builds.
   image:
     needs: node
     permissions:
@@ -48,7 +60,7 @@ jobs:
       id-token: write
     uses: ./.github/workflows/docker.yml
     with:
-      push: ${{ github.event_name == 'push' }}
+      push: ${{ github.event_name != 'pull_request' }}
     secrets: inherit
 
   deploy:

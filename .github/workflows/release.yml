@@ -1,0 +1,36 @@
+name: Release
+
+# Tags the current main with a CalVer version (vYYYY.M.D, today in UTC) and
+# runs CI on that tag, which publishes the YYYY.M.D and YYYY.M images. The
+# format stays valid semver (no leading zeros) for docker/metadata-action.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write # Create the tag
+  actions: write # Dispatch CI on the tag
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tag main and run CI on the tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="v$(date -u +%Y.%-m.%-d)"
+          if gh api "repos/${GH_REPO}/git/ref/tags/${tag}" >/dev/null 2>&1; then
+            echo "::error::${tag} already exists: one release per day."
+            exit 1
+          fi
+          gh api "repos/${GH_REPO}/git/refs" \
+            -f ref="refs/tags/${tag}" -f sha="${GITHUB_SHA}" >/dev/null
+          gh workflow run ci.yml --ref "${tag}"
+          echo "Tagged ${GITHUB_SHA::7} as ${tag}; CI started on the tag." \
+            >> "$GITHUB_STEP_SUMMARY"
