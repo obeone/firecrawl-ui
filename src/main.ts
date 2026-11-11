@@ -10,6 +10,7 @@ import { createApp } from 'vue';
 import App from './App.vue';
 import apiPlugin from './plugins/api.js';
 import router from './router/index.js';
+import { isUnauthorized } from './utils/errors.js';
 import ApiKeyInput from './components/ApiKeyInput.vue';
 
 // Create Vue application instance with the root component
@@ -26,9 +27,9 @@ const app = createApp(App);
  * @param {string} info - Additional Vue-specific error information.
  */
 app.config.errorHandler = (err, instance, info) => {
-  if (err instanceof Error && err.message.includes('401')) {
+  if (isUnauthorized(err)) {
     // Redirect to API configuration page on 401 Unauthorized errors
-    router.push({ name: 'ApiConfig' });
+    router.push({ name: 'api-config' });
   }
   console.error('Error:', err, info);
 };

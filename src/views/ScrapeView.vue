@@ -370,7 +370,7 @@
 import { defineComponent, ref, watch, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useApi } from '../plugins/api';
-import { getErrorMessage } from '@/utils/errors';
+import { describeRequestError, getErrorMessage, isUnauthorized } from '@/utils/errors';
 import { checkCountryCode, firstFormError } from '@/utils/formValidation';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -885,19 +885,11 @@ export default defineComponent({
         const response = await api.scraping.scrapeAndExtractFromUrl(requestPayload);
         result.value = response.data;
       } catch (err: unknown) {
-        if (err instanceof Error) {
-          if (err.message.includes('401')) {
-            router.push({ name: 'ApiConfig' });
-            return;
-          }
-          error.value = err.message.includes('404')
-            ? 'Page not found (404)'
-            : err.message.includes('Network Error')
-              ? 'Network connection failed'
-              : err.message;
-        } else {
-          error.value = 'An unexpected error occurred.';
+        if (isUnauthorized(err)) {
+          router.push({ name: 'api-config' });
+          return;
         }
+        error.value = describeRequestError(err);
       } finally {
         // Capture how long the request took for the playground status bar.
         durationMs.value = performance.now() - startedAt;
