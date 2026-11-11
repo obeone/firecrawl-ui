@@ -8,12 +8,16 @@
           id="apiKey"
           v-model="apiKey"
           type="password"
-          placeholder="Enter your API key"
-          required
+          autocomplete="off"
+          :placeholder="keyRequired ? 'Enter your API key' : 'Optional for this instance'"
+          :required="keyRequired"
         />
         <small>
-          You can get your API key on
-          <a href="https://app.firecrawl.dev" target="_blank">the Firecrawl dashboard</a>
+          Required for Firecrawl Cloud; get one on
+          <a href="https://app.firecrawl.dev" target="_blank" rel="noopener noreferrer"
+            >the Firecrawl dashboard</a
+          >. A self-hosted instance without authentication needs none. The key is stored in this
+          browser's local storage.
         </small>
       </div>
       <div class="form-group">
@@ -21,23 +25,39 @@
         <input id="baseUrl" v-model="baseUrl" type="text" placeholder="https://api.firecrawl.dev" />
         <small> Leave blank to use the default URL. </small>
       </div>
-      <button type="submit" class="primary-button">Save</button>
+      <div class="actions">
+        <button type="submit" class="primary-button">Save</button>
+        <button type="button" class="secondary-button" :disabled="testing" @click="checkConnection">
+          {{ testing ? 'Testing…' : 'Test connection' }}
+        </button>
+        <button type="button" class="secondary-button" :disabled="!hasSavedKey" @click="forgetKey">
+          Forget key
+        </button>
+      </div>
     </form>
+    <div v-if="connection" :class="connection.ok ? 'success-message' : 'error-message'">
+      {{ connection.message }}
+    </div>
     <div v-if="error" class="error-message">
       {{ error }}
     </div>
-    <div v-if="success" class="success-message">API Key saved successfully!</div>
+    <div v-if="success" class="success-message">{{ success }}</div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted } from 'vue';
-import { refreshApiClients } from '@/plugins/api';
+import { computed, defineComponent, ref, onMounted } from 'vue';
+import { forgetSavedApiKey, refreshApiClients } from '@/plugins/api';
+import { getBuildTimeApiKey, resolveBaseUrl } from '@/config/api';
 import { normalizeFirecrawlBaseUrl } from '@/services/firecrawl';
+import { isApiKeyMissing, testConnection, type ConnectionTestResult } from '@/utils/connection';
 
 /**
  * Component allowing users to configure and store the Firecrawl API key and base URL.
  * This component handles the persistence of these settings in local storage.
+ *
+ * A key is only required for Firecrawl Cloud; a self-hosted instance may run
+ * without authentication.
  *
  * @returns Component options for the API key input view.
  */
@@ -47,39 +67,73 @@ export default defineComponent({
   setup() {
     const apiKey = ref(localStorage.getItem('firecrawl_api_key') || '');
     const baseUrl = ref(localStorage.getItem('firecrawl_base_url') || '');
+    const hasSavedKey = ref(Boolean(apiKey.value));
     const error = ref('');
-    const success = ref(false);
+    const success = ref('');
+    const testing = ref(false);
+    const connection = ref<ConnectionTestResult | null>(null);
 
-    // Automatically display if no key is configured
+    /** Key typed in the form, else the one baked in at build time. */
+    const effectiveKey = () => apiKey.value.trim() || getBuildTimeApiKey();
+    /** Base URL typed in the form, else the build-time one, else Firecrawl Cloud. */
+    const effectiveBaseUrl = () => resolveBaseUrl(baseUrl.value);
+    const keyRequired = computed(() => isApiKeyMissing(effectiveBaseUrl(), getBuildTimeApiKey()));
+
+    // Ask for a key on load only when the target actually needs one.
     onMounted(() => {
-      if (!apiKey.value) {
-        error.value = 'Please configure your API key to continue';
+      if (isApiKeyMissing(effectiveBaseUrl(), effectiveKey())) {
+        error.value = 'Please configure your API key to use Firecrawl Cloud';
       }
       if (baseUrl.value) {
         baseUrl.value = normalizeFirecrawlBaseUrl(baseUrl.value);
       }
     });
 
+    const flash = (message: string) => {
+      success.value = message;
+      setTimeout(() => (success.value = ''), 3000);
+    };
+
     const saveApiConfig = () => {
       try {
-        if (!apiKey.value) {
-          throw new Error('Please enter a valid API key');
+        if (isApiKeyMissing(effectiveBaseUrl(), effectiveKey())) {
+          throw new Error('Firecrawl Cloud requires an API key');
         }
-        // Save the API key
-        localStorage.setItem('firecrawl_api_key', apiKey.value);
-        // Save the base URL (even if empty to override any previous value if needed)
-        localStorage.setItem('firecrawl_base_url', normalizeFirecrawlBaseUrl(baseUrl.value));
-
-        success.value = true;
         error.value = '';
-        setTimeout(() => (success.value = false), 3000);
-
-        // Update API clients dynamically without reloading the page
-        refreshApiClients(baseUrl.value, apiKey.value);
+        // Update the saved settings and the API clients without reloading the page.
+        // An empty key removes the saved one.
+        refreshApiClients(
+          baseUrl.value.trim() ? normalizeFirecrawlBaseUrl(baseUrl.value) : '',
+          apiKey.value,
+        );
+        hasSavedKey.value = Boolean(apiKey.value.trim());
+        flash('Settings saved.');
       } catch (err) {
         error.value = err instanceof Error ? err.message : 'Unknown error';
-        success.value = false;
+        success.value = '';
       }
+    };
+
+    const checkConnection = async () => {
+      testing.value = true;
+      connection.value = null;
+      try {
+        connection.value = await testConnection(effectiveBaseUrl(), effectiveKey());
+      } finally {
+        testing.value = false;
+      }
+    };
+
+    const forgetKey = () => {
+      const buildTimeKeyRemains = forgetSavedApiKey();
+      apiKey.value = '';
+      hasSavedKey.value = false;
+      error.value = '';
+      flash(
+        buildTimeKeyRemains
+          ? 'Saved key removed. The key built into this deployment is still in use.'
+          : 'Saved key removed.',
+      );
     };
 
     return {
@@ -87,7 +141,13 @@ export default defineComponent({
       baseUrl,
       error,
       success,
+      testing,
+      connection,
+      hasSavedKey,
+      keyRequired,
       saveApiConfig,
+      checkConnection,
+      forgetKey,
     };
   },
 });
@@ -179,6 +239,31 @@ button:hover {
 
 button:active {
   transform: translateY(0);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Secondary actions: outlined, so Save stays the primary call to action. */
+.secondary-button {
+  background: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  box-shadow: none;
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: var(--color-background-soft);
+  box-shadow: none;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 /* Inline feedback messages — semantic danger / success tokens. */

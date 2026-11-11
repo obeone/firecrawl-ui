@@ -1,5 +1,5 @@
 import { inject, type App, type InjectionKey } from 'vue';
-import apiConfig, { getApiConfig, updateApiConfig } from '../config/api.js';
+import apiConfig, { forgetApiKey, getApiConfig, updateApiConfig } from '../config/api.js';
 import { createFirecrawlApiClients, type FirecrawlApiClients } from '../services/firecrawl.js';
 
 /**
@@ -54,6 +54,24 @@ export function useApi(): FirecrawlApiClients {
  */
 export function refreshApiClients(baseUrl?: string, apiKey?: string): void {
   updateApiConfig(baseUrl, apiKey);
+  rebuildApiClients();
+}
+
+/**
+ * Remove the API key saved in this browser and rebuild the API clients.
+ *
+ * @returns True when a key baked in at build time is still in use afterwards.
+ */
+export function forgetSavedApiKey(): boolean {
+  const buildTimeKeyRemains = forgetApiKey();
+  rebuildApiClients();
+  return buildTimeKeyRemains;
+}
+
+/**
+ * Rebuild the shared API clients from the current configuration.
+ */
+function rebuildApiClients(): void {
   const config = getApiConfig();
   Object.assign(apiClients, createFirecrawlApiClients(config.apiKey, config.basePath));
 
