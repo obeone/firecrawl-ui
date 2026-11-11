@@ -157,6 +157,7 @@ import { getErrorMessage } from '@/utils/errors';
 import { useRoute, useRouter } from 'vue-router';
 import { filterMapLinks, type MapLink } from '@/utils/mapLinks';
 import { setPendingBatchUrls } from '@/utils/batchHandoff';
+import { newLocalJobId, recordJob } from '@/utils/jobHistory';
 import PlaygroundLayout from './playground/PlaygroundLayout.vue';
 import CodeBlock from './playground/CodeBlock.vue';
 import CopyButton from './playground/CopyButton.vue';
@@ -358,9 +359,25 @@ async function handleSubmit(): Promise<void> {
   try {
     const response = await api.mapping.mapUrls(payload);
     links.value = response.data.links ?? [];
+    recordJob({
+      kind: 'map',
+      id: newLocalJobId(),
+      createdAt: new Date().toISOString(),
+      sourceUrl: baseUrl.value,
+      resultCount: links.value.length,
+      status: 'completed',
+    });
   } catch (err) {
     error.value = getErrorMessage(err, 'Failed to map URLs. Please check the URL and try again.');
     links.value = [];
+    recordJob({
+      kind: 'map',
+      id: newLocalJobId(),
+      createdAt: new Date().toISOString(),
+      sourceUrl: baseUrl.value,
+      resultCount: null,
+      status: 'failed',
+    });
   } finally {
     durationMs.value = performance.now() - t0;
     loading.value = false;

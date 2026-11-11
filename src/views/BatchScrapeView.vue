@@ -88,12 +88,14 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { useApi } from '@/plugins/api';
 import type { CrawlError } from '@/services/firecrawl';
 import { describeRequestError } from '@/utils/errors';
 import { createLatestGuard, type IsCurrent } from '@/utils/latestGuard';
 import { takePendingBatchUrls } from '@/utils/batchHandoff';
 import { isTerminalStatus } from '@/utils/polling';
+import { recordJob, updateJob } from '@/utils/jobHistory';
 import { useJobPoller } from '@/composables/useJobPoller';
 import ScrapeOptionsForm from '@/components/ScrapeOptionsForm.vue';
 import {
@@ -221,6 +223,7 @@ function pollStatus(id: string, isCurrent: IsCurrent): void {
     onUpdate: (data) => {
       status.value = data.status;
       completed.value = data.completed;
+      updateJob('batch', id, { status: data.status, resultCount: data.completed });
       total.value = data.total;
       creditsUsed.value = data.creditsUsed;
       progress.value = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
@@ -297,6 +300,14 @@ async function handleSubmit(): Promise<void> {
     }
     jobId.value = response.data.id;
     status.value = 'scraping';
+    recordJob({
+      kind: 'batch',
+      id: response.data.id,
+      createdAt: new Date().toISOString(),
+      sourceUrl: urls[0],
+      resultCount: null,
+      status: 'scraping',
+    });
     pollStatus(response.data.id, isCurrent);
   } catch (err: unknown) {
     if (isCurrent()) {
@@ -308,6 +319,20 @@ async function handleSubmit(): Promise<void> {
     }
   }
 }
+
+const route = useRoute();
+
+// Reopen a job from the History page (?job=<id>): resume polling it the same
+// way a fresh submit does.
+onMounted(() => {
+  const job = route.query.job;
+  if (typeof job === 'string' && job !== '') {
+    const isCurrent = jobGuard.begin();
+    jobId.value = job;
+    status.value = 'scraping';
+    pollStatus(job, isCurrent);
+  }
+});
 
 /**
  * Cancel the currently running batch scrape job.
@@ -321,11 +346,14 @@ async function cancelJob(): Promise<void> {
   if (!jobId.value) {
     return;
   }
+  const id = jobId.value;
   const isCurrent = jobGuard.current();
   cancelling.value = true;
   error.value = '';
   try {
-    await api.batchScraping.cancelBatchScrape(jobId.value);
+    await api.batchScraping.cancelBatchScrape(id);
+    // The server cancelled this job whichever job is on screen now.
+    updateJob('batch', id, { status: 'cancelled' });
     if (isCurrent()) {
       stopPolling();
       status.value = 'cancelled';

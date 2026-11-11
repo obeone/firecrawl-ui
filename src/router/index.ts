@@ -11,6 +11,7 @@ import ResearchView from '../views/ResearchView.vue';
 import LlmsTxtView from '../views/LlmsTxtView.vue';
 import BillingView from '../views/BillingView.vue';
 import AboutView from '../views/AboutView.vue';
+import HistoryView from '../views/HistoryView.vue';
 
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
@@ -69,6 +70,11 @@ const router = createRouter({
       path: '/billing',
       name: 'billing',
       component: BillingView, // Route for the billing and credit usage view.
+    },
+    {
+      path: '/history',
+      name: 'history',
+      component: HistoryView, // Route for the local job history.
     },
     {
       path: '/about',
