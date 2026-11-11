@@ -19,24 +19,11 @@
           <input id="url" v-model="formData.url" type="text" required />
         </div>
 
-        <div class="form-group">
-          <label for="formats">Output Formats:</label>
-          <select id="formats" v-model="formData.scrapeOptions.formats" multiple>
-            <option value="markdown">Markdown</option>
-            <option value="html">HTML</option>
-            <option value="rawHtml">Raw HTML</option>
-            <option value="links">Links</option>
-            <option value="images">Images</option>
-            <option value="summary">Summary †</option>
-            <option value="screenshot">Screenshot (Viewport)</option>
-            <option value="screenshot@fullPage">Screenshot (Full Page)</option>
-            <option value="json">JSON (Structured Extraction) †</option>
-            <option value="attributes">Attributes</option>
-            <option value="branding">Branding *</option>
-            <option value="changeTracking">Change Tracking (Requires Markdown) *</option>
-          </select>
-          <small>Select one or more formats.</small>
-        </div>
+        <ScrapeOptionsForm
+          v-model="formData.scrapeOptions"
+          :format-options="formatOptions"
+          part="formats"
+        />
 
         <fieldset class="form-group options-fieldset">
           <legend
@@ -46,32 +33,16 @@
             Scrape Options
           </legend>
           <div v-show="!isScrapeOptionsCollapsed">
-            <label>
-              <input v-model="formData.scrapeOptions.onlyMainContent" type="checkbox" />
-              Only Main Content (exclude headers, footers, etc.)
-            </label>
-            <label>
-              <input v-model="formData.scrapeOptions.onlyCleanContent" type="checkbox" />
-              Only Clean Content (beta, extra LLM pass to remove residual boilerplate)
-            </label>
-            <div class="form-group">
-              <label for="includeTags">Include Tags (comma separated):</label>
-              <input
-                id="includeTags"
-                v-model="formData.scrapeOptions.includeTags"
-                type="text"
-                placeholder="e.g. p, div, span"
-              />
-            </div>
-            <div class="form-group">
-              <label for="excludeTags">Exclude Tags (comma separated):</label>
-              <input
-                id="excludeTags"
-                v-model="formData.scrapeOptions.excludeTags"
-                type="text"
-                placeholder="e.g. script, style"
-              />
-            </div>
+            <ScrapeOptionsForm
+              v-model="formData.scrapeOptions"
+              :format-options="formatOptions"
+              part="filters"
+            >
+              <label>
+                <input v-model="formData.scrapeOptions.onlyCleanContent" type="checkbox" />
+                Only Clean Content (beta, extra LLM pass to remove residual boilerplate)
+              </label>
+            </ScrapeOptionsForm>
           </div>
         </fieldset>
 
@@ -335,25 +306,9 @@
         <pre v-else>{{ previewContent }}</pre>
       </div>
 
-      <!-- Markdown: raw markdown via CodeBlock -->
-      <CodeBlock v-else-if="activeTab === 'markdown'" :content="markdownContent" label="Markdown" />
-
-      <!-- HTML: raw html string via CodeBlock -->
-      <CodeBlock v-else-if="activeTab === 'html'" :content="htmlContent" label="HTML" />
-
-      <!-- Links: list of discovered links via CodeBlock -->
-      <CodeBlock v-else-if="activeTab === 'links'" :content="linksContent" label="Links" />
-
-      <!-- Screenshot: rendered image -->
-      <div v-else-if="activeTab === 'screenshot'" class="screenshot-pane">
-        <img :src="screenshotContent" alt="Page screenshot" />
-      </div>
-
-      <!-- Metadata: page metadata object as JSON -->
-      <CodeBlock v-else-if="activeTab === 'metadata'" :json="metadataContent" label="Metadata" />
-
-      <!-- JSON: the full result object -->
-      <CodeBlock v-else :json="result" label="JSON" />
+      <!-- Other tabs: raw markdown/HTML/links, screenshot, metadata, or the
+           full result object as JSON -->
+      <ResultViewer v-else :doc="resultData" :tab="activeTab" :json="result" />
     </template>
 
     <!-- Response actions: copy current tab payload + download menu -->
@@ -374,8 +329,21 @@ import { describeRequestError, getErrorMessage, isUnauthorized } from '@/utils/e
 import { checkCountryCode, firstFormError } from '@/utils/formValidation';
 import { renderMarkdown } from '@/utils/sanitize';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
-import CodeBlock from '../components/playground/CodeBlock.vue';
 import CopyButton from '../components/playground/CopyButton.vue';
+import ResultViewer from '@/components/ResultViewer.vue';
+import ScrapeOptionsForm from '@/components/ScrapeOptionsForm.vue';
+import {
+  buildDocumentTabs,
+  getDocumentHtml,
+  getDocumentLinks,
+  getDocumentMarkdown,
+  type ResultTab,
+} from '@/utils/resultDocument';
+import {
+  SCRAPE_FORMAT_OPTIONS,
+  buildTagFilters,
+  type ScrapeOptionsFormValue,
+} from '@/utils/scrapeOptions';
 
 type ScrapeResult = {
   success: boolean;
@@ -440,19 +408,13 @@ interface PageAction {
 }
 
 /**
+ * Shared scrape options (formats, main content, tag filters) plus the
+ * Scrape-only clean content toggle.
  * @typedef {object} FormDataScrapeOptions
- * @property {string[]} formats - Array of output formats (e.g., "json", "markdown").
- * @property {boolean} [onlyMainContent] - Scrape only the main content, excluding headers, footers, etc.
  * @property {boolean} [onlyCleanContent] - Run an extra LLM pass to remove residual boilerplate.
- * @property {string} [includeTags] - Comma-separated list of HTML tags to include.
- * @property {string} [excludeTags] - Comma-separated list of HTML tags to exclude.
  */
-interface FormDataScrapeOptions {
-  formats: string[];
-  onlyMainContent?: boolean;
+interface FormDataScrapeOptions extends ScrapeOptionsFormValue {
   onlyCleanContent?: boolean;
-  includeTags?: string;
-  excludeTags?: string;
 }
 
 /**
@@ -489,8 +451,9 @@ export default defineComponent({
   name: 'ScrapeView',
   components: {
     PlaygroundLayout,
-    CodeBlock,
     CopyButton,
+    ResultViewer,
+    ScrapeOptionsForm,
   },
   /**
    * Setup function for the ScrapeView component.
@@ -611,46 +574,19 @@ export default defineComponent({
      * Raw markdown string from the result, when present.
      * @returns {string}
      */
-    const markdownContent = computed<string>(() => {
-      const md = resultData.value?.markdown;
-      return typeof md === 'string' ? md : '';
-    });
+    const markdownContent = computed<string>(() => getDocumentMarkdown(resultData.value));
 
     /**
      * Raw HTML string from the result (prefers `html`, falls back to `rawHtml`).
      * @returns {string}
      */
-    const htmlContent = computed<string>(() => {
-      const html = resultData.value?.html ?? resultData.value?.rawHtml;
-      return typeof html === 'string' ? html : '';
-    });
+    const htmlContent = computed<string>(() => getDocumentHtml(resultData.value));
 
     /**
      * Newline-joined list of discovered links, when present.
      * @returns {string}
      */
-    const linksContent = computed<string>(() => {
-      const links = resultData.value?.links;
-      return Array.isArray(links) ? links.join('\n') : '';
-    });
-
-    /**
-     * Screenshot data URL from the result, when present.
-     * @returns {string}
-     */
-    const screenshotContent = computed<string>(() => {
-      const shot = resultData.value?.screenshot;
-      return typeof shot === 'string' ? shot : '';
-    });
-
-    /**
-     * Page metadata object from the result, when present.
-     * @returns {Record<string, unknown> | null}
-     */
-    const metadataContent = computed<Record<string, unknown> | null>(() => {
-      const meta = resultData.value?.metadata;
-      return meta && typeof meta === 'object' ? (meta as Record<string, unknown>) : null;
-    });
+    const linksContent = computed<string>(() => getDocumentLinks(resultData.value));
 
     /**
      * Text shown in the Preview tab: rendered markdown if available, otherwise
@@ -681,19 +617,9 @@ export default defineComponent({
      * Only tabs backed by real data are shown; JSON is always available.
      * @returns {{ key: string; label: string }[]}
      */
-    const responseTabs = computed<{ key: string; label: string }[]>(() => {
-      const tabs: { key: string; label: string }[] = [];
-      if (markdownContent.value || htmlContent.value) {
-        tabs.push({ key: 'preview', label: 'Preview' });
-      }
-      if (markdownContent.value) tabs.push({ key: 'markdown', label: 'Markdown' });
-      if (htmlContent.value) tabs.push({ key: 'html', label: 'HTML' });
-      if (linksContent.value) tabs.push({ key: 'links', label: 'Links' });
-      if (screenshotContent.value) tabs.push({ key: 'screenshot', label: 'Screenshot' });
-      if (metadataContent.value) tabs.push({ key: 'metadata', label: 'Metadata' });
-      tabs.push({ key: 'json', label: 'JSON' });
-      return tabs;
-    });
+    const responseTabs = computed<ResultTab[]>(() =>
+      buildDocumentTabs(resultData.value, { includePreview: true }),
+    );
 
     /**
      * Status label for the playground status bar: reflects success, error, or idle.
@@ -842,20 +768,7 @@ export default defineComponent({
         ...(formData.value.scrapeOptions.onlyCleanContent === true && {
           onlyCleanContent: true,
         }),
-        ...(formData.value.scrapeOptions.includeTags &&
-          formData.value.scrapeOptions.includeTags.trim() !== '' && {
-            includeTags: formData.value.scrapeOptions.includeTags
-              .split(',')
-              .map((tag) => tag.trim())
-              .filter((tag) => tag !== ''),
-          }),
-        ...(formData.value.scrapeOptions.excludeTags &&
-          formData.value.scrapeOptions.excludeTags.trim() !== '' && {
-            excludeTags: formData.value.scrapeOptions.excludeTags
-              .split(',')
-              .map((tag) => tag.trim())
-              .filter((tag) => tag !== ''),
-          }),
+        ...buildTagFilters(formData.value.scrapeOptions),
 
         // Build the JSON format object (prompt and/or schema) when 'json' is selected.
         ...(formData.value.scrapeOptions.formats.includes('json') &&
@@ -1117,10 +1030,10 @@ export default defineComponent({
       markdownContent,
       htmlContent,
       linksContent,
-      screenshotContent,
-      metadataContent,
       previewContent,
       previewHtml,
+      resultData,
+      formatOptions: SCRAPE_FORMAT_OPTIONS,
     };
   },
 });
@@ -1130,7 +1043,8 @@ export default defineComponent({
 /* ---------------------------------------------------------------------------
  * Form layout — spacing and field groups.
  * --------------------------------------------------------------------------- */
-.form-group {
+/* :deep() so the fields rendered by ScrapeOptionsForm keep the same spacing. */
+:deep(.form-group) {
   margin-bottom: 1.25rem;
 }
 
@@ -1195,8 +1109,8 @@ export default defineComponent({
   gap: 0.4rem;
 }
 
-/* Helper text under form fields. */
-.form-group small {
+/* Helper text under form fields, shared form fields included. */
+:deep(.form-group small) {
   display: block;
   font-size: 0.8em;
   color: var(--color-text-mute);
@@ -1443,28 +1357,5 @@ export default defineComponent({
 .markdown-body th {
   font-weight: 700;
   background: var(--color-background-soft);
-}
-
-/* ---------------------------------------------------------------------------
- * Screenshot pane — centered, scrollable image surface.
- * Same glass fill treatment as the preview pane for visual cohesion.
- * --------------------------------------------------------------------------- */
-.screenshot-pane {
-  height: 100%;
-  overflow: auto;
-  padding: 1rem;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  /* Glass fill keeps the aurora visible behind the screenshot. */
-  background: var(--glass-fill);
-}
-
-.screenshot-pane img {
-  max-width: 100%;
-  height: auto;
-  /* Glass-bordered image frame matches the panel language. */
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
 }
 </style>
