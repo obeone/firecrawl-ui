@@ -36,6 +36,18 @@ updates:
       prefix: chore(deps)
       prefix-development: chore(deps-dev)
       include: scope
+    ignore:
+      # TypeScript majors are blocked by the toolchain, not by this code:
+      # - 7.x ships no programmatic API until 7.1, so vue-tsc (Volar) and
+      #   typescript-eslint cannot use it; the 7.0 announcement tells Vue
+      #   projects to stay on 6.0 for now.
+      # - 6.x is refused by openapi-typescript (peer typescript ^5.x), which
+      #   `npm run api:types` needs.
+      # Lift this once openapi-typescript accepts 6 (for 6.x) or once 7.1
+      # ships its API and vue-tsc and typescript-eslint support it (for 7.x).
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
     groups:
       npm-minor-patch:
         applies-to: version-updates
