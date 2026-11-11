@@ -32,7 +32,7 @@ This is a Vue 3 + TypeScript + Vite SPA that provides a UI for the Firecrawl API
 
 ### API Adapter (`src/services/firecrawl.ts`)
 
-Hand-written adapter layer that targets the Firecrawl **API v2** (`/v2/*` endpoints). `createFirecrawlApiClients()` builds a set of legacy-compatible clients (`crawling`, `extraction`, `mapping`, `scraping`, `search`) that translate the payloads the views build into v2 requests and normalize v2 responses back into the shapes the views expect. The v2 spec lives in `openapi_v2.yaml` for reference.
+Hand-written adapter layer that targets the Firecrawl **API v2** (`/v2/*` endpoints). `createFirecrawlApiClients()` builds a set of legacy-compatible clients (`crawling`, `extraction`, `mapping`, `scraping`, `search`) that translate the payloads the views build into v2 requests and normalize v2 responses back into the shapes the views expect. The authoritative reference is the online v2 API documentation at <https://docs.firecrawl.dev/api-reference/v2-introduction>.
 
 ### API Configuration (`src/config/api.ts`)
 
