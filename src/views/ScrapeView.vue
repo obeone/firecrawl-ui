@@ -25,225 +25,207 @@
           part="formats"
         />
 
-        <fieldset class="form-group options-fieldset">
-          <legend
-            class="collapsible-header"
-            @click="isScrapeOptionsCollapsed = !isScrapeOptionsCollapsed"
+        <OptionsDisclosure v-model:collapsed="isScrapeOptionsCollapsed" title="Scrape Options">
+          <ScrapeOptionsForm
+            v-model="formData.scrapeOptions"
+            :format-options="formatOptions"
+            part="filters"
           >
-            Scrape Options
-          </legend>
-          <div v-show="!isScrapeOptionsCollapsed">
-            <ScrapeOptionsForm
-              v-model="formData.scrapeOptions"
-              :format-options="formatOptions"
-              part="filters"
+            <label>
+              <input v-model="formData.scrapeOptions.onlyCleanContent" type="checkbox" />
+              Only Clean Content (beta, extra LLM pass to remove residual boilerplate)
+            </label>
+          </ScrapeOptionsForm>
+        </OptionsDisclosure>
+
+        <OptionsDisclosure v-model:collapsed="isPageOptionsCollapsed" title="Page Options">
+          <div class="grid-layout">
+            <div class="form-group">
+              <label for="waitFor">Wait For (ms):</label>
+              <input
+                id="waitFor"
+                v-model.number="formData.pageOptions.waitFor"
+                type="number"
+                min="0"
+              />
+              <small>Delay before fetching content.</small>
+            </div>
+            <div class="form-group">
+              <label for="maxAge">Max Age (ms) *:</label>
+              <input
+                id="maxAge"
+                v-model.number="formData.pageOptions.maxAge"
+                type="number"
+                min="0"
+              />
+              <small>Use cached page if younger than this age.</small>
+            </div>
+            <div class="form-group">
+              <label for="minAge">Min Age (ms) *:</label>
+              <input
+                id="minAge"
+                v-model.number="formData.pageOptions.minAge"
+                type="number"
+                min="0"
+              />
+              <small>Only return cached data older than this age.</small>
+            </div>
+            <div class="form-group">
+              <label for="timeout">Timeout (ms):</label>
+              <input
+                id="timeout"
+                v-model.number="formData.pageOptions.timeout"
+                type="number"
+                min="1000"
+                max="300000"
+                placeholder="60000"
+              />
+              <small>Page request timeout, 1000 to 300000 (server default: 60000).</small>
+            </div>
+            <div class="form-group">
+              <label for="proxy">Proxy *:</label>
+              <select id="proxy" v-model="formData.pageOptions.proxy">
+                <option value="">Default</option>
+                <option value="auto">Auto</option>
+                <option value="basic">Basic</option>
+                <option value="stealth">Stealth</option>
+                <option value="enhanced">Enhanced</option>
+              </select>
+              <small>Proxy type for request.</small>
+            </div>
+            <label class="checkbox-label">
+              <input v-model="formData.pageOptions.mobile" type="checkbox" />
+              Emulate Mobile Device
+            </label>
+            <label class="checkbox-label">
+              <input v-model="formData.pageOptions.skipTlsVerification" type="checkbox" />
+              Skip TLS Verification
+            </label>
+            <label class="checkbox-label">
+              <input v-model="formData.pageOptions.blockAds" type="checkbox" />
+              Block Ads & Popups
+            </label>
+            <label class="checkbox-label">
+              <input v-model="formData.pageOptions.removeBase64Images" type="checkbox" />
+              Remove Base64 Images
+            </label>
+            <label class="checkbox-label">
+              <input v-model="formData.pageOptions.parsePDF" type="checkbox" />
+              Parse PDF and Image Files (unchecked: PDF returned as base64)
+            </label>
+            <label class="checkbox-label">
+              <input v-model="formData.pageOptions.storeInCache" type="checkbox" />
+              Store In Cache *
+            </label>
+            <label class="checkbox-label">
+              <input v-model="formData.pageOptions.lockdown" type="checkbox" />
+              Lockdown Mode *
+            </label>
+            <label class="checkbox-label">
+              <input v-model="formData.pageOptions.redactPII" type="checkbox" />
+              Redact PII *
+            </label>
+            <label class="checkbox-label">
+              <input v-model="formData.pageOptions.zeroDataRetention" type="checkbox" />
+              Zero Data Retention *
+            </label>
+          </div>
+          <div class="form-group">
+            <label for="headers">HTTP Headers (JSON format):</label>
+            <textarea
+              id="headers"
+              v-model="headersJson"
+              rows="4"
+              placeholder='{"Authorization": "Bearer token", "Accept": "application/json"}'
+            ></textarea>
+            <div v-if="headersError" class="error-message">{{ headersError }}</div>
+            <small>Enter HTTP headers as JSON object.</small>
+          </div>
+          <div class="form-group">
+            <label for="location">Location *:</label>
+            <input
+              id="location"
+              v-model="formData.pageOptions.location"
+              type="text"
+              maxlength="2"
+              placeholder="US"
+            />
+            <div v-if="locationError" class="error-message">{{ locationError }}</div>
+            <small
+              >Two-letter ISO country code (e.g. US, DE, JP). Empty: server default (US).</small
             >
-              <label>
-                <input v-model="formData.scrapeOptions.onlyCleanContent" type="checkbox" />
-                Only Clean Content (beta, extra LLM pass to remove residual boilerplate)
-              </label>
-            </ScrapeOptionsForm>
           </div>
-        </fieldset>
-
-        <fieldset class="form-group options-fieldset">
-          <legend
-            class="collapsible-header"
-            @click="isPageOptionsCollapsed = !isPageOptionsCollapsed"
-          >
-            Page Options
-          </legend>
-          <div v-show="!isPageOptionsCollapsed">
-            <div class="grid-layout">
-              <div class="form-group">
-                <label for="waitFor">Wait For (ms):</label>
-                <input
-                  id="waitFor"
-                  v-model.number="formData.pageOptions.waitFor"
-                  type="number"
-                  min="0"
-                />
-                <small>Delay before fetching content.</small>
-              </div>
-              <div class="form-group">
-                <label for="maxAge">Max Age (ms) *:</label>
-                <input
-                  id="maxAge"
-                  v-model.number="formData.pageOptions.maxAge"
-                  type="number"
-                  min="0"
-                />
-                <small>Use cached page if younger than this age.</small>
-              </div>
-              <div class="form-group">
-                <label for="minAge">Min Age (ms) *:</label>
-                <input
-                  id="minAge"
-                  v-model.number="formData.pageOptions.minAge"
-                  type="number"
-                  min="0"
-                />
-                <small>Only return cached data older than this age.</small>
-              </div>
-              <div class="form-group">
-                <label for="timeout">Timeout (ms):</label>
-                <input
-                  id="timeout"
-                  v-model.number="formData.pageOptions.timeout"
-                  type="number"
-                  min="1000"
-                  max="300000"
-                  placeholder="60000"
-                />
-                <small>Page request timeout, 1000 to 300000 (server default: 60000).</small>
-              </div>
-              <div class="form-group">
-                <label for="proxy">Proxy *:</label>
-                <select id="proxy" v-model="formData.pageOptions.proxy">
-                  <option value="">Default</option>
-                  <option value="auto">Auto</option>
-                  <option value="basic">Basic</option>
-                  <option value="stealth">Stealth</option>
-                  <option value="enhanced">Enhanced</option>
-                </select>
-                <small>Proxy type for request.</small>
-              </div>
-              <label class="checkbox-label">
-                <input v-model="formData.pageOptions.mobile" type="checkbox" />
-                Emulate Mobile Device
-              </label>
-              <label class="checkbox-label">
-                <input v-model="formData.pageOptions.skipTlsVerification" type="checkbox" />
-                Skip TLS Verification
-              </label>
-              <label class="checkbox-label">
-                <input v-model="formData.pageOptions.blockAds" type="checkbox" />
-                Block Ads & Popups
-              </label>
-              <label class="checkbox-label">
-                <input v-model="formData.pageOptions.removeBase64Images" type="checkbox" />
-                Remove Base64 Images
-              </label>
-              <label class="checkbox-label">
-                <input v-model="formData.pageOptions.parsePDF" type="checkbox" />
-                Parse PDF and Image Files (unchecked: PDF returned as base64)
-              </label>
-              <label class="checkbox-label">
-                <input v-model="formData.pageOptions.storeInCache" type="checkbox" />
-                Store In Cache *
-              </label>
-              <label class="checkbox-label">
-                <input v-model="formData.pageOptions.lockdown" type="checkbox" />
-                Lockdown Mode *
-              </label>
-              <label class="checkbox-label">
-                <input v-model="formData.pageOptions.redactPII" type="checkbox" />
-                Redact PII *
-              </label>
-              <label class="checkbox-label">
-                <input v-model="formData.pageOptions.zeroDataRetention" type="checkbox" />
-                Zero Data Retention *
-              </label>
-            </div>
-            <div class="form-group">
-              <label for="headers">HTTP Headers (JSON format):</label>
-              <textarea
-                id="headers"
-                v-model="headersJson"
-                rows="4"
-                placeholder='{"Authorization": "Bearer token", "Accept": "application/json"}'
-              ></textarea>
-              <div v-if="headersError" class="error-message">{{ headersError }}</div>
-              <small>Enter HTTP headers as JSON object.</small>
-            </div>
-            <div class="form-group">
-              <label for="location">Location *:</label>
-              <input
-                id="location"
-                v-model="formData.pageOptions.location"
-                type="text"
-                maxlength="2"
-                placeholder="US"
-              />
-              <div v-if="locationError" class="error-message">{{ locationError }}</div>
-              <small
-                >Two-letter ISO country code (e.g. US, DE, JP). Empty: server default (US).</small
-              >
-            </div>
-            <div class="form-group">
-              <label for="languages">Languages (comma separated) *:</label>
-              <input
-                id="languages"
-                v-model="formData.pageOptions.languages"
-                type="text"
-                placeholder="e.g. en-US, fr-FR"
-              />
-              <small>Preferred languages emulated for the request.</small>
-            </div>
-            <div class="form-group">
-              <label>Actions:</label>
-              <div
-                v-for="(action, idx) in formData.pageOptions.actions"
-                :key="idx"
-                class="action-item"
-              >
-                <select v-model="action.type">
-                  <option v-for="t in actionTypes" :key="t" :value="t">{{ t }}</option>
-                </select>
-                <template v-if="action.type === 'wait'">
-                  <input
-                    v-model.number="action.milliseconds"
-                    type="number"
-                    placeholder="ms"
-                    min="1"
-                  />
-                  <input v-model="action.selector" type="text" placeholder="selector" />
-                </template>
-                <template v-else-if="action.type === 'screenshot'">
-                  <label class="checkbox-label">
-                    <input v-model="action.fullPage" type="checkbox" /> Full Page
-                  </label>
-                </template>
-                <template v-else-if="action.type === 'click'">
-                  <input v-model="action.selector" type="text" placeholder="selector" />
-                  <label class="checkbox-label">
-                    <input v-model="action.all" type="checkbox" /> All
-                  </label>
-                </template>
-                <template v-else-if="action.type === 'write'">
-                  <input v-model="action.text" type="text" placeholder="text" />
-                </template>
-                <template v-else-if="action.type === 'press'">
-                  <input v-model="action.key" type="text" placeholder="key" />
-                </template>
-                <template v-else-if="action.type === 'scroll'">
-                  <select v-model="action.direction">
-                    <option value="down">down</option>
-                    <option value="up">up</option>
-                  </select>
-                  <input v-model="action.selector" type="text" placeholder="selector" />
-                </template>
-                <template v-else-if="action.type === 'executeJavascript'">
-                  <textarea v-model="action.script" rows="2" placeholder="script"></textarea>
-                </template>
-                <button type="button" class="action-remove" @click="removeAction(idx)">
-                  Remove
-                </button>
-              </div>
-              <button type="button" class="action-add" @click="addAction">Add Action</button>
-            </div>
+          <div class="form-group">
+            <label for="languages">Languages (comma separated) *:</label>
+            <input
+              id="languages"
+              v-model="formData.pageOptions.languages"
+              type="text"
+              placeholder="e.g. en-US, fr-FR"
+            />
+            <small>Preferred languages emulated for the request.</small>
           </div>
-        </fieldset>
+          <div class="form-group">
+            <label>Actions:</label>
+            <div
+              v-for="(action, idx) in formData.pageOptions.actions"
+              :key="idx"
+              class="action-item"
+            >
+              <select v-model="action.type">
+                <option v-for="t in actionTypes" :key="t" :value="t">{{ t }}</option>
+              </select>
+              <template v-if="action.type === 'wait'">
+                <input
+                  v-model.number="action.milliseconds"
+                  type="number"
+                  placeholder="ms"
+                  min="1"
+                />
+                <input v-model="action.selector" type="text" placeholder="selector" />
+              </template>
+              <template v-else-if="action.type === 'screenshot'">
+                <label class="checkbox-label">
+                  <input v-model="action.fullPage" type="checkbox" /> Full Page
+                </label>
+              </template>
+              <template v-else-if="action.type === 'click'">
+                <input v-model="action.selector" type="text" placeholder="selector" />
+                <label class="checkbox-label">
+                  <input v-model="action.all" type="checkbox" /> All
+                </label>
+              </template>
+              <template v-else-if="action.type === 'write'">
+                <input v-model="action.text" type="text" placeholder="text" />
+              </template>
+              <template v-else-if="action.type === 'press'">
+                <input v-model="action.key" type="text" placeholder="key" />
+              </template>
+              <template v-else-if="action.type === 'scroll'">
+                <select v-model="action.direction">
+                  <option value="down">down</option>
+                  <option value="up">up</option>
+                </select>
+                <input v-model="action.selector" type="text" placeholder="selector" />
+              </template>
+              <template v-else-if="action.type === 'executeJavascript'">
+                <textarea v-model="action.script" rows="2" placeholder="script"></textarea>
+              </template>
+              <button type="button" class="action-remove" @click="removeAction(idx)">Remove</button>
+            </div>
+            <button type="button" class="action-add" @click="addAction">Add Action</button>
+          </div>
+        </OptionsDisclosure>
 
-        <fieldset
+        <OptionsDisclosure
           v-if="formData.scrapeOptions.formats.includes('json')"
-          class="form-group options-fieldset"
+          title="JSON Format (Structured Extraction) †"
+          :collapsible="false"
         >
-          <legend>JSON Format (Structured Extraction) †</legend>
-          <small class="fieldset-hint">
+          <template #hint>
             Replaces the deprecated Extract endpoint. Provide a prompt, a JSON schema, or both to
             extract structured data with an LLM.
-          </small>
+          </template>
           <div class="form-group">
             <label for="jsonPrompt">Prompt:</label>
             <textarea
@@ -267,7 +249,7 @@
               {{ jsonFormatSchemaError }}
             </div>
           </div>
-        </fieldset>
+        </OptionsDisclosure>
 
         <div v-if="formData.scrapeOptions.formats.includes('attributes')" class="form-group">
           <label for="attributesOptions">Attribute Selectors (JSON format):</label>
@@ -332,6 +314,7 @@ import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
 import CopyButton from '../components/playground/CopyButton.vue';
 import ResultViewer from '@/components/ResultViewer.vue';
 import ScrapeOptionsForm from '@/components/ScrapeOptionsForm.vue';
+import OptionsDisclosure from '@/components/OptionsDisclosure.vue';
 import {
   buildDocumentTabs,
   getDocumentHtml,
@@ -454,6 +437,7 @@ export default defineComponent({
     CopyButton,
     ResultViewer,
     ScrapeOptionsForm,
+    OptionsDisclosure,
   },
   /**
    * Setup function for the ScrapeView component.
@@ -1049,51 +1033,6 @@ export default defineComponent({
 }
 
 /* ---------------------------------------------------------------------------
- * Collapsible option fieldsets — frosted glass cards so they read as nested
- * panels floating over the request pane aurora. Hover lifts the card gently.
- * --------------------------------------------------------------------------- */
-.options-fieldset {
-  /* Glass surface: translucent fill + heavy blur to show the aurora through. */
-  background: var(--glass-fill);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  border: 1px solid var(--glass-border);
-  padding: 1rem;
-  border-radius: var(--radius-md);
-  margin-bottom: 1.25rem;
-  transition:
-    border-color var(--transition),
-    box-shadow var(--transition),
-    transform var(--transition);
-}
-
-.options-fieldset:hover {
-  /* Subtle lift so nested panels feel interactive, not static. */
-  border-color: var(--color-border-hover);
-  box-shadow: var(--box-shadow-card);
-  transform: translateY(-2px);
-}
-
-.options-fieldset legend {
-  font-weight: 700;
-  padding: 0 0.4rem;
-  color: var(--color-heading);
-}
-
-/* ---------------------------------------------------------------------------
- * Collapsible legend header — pointer + violet hover to signal interactivity.
- * --------------------------------------------------------------------------- */
-.collapsible-header {
-  cursor: pointer;
-  user-select: none;
-  transition: color var(--transition-fast);
-}
-
-.collapsible-header:hover {
-  color: var(--brand-strong);
-}
-
-/* ---------------------------------------------------------------------------
  * Responsive grid inside option sections.
  * --------------------------------------------------------------------------- */
 .grid-layout {
@@ -1115,14 +1054,6 @@ export default defineComponent({
   font-size: 0.8em;
   color: var(--color-text-mute);
   margin-top: 0.2rem;
-}
-
-/* Help text shown directly under a fieldset legend. */
-.fieldset-hint {
-  display: block;
-  font-size: 0.8em;
-  color: var(--color-text-mute);
-  margin-bottom: 0.75rem;
 }
 
 /* Footnote explaining the "*" marker on cloud-only (official API) options. */

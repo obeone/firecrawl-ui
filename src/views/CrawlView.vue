@@ -27,291 +27,267 @@
         </div>
 
         <!-- Crawler Options Section -->
-        <fieldset class="form-group options-fieldset">
-          <legend
-            class="collapsible-header"
-            @click="isCrawlerOptionsCollapsed = !isCrawlerOptionsCollapsed"
-          >
-            {{ crawlerOptionsArrow }} Crawler Options
-          </legend>
-          <div v-show="!isCrawlerOptionsCollapsed">
-            <div class="grid-layout">
-              <div class="form-group">
-                <label for="includes">Includes (Regex Patterns):</label>
-                <input
-                  id="includes"
-                  v-model="includesInput"
-                  type="text"
-                  placeholder="/blog/.*, /products/.*"
-                />
-                <div v-if="includesError" class="error-message">{{ includesError }}</div>
-                <small>Comma-separated regex patterns. Only matching URLs will be included.</small>
-              </div>
-              <div class="form-group">
-                <label for="excludes">Excludes (Regex Patterns):</label>
-                <input
-                  id="excludes"
-                  v-model="excludesInput"
-                  type="text"
-                  placeholder="/login, /private/.*"
-                />
-                <div v-if="excludesError" class="error-message">{{ excludesError }}</div>
-                <small>Comma-separated regex patterns to exclude URLs.</small>
-              </div>
-              <div class="form-group">
-                <label for="maxDepth">Max Depth:</label>
-                <input
-                  id="maxDepth"
-                  v-model.number="formData.crawlerOptions.maxDepth"
-                  type="number"
-                  min="1"
-                  placeholder="e.g. 3"
-                />
-                <small>Maximum depth relative to the base URL (path segments).</small>
-              </div>
-              <div class="form-group">
-                <label for="maxDiscoveryDepth">Max Discovery Depth:</label>
-                <input
-                  id="maxDiscoveryDepth"
-                  v-model.number="formData.crawlerOptions.maxDiscoveryDepth"
-                  type="number"
-                  min="1"
-                  placeholder="e.g. 2"
-                />
-                <small>Maximum depth based on discovery order.</small>
-              </div>
-              <div class="form-group">
-                <label for="limit">Page Limit:</label>
-                <input
-                  id="limit"
-                  v-model.number="formData.crawlerOptions.limit"
-                  type="number"
-                  min="1"
-                  placeholder="e.g. 100"
-                />
-                <small>Maximum number of pages to crawl (default: 10000).</small>
-              </div>
-              <div class="form-group">
-                <label for="delay">Delay (seconds):</label>
-                <input
-                  id="delay"
-                  v-model.number="formData.crawlerOptions.delay"
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  placeholder="e.g. 1.5"
-                />
-                <small>Delay between pages to respect rate limits.</small>
-              </div>
-              <div class="form-group">
-                <label for="maxConcurrency">Max Concurrency:</label>
-                <input
-                  id="maxConcurrency"
-                  v-model.number="formData.crawlerOptions.maxConcurrency"
-                  type="number"
-                  min="1"
-                  placeholder="e.g. 5"
-                />
-                <small>Maximum number of pages processed in parallel.</small>
-              </div>
-              <div class="form-group">
-                <label for="statusInterval">Status Check Interval (seconds):</label>
-                <input
-                  id="statusInterval"
-                  v-model.number="statusCheckInterval"
-                  type="number"
-                  min="1"
-                  placeholder="e.g. 5"
-                />
-                <small>Time between status checks.</small>
-              </div>
+        <OptionsDisclosure v-model:collapsed="isCrawlerOptionsCollapsed" title="Crawler Options">
+          <div class="grid-layout">
+            <div class="form-group">
+              <label for="includes">Includes (Regex Patterns):</label>
+              <input
+                id="includes"
+                v-model="includesInput"
+                type="text"
+                placeholder="/blog/.*, /products/.*"
+              />
+              <div v-if="includesError" class="error-message">{{ includesError }}</div>
+              <small>Comma-separated regex patterns. Only matching URLs will be included.</small>
             </div>
-            <div class="grid-layout">
-              <div class="form-group">
-                <label for="sitemapMode">Sitemap Mode:</label>
-                <select id="sitemapMode" v-model="formData.crawlerOptions.sitemap">
-                  <option value="include">Include sitemap</option>
-                  <option value="skip">Skip sitemap</option>
-                  <option value="only">Only sitemap URLs</option>
-                </select>
-              </div>
-              <label class="checkbox-label">
-                <input v-model="formData.crawlerOptions.ignoreQueryParameters" type="checkbox" />
-                Ignore Query Parameters
-              </label>
-              <label class="checkbox-label">
-                <input v-model="formData.crawlerOptions.allowExternalLinks" type="checkbox" />
-                Allow External Links
-              </label>
-              <label class="checkbox-label">
-                <input v-model="formData.crawlerOptions.allowSubdomains" type="checkbox" />
-                Allow Subdomains
-              </label>
-              <label class="checkbox-label">
-                <input v-model="formData.crawlerOptions.crawlEntireDomain" type="checkbox" />
-                Crawl Entire Domain (follow sibling and parent links)
-              </label>
+            <div class="form-group">
+              <label for="excludes">Excludes (Regex Patterns):</label>
+              <input
+                id="excludes"
+                v-model="excludesInput"
+                type="text"
+                placeholder="/login, /private/.*"
+              />
+              <div v-if="excludesError" class="error-message">{{ excludesError }}</div>
+              <small>Comma-separated regex patterns to exclude URLs.</small>
+            </div>
+            <div class="form-group">
+              <label for="maxDepth">Max Depth:</label>
+              <input
+                id="maxDepth"
+                v-model.number="formData.crawlerOptions.maxDepth"
+                type="number"
+                min="1"
+                placeholder="e.g. 3"
+              />
+              <small>Maximum depth relative to the base URL (path segments).</small>
+            </div>
+            <div class="form-group">
+              <label for="maxDiscoveryDepth">Max Discovery Depth:</label>
+              <input
+                id="maxDiscoveryDepth"
+                v-model.number="formData.crawlerOptions.maxDiscoveryDepth"
+                type="number"
+                min="1"
+                placeholder="e.g. 2"
+              />
+              <small>Maximum depth based on discovery order.</small>
+            </div>
+            <div class="form-group">
+              <label for="limit">Page Limit:</label>
+              <input
+                id="limit"
+                v-model.number="formData.crawlerOptions.limit"
+                type="number"
+                min="1"
+                placeholder="e.g. 100"
+              />
+              <small>Maximum number of pages to crawl (default: 10000).</small>
+            </div>
+            <div class="form-group">
+              <label for="delay">Delay (seconds):</label>
+              <input
+                id="delay"
+                v-model.number="formData.crawlerOptions.delay"
+                type="number"
+                min="0"
+                step="0.1"
+                placeholder="e.g. 1.5"
+              />
+              <small>Delay between pages to respect rate limits.</small>
+            </div>
+            <div class="form-group">
+              <label for="maxConcurrency">Max Concurrency:</label>
+              <input
+                id="maxConcurrency"
+                v-model.number="formData.crawlerOptions.maxConcurrency"
+                type="number"
+                min="1"
+                placeholder="e.g. 5"
+              />
+              <small>Maximum number of pages processed in parallel.</small>
+            </div>
+            <div class="form-group">
+              <label for="statusInterval">Status Check Interval (seconds):</label>
+              <input
+                id="statusInterval"
+                v-model.number="statusCheckInterval"
+                type="number"
+                min="1"
+                placeholder="e.g. 5"
+              />
+              <small>Time between status checks.</small>
             </div>
           </div>
-        </fieldset>
-
-        <!-- Scrape Options Section -->
-        <fieldset class="form-group options-fieldset">
-          <legend
-            class="collapsible-header"
-            @click="isScrapeOptionsCollapsed = !isScrapeOptionsCollapsed"
-          >
-            {{ scrapeOptionsArrow }} Scrape Options
-          </legend>
-          <div v-show="!isScrapeOptionsCollapsed">
-            <ScrapeOptionsForm v-model="scrapeOptionsForm" :format-options="formatOptions" />
+          <div class="grid-layout">
             <div class="form-group">
-              <label for="timeout">Timeout (ms):</label>
-              <input
-                id="timeout"
-                v-model.number="formData.scrapeOptions.timeout"
-                type="number"
-                min="1000"
-                max="300000"
-                placeholder="60000"
-              />
-              <small>Per-page timeout, 1000 to 300000 (server default: 60000).</small>
-            </div>
-            <label class="checkbox-label">
-              <input v-model="formData.scrapeOptions.skipTlsVerification" type="checkbox" />
-              Skip TLS Verification
-            </label>
-            <label class="checkbox-label">
-              <input v-model="formData.scrapeOptions.blockAds" type="checkbox" />
-              Block Ads
-            </label>
-            <div class="form-group">
-              <label for="proxy">Proxy *:</label>
-              <select id="proxy" v-model="formData.scrapeOptions.proxy">
-                <option value="">Default</option>
-                <option value="auto">Auto</option>
-                <option value="basic">Basic</option>
-                <option value="stealth">Stealth</option>
-                <option value="enhanced">Enhanced</option>
+              <label for="sitemapMode">Sitemap Mode:</label>
+              <select id="sitemapMode" v-model="formData.crawlerOptions.sitemap">
+                <option value="include">Include sitemap</option>
+                <option value="skip">Skip sitemap</option>
+                <option value="only">Only sitemap URLs</option>
               </select>
             </div>
-            <div class="form-group">
-              <label for="locationCountry">Location Country *:</label>
-              <input
-                id="locationCountry"
-                v-model="formData.scrapeOptions.location.country"
-                type="text"
-                maxlength="2"
-                placeholder="US"
-              />
-              <div v-if="locationCountryError" class="error-message">
-                {{ locationCountryError }}
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="locationLanguages">Location Languages *:</label>
-              <input
-                id="locationLanguages"
-                v-model="locationLanguagesInput"
-                type="text"
-                placeholder="en-US, fr"
-                @blur="parseLocationLanguages"
-              />
-            </div>
-            <div class="form-group">
-              <label for="jsonSchema">JSON Options Schema (JSON) †:</label>
-              <textarea id="jsonSchema" v-model="jsonOptionsSchemaInput"></textarea>
-              <div v-if="jsonOptionsSchemaError" class="error-message">
-                {{ jsonOptionsSchemaError }}
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="jsonPrompt">JSON Prompt †:</label>
-              <textarea
-                id="jsonPrompt"
-                v-model="formData.scrapeOptions.jsonOptions.prompt"
-              ></textarea>
-            </div>
-            <div class="form-group">
-              <label for="changeModes">Change Tracking Modes *:</label>
-              <input
-                id="changeModes"
-                v-model="changeTrackingModesInput"
-                type="text"
-                placeholder="git-diff, json"
-                @blur="parseChangeTrackingModes"
-              />
-            </div>
-            <div class="form-group">
-              <label for="changeSchema">Change Tracking Schema (JSON) *:</label>
-              <textarea id="changeSchema" v-model="changeTrackingSchemaInput"></textarea>
-              <div v-if="changeTrackingSchemaError" class="error-message">
-                {{ changeTrackingSchemaError }}
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="changePrompt">Change Tracking Prompt *:</label>
-              <textarea
-                id="changePrompt"
-                v-model="formData.scrapeOptions.changeTrackingOptions.prompt"
-              ></textarea>
+            <label class="checkbox-label">
+              <input v-model="formData.crawlerOptions.ignoreQueryParameters" type="checkbox" />
+              Ignore Query Parameters
+            </label>
+            <label class="checkbox-label">
+              <input v-model="formData.crawlerOptions.allowExternalLinks" type="checkbox" />
+              Allow External Links
+            </label>
+            <label class="checkbox-label">
+              <input v-model="formData.crawlerOptions.allowSubdomains" type="checkbox" />
+              Allow Subdomains
+            </label>
+            <label class="checkbox-label">
+              <input v-model="formData.crawlerOptions.crawlEntireDomain" type="checkbox" />
+              Crawl Entire Domain (follow sibling and parent links)
+            </label>
+          </div>
+        </OptionsDisclosure>
+
+        <!-- Scrape Options Section -->
+        <OptionsDisclosure v-model:collapsed="isScrapeOptionsCollapsed" title="Scrape Options">
+          <ScrapeOptionsForm v-model="scrapeOptionsForm" :format-options="formatOptions" />
+          <div class="form-group">
+            <label for="timeout">Timeout (ms):</label>
+            <input
+              id="timeout"
+              v-model.number="formData.scrapeOptions.timeout"
+              type="number"
+              min="1000"
+              max="300000"
+              placeholder="60000"
+            />
+            <small>Per-page timeout, 1000 to 300000 (server default: 60000).</small>
+          </div>
+          <label class="checkbox-label">
+            <input v-model="formData.scrapeOptions.skipTlsVerification" type="checkbox" />
+            Skip TLS Verification
+          </label>
+          <label class="checkbox-label">
+            <input v-model="formData.scrapeOptions.blockAds" type="checkbox" />
+            Block Ads
+          </label>
+          <div class="form-group">
+            <label for="proxy">Proxy *:</label>
+            <select id="proxy" v-model="formData.scrapeOptions.proxy">
+              <option value="">Default</option>
+              <option value="auto">Auto</option>
+              <option value="basic">Basic</option>
+              <option value="stealth">Stealth</option>
+              <option value="enhanced">Enhanced</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="locationCountry">Location Country *:</label>
+            <input
+              id="locationCountry"
+              v-model="formData.scrapeOptions.location.country"
+              type="text"
+              maxlength="2"
+              placeholder="US"
+            />
+            <div v-if="locationCountryError" class="error-message">
+              {{ locationCountryError }}
             </div>
           </div>
-        </fieldset>
+          <div class="form-group">
+            <label for="locationLanguages">Location Languages *:</label>
+            <input
+              id="locationLanguages"
+              v-model="locationLanguagesInput"
+              type="text"
+              placeholder="en-US, fr"
+              @blur="parseLocationLanguages"
+            />
+          </div>
+          <div class="form-group">
+            <label for="jsonSchema">JSON Options Schema (JSON) †:</label>
+            <textarea id="jsonSchema" v-model="jsonOptionsSchemaInput"></textarea>
+            <div v-if="jsonOptionsSchemaError" class="error-message">
+              {{ jsonOptionsSchemaError }}
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="jsonPrompt">JSON Prompt †:</label>
+            <textarea
+              id="jsonPrompt"
+              v-model="formData.scrapeOptions.jsonOptions.prompt"
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label for="changeModes">Change Tracking Modes *:</label>
+            <input
+              id="changeModes"
+              v-model="changeTrackingModesInput"
+              type="text"
+              placeholder="git-diff, json"
+              @blur="parseChangeTrackingModes"
+            />
+          </div>
+          <div class="form-group">
+            <label for="changeSchema">Change Tracking Schema (JSON) *:</label>
+            <textarea id="changeSchema" v-model="changeTrackingSchemaInput"></textarea>
+            <div v-if="changeTrackingSchemaError" class="error-message">
+              {{ changeTrackingSchemaError }}
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="changePrompt">Change Tracking Prompt *:</label>
+            <textarea
+              id="changePrompt"
+              v-model="formData.scrapeOptions.changeTrackingOptions.prompt"
+            ></textarea>
+          </div>
+        </OptionsDisclosure>
 
         <!-- Webhook Options Section -->
-        <fieldset class="form-group options-fieldset">
-          <legend
-            class="collapsible-header"
-            @click="isWebhookOptionsCollapsed = !isWebhookOptionsCollapsed"
-          >
-            {{ webhookOptionsArrow }} Webhook Options (Optional)
-          </legend>
-          <div v-show="!isWebhookOptionsCollapsed">
-            <div class="grid-layout">
-              <div class="form-group">
-                <label for="webhookUrl">Webhook URL:</label>
-                <input
-                  id="webhookUrl"
-                  v-model="formData.webhookOptions.url"
-                  type="text"
-                  placeholder="https://your-service.com/webhook"
-                />
-              </div>
-              <div class="form-group">
-                <label for="webhookHeaders">Webhook Headers (JSON):</label>
-                <textarea
-                  id="webhookHeaders"
-                  v-model="webhookHeadersInput"
-                  placeholder='{"Authorization": "token"}'
-                ></textarea>
-                <div v-if="webhookHeadersError" class="error-message">
-                  {{ webhookHeadersError }}
-                </div>
-              </div>
-              <div class="form-group">
-                <label for="webhookMetadata">Webhook Metadata (JSON):</label>
-                <textarea
-                  id="webhookMetadata"
-                  v-model="webhookMetadataInput"
-                  placeholder='{"source": "ui"}'
-                ></textarea>
-                <div v-if="webhookMetadataError" class="error-message">
-                  {{ webhookMetadataError }}
-                </div>
-              </div>
-              <div class="form-group">
-                <label for="webhookEvents">Webhook Events:</label>
-                <select id="webhookEvents" v-model="formData.webhookOptions.events" multiple>
-                  <option value="completed">Completed</option>
-                  <option value="page">Page</option>
-                  <option value="failed">Failed</option>
-                  <option value="started">Started</option>
-                </select>
+        <OptionsDisclosure
+          v-model:collapsed="isWebhookOptionsCollapsed"
+          title="Webhook Options (Optional)"
+        >
+          <div class="grid-layout">
+            <div class="form-group">
+              <label for="webhookUrl">Webhook URL:</label>
+              <input
+                id="webhookUrl"
+                v-model="formData.webhookOptions.url"
+                type="text"
+                placeholder="https://your-service.com/webhook"
+              />
+            </div>
+            <div class="form-group">
+              <label for="webhookHeaders">Webhook Headers (JSON):</label>
+              <textarea
+                id="webhookHeaders"
+                v-model="webhookHeadersInput"
+                placeholder='{"Authorization": "token"}'
+              ></textarea>
+              <div v-if="webhookHeadersError" class="error-message">
+                {{ webhookHeadersError }}
               </div>
             </div>
+            <div class="form-group">
+              <label for="webhookMetadata">Webhook Metadata (JSON):</label>
+              <textarea
+                id="webhookMetadata"
+                v-model="webhookMetadataInput"
+                placeholder='{"source": "ui"}'
+              ></textarea>
+              <div v-if="webhookMetadataError" class="error-message">
+                {{ webhookMetadataError }}
+              </div>
+            </div>
+            <ChipMultiSelect
+              :model-value="formData.webhookOptions.events ?? []"
+              legend="Webhook Events"
+              :options="webhookEventOptions"
+              @update:model-value="formData.webhookOptions.events = $event"
+            />
           </div>
-        </fieldset>
+        </OptionsDisclosure>
 
         <p class="api-note">
           * Available only on the official Firecrawl cloud API. These options may be ignored or
@@ -543,6 +519,8 @@ import { useRouter, useRoute } from 'vue-router';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
 import CodeBlock from '../components/playground/CodeBlock.vue';
 import ScrapeOptionsForm from '@/components/ScrapeOptionsForm.vue';
+import OptionsDisclosure from '@/components/OptionsDisclosure.vue';
+import ChipMultiSelect, { type ChipOption } from '@/components/ChipMultiSelect.vue';
 import { type ActiveCrawl, type CrawlError } from '../services/firecrawl';
 import { useApi } from '../plugins/api';
 import { describeRequestError, getErrorMessage, isUnauthorized } from '@/utils/errors';
@@ -651,6 +629,14 @@ interface FormData {
   webhookOptions: WebhookOptions;
 }
 
+/** Events a crawl webhook can subscribe to. */
+const WEBHOOK_EVENT_OPTIONS: readonly ChipOption[] = [
+  { value: 'completed', label: 'Completed' },
+  { value: 'page', label: 'Page' },
+  { value: 'failed', label: 'Failed' },
+  { value: 'started', label: 'Started' },
+];
+
 /**
  * Component allowing users to configure and run crawl jobs.
  *
@@ -658,7 +644,13 @@ interface FormData {
  */
 export default defineComponent({
   name: 'CrawlView',
-  components: { PlaygroundLayout, CodeBlock, ScrapeOptionsForm },
+  components: {
+    PlaygroundLayout,
+    CodeBlock,
+    ScrapeOptionsForm,
+    OptionsDisclosure,
+    ChipMultiSelect,
+  },
   setup() {
     const router = useRouter();
     const route = useRoute();
@@ -745,10 +737,6 @@ export default defineComponent({
     const isWebhookOptionsCollapsed = ref(true);
     const useSubfolders = ref(false);
     const statusCheckInterval = ref(3);
-
-    const crawlerOptionsArrow = computed(() => (isCrawlerOptionsCollapsed.value ? '▶' : '▼'));
-    const scrapeOptionsArrow = computed(() => (isScrapeOptionsCollapsed.value ? '▶' : '▼'));
-    const webhookOptionsArrow = computed(() => (isWebhookOptionsCollapsed.value ? '▶' : '▼'));
 
     /**
      * Parses and validates regex patterns from the includes input.
@@ -1838,9 +1826,7 @@ export default defineComponent({
       simulatedFiles,
       activeFormats,
       selectedFormats,
-      crawlerOptionsArrow,
-      scrapeOptionsArrow,
-      webhookOptionsArrow,
+      webhookEventOptions: WEBHOOK_EVENT_OPTIONS,
       useSubfolders,
       statusCheckInterval,
       clearHistory,
@@ -1859,6 +1845,8 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  /* The flex gap already spaces the option groups. */
+  --disclosure-gap: 0;
 }
 
 /* :deep() so the fields rendered by ScrapeOptionsForm get the same layout. */
@@ -1878,51 +1866,6 @@ export default defineComponent({
 .crawl-config-form :deep(select),
 .crawl-config-form :deep(textarea) {
   width: 100%;
-}
-
-/* ---------------------------------------------------------------------------
- * Collapsible option fieldsets — frosted glass cards that nest inside the
- * request pane. Hover-lift makes the collapsed/expanded state feel tactile.
- * --------------------------------------------------------------------------- */
-.options-fieldset {
-  /* Glass surface: translucent fill + heavy blur so the aurora shows through. */
-  background: var(--glass-fill);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  border: 1px solid var(--glass-border);
-  padding: 1rem;
-  border-radius: var(--radius-md);
-  margin-bottom: 0;
-  transition:
-    border-color var(--transition),
-    box-shadow var(--transition),
-    transform var(--transition);
-}
-
-.options-fieldset:hover {
-  /* Gentle lift on hover to indicate the fieldset is interactive. */
-  border-color: var(--color-border-hover);
-  box-shadow: var(--box-shadow-card);
-  transform: translateY(-2px);
-}
-
-.options-fieldset legend {
-  font-weight: 700;
-  padding: 0 0.4rem;
-  color: var(--color-heading);
-}
-
-/* ---------------------------------------------------------------------------
- * Collapsible legend — pointer cursor + violet hover to signal click-to-toggle.
- * --------------------------------------------------------------------------- */
-.collapsible-header {
-  cursor: pointer;
-  user-select: none;
-  transition: color var(--transition-fast);
-}
-
-.collapsible-header:hover {
-  color: var(--brand-strong);
 }
 
 /* Responsive grid for compact option pairs (e.g. max depth / limit). */

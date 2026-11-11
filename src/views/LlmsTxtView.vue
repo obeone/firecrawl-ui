@@ -74,6 +74,7 @@
             <button
               class="collapsible-toggle"
               type="button"
+              :aria-expanded="fullTextExpanded ? 'true' : 'false'"
               @click="fullTextExpanded = !fullTextExpanded"
             >
               {{ fullTextExpanded ? '▾' : '▸' }} llms-full.txt

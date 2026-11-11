@@ -197,6 +197,10 @@
   --color-link: var(--violet-300);
   --color-link-hover: var(--cyan-300);
 
+  /* Selected / open state of form controls (chips, disclosures): AA text on glass. */
+  --control-accent: var(--violet-300);
+  --control-accent-border: rgba(168, 146, 255, 0.55);
+
   /* Glass surface composition (dark): faint white fill, top-lit hairline,
      soft outer shadow plus an inner top highlight for the "lit edge" look. */
   --glass-fill: rgba(255, 255, 255, 0.06);
@@ -242,6 +246,10 @@
   --color-link: var(--violet-300);
   --color-link-hover: var(--cyan-300);
 
+  /* Selected / open state of form controls (chips, disclosures): AA text on glass. */
+  --control-accent: var(--violet-300);
+  --control-accent-border: rgba(168, 146, 255, 0.55);
+
   --glass-fill: rgba(255, 255, 255, 0.06);
   --glass-fill-strong: rgba(255, 255, 255, 0.09);
   --glass-border: rgba(255, 255, 255, 0.14);
@@ -284,6 +292,9 @@
 
   --color-link: var(--violet-600);
   --color-link-hover: var(--violet-700);
+
+  --control-accent: var(--violet-700);
+  --control-accent-border: rgba(106, 69, 240, 0.5);
 
   /* Glass surface composition (light): translucent white over the bright
      aurora, with a subtle dark hairline and gentle shadow. */

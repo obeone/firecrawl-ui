@@ -27,67 +27,67 @@
           required
         />
 
-        <fieldset class="advanced-options">
-          <legend class="options-legend">Advanced Options</legend>
+        <OptionsDisclosure v-model:collapsed="advancedCollapsed" title="Advanced Options">
+          <div class="advanced-options">
+            <div class="field-row">
+              <span class="field-label">Sources</span>
+              <span class="source-flags">
+                <label class="checkbox-label">
+                  <input v-model="options.sources.web" type="checkbox" />
+                  Web
+                </label>
+                <label class="checkbox-label">
+                  <input v-model="options.sources.news" type="checkbox" />
+                  News
+                </label>
+                <label class="checkbox-label">
+                  <input v-model="options.sources.images" type="checkbox" />
+                  Images
+                </label>
+              </span>
+            </div>
 
-          <div class="field-row">
-            <span class="field-label">Sources</span>
-            <span class="source-flags">
-              <label class="checkbox-label">
-                <input v-model="options.sources.web" type="checkbox" />
-                Web
-              </label>
-              <label class="checkbox-label">
-                <input v-model="options.sources.news" type="checkbox" />
-                News
-              </label>
-              <label class="checkbox-label">
-                <input v-model="options.sources.images" type="checkbox" />
-                Images
-              </label>
-            </span>
+            <label class="checkbox-label block">
+              <input v-model="options.includeMetadata" type="checkbox" />
+              Include metadata in results
+            </label>
+            <label class="checkbox-label block">
+              <input v-model="options.extractContent" type="checkbox" />
+              Enable content extraction
+            </label>
+
+            <label class="field-label" for="maxResults">Max results</label>
+            <input
+              id="maxResults"
+              v-model.number="options.maxResults"
+              type="number"
+              class="field-input field-input--short"
+              min="1"
+              max="100"
+            />
+
+            <label class="field-label" for="location">Location</label>
+            <input
+              id="location"
+              v-model="options.location"
+              type="text"
+              class="field-input"
+              placeholder="Paris, France"
+            />
+
+            <label class="field-label" for="tbs">Time range (tbs)</label>
+            <input id="tbs" v-model="options.tbs" type="text" class="field-input" />
+
+            <label class="field-label" for="timeout">Timeout (ms)</label>
+            <input
+              id="timeout"
+              v-model.number="options.timeout"
+              type="number"
+              class="field-input field-input--short"
+              min="0"
+            />
           </div>
-
-          <label class="checkbox-label block">
-            <input v-model="options.includeMetadata" type="checkbox" />
-            Include metadata in results
-          </label>
-          <label class="checkbox-label block">
-            <input v-model="options.extractContent" type="checkbox" />
-            Enable content extraction
-          </label>
-
-          <label class="field-label" for="maxResults">Max results</label>
-          <input
-            id="maxResults"
-            v-model.number="options.maxResults"
-            type="number"
-            class="field-input field-input--short"
-            min="1"
-            max="100"
-          />
-
-          <label class="field-label" for="location">Location</label>
-          <input
-            id="location"
-            v-model="options.location"
-            type="text"
-            class="field-input"
-            placeholder="Paris, France"
-          />
-
-          <label class="field-label" for="tbs">Time range (tbs)</label>
-          <input id="tbs" v-model="options.tbs" type="text" class="field-input" />
-
-          <label class="field-label" for="timeout">Timeout (ms)</label>
-          <input
-            id="timeout"
-            v-model.number="options.timeout"
-            type="number"
-            class="field-input field-input--short"
-            min="0"
-          />
-        </fieldset>
+        </OptionsDisclosure>
 
         <button type="submit" class="run-button" :disabled="loading">
           {{ loading ? 'Searching…' : 'Search' }}
@@ -157,6 +157,7 @@ import { saveAs } from 'file-saver';
 import axios from 'axios';
 import PlaygroundLayout from './playground/PlaygroundLayout.vue';
 import CodeBlock from './playground/CodeBlock.vue';
+import OptionsDisclosure from './OptionsDisclosure.vue';
 import { toSearchResults, type SearchResult } from '@/utils/searchResults';
 
 /**
@@ -186,6 +187,9 @@ const api = useApi();
  * Reactive reference for the search query input.
  */
 const query = ref('');
+
+/** Whether the advanced options group is folded. Open by default, as before. */
+const advancedCollapsed = ref(false);
 
 /**
  * Reactive reference for the search options, initialized with default values.
@@ -404,6 +408,8 @@ async function handleDownload(type: string): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
+  /* The flex gap already spaces the options group. */
+  --disclosure-gap: 0;
 }
 
 .field-label {
@@ -443,27 +449,12 @@ async function handleDownload(type: string): Promise<void> {
   width: 6rem;
 }
 
-/* Advanced options fieldset — glass surface so aurora shows through. */
+/* Advanced option rows, stacked inside the disclosure card. */
 .advanced-options {
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  /* Frosted glass background for the options panel. */
-  background: var(--glass-fill);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  padding: 0.75rem;
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
-}
-
-.options-legend {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--color-text-mute);
-  padding: 0 0.25rem;
+  padding-bottom: 0.9rem;
 }
 
 .field-row {

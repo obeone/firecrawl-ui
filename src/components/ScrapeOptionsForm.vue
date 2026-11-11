@@ -3,17 +3,18 @@
  * ScrapeOptionsForm.vue
  *
  * Form fields shared by the views that send scrape options: the output formats
- * select, the "only main content" toggle and the include/exclude tag filters.
+ * chips, the "only main content" toggle and the include/exclude tag filters.
  * Bound with `v-model` to a {@link ScrapeOptionsFormValue}; a wider object is
  * accepted and its extra fields are passed through unchanged.
  *
  * The fields render without a wrapper element so they lay out exactly like
- * the parent's own fields. `part` renders only the formats select or only the
+ * the parent's own fields. `part` renders only the formats chips or only the
  * filters, for views that place them in different sections. The default slot
  * renders right after the "only main content" toggle, for view-specific
  * toggles.
  */
 import { computed, type WritableComputedRef } from 'vue';
+import ChipMultiSelect from '@/components/ChipMultiSelect.vue';
 import {
   withFormField,
   type FormatOption,
@@ -24,7 +25,7 @@ const props = withDefaults(
   defineProps<{
     /** The edited options. */
     modelValue: T;
-    /** Entries of the output formats select. */
+    /** Entries of the output formats chips. */
     formatOptions: readonly FormatOption[];
     /** Which fields to render: everything, only the formats or only the filters. */
     part?: 'all' | 'formats' | 'filters';
@@ -61,22 +62,20 @@ const includeTags = bindField('includeTags');
 /** Exclude tags filter text. */
 const excludeTags = bindField('excludeTags');
 
-/** Whether the formats select is rendered. */
+/** Whether the formats chips are rendered. */
 const showFormats = computed<boolean>(() => props.part !== 'filters');
 /** Whether the content filters are rendered. */
 const showFilters = computed<boolean>(() => props.part !== 'formats');
 </script>
 
 <template>
-  <div v-if="showFormats" class="form-group">
-    <label for="formats">Output Formats:</label>
-    <select id="formats" v-model="formats" multiple>
-      <option v-for="option in formatOptions" :key="option.value" :value="option.value">
-        {{ option.label }}
-      </option>
-    </select>
-    <small>Select one or more formats.</small>
-  </div>
+  <ChipMultiSelect
+    v-if="showFormats"
+    v-model="formats"
+    legend="Output Formats"
+    :options="formatOptions"
+    hint="Select one or more formats."
+  />
   <template v-if="showFilters">
     <label class="checkbox-label">
       <input v-model="onlyMainContent" type="checkbox" />

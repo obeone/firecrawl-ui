@@ -54,133 +54,129 @@
         </div>
 
         <!-- Scrape Options: forwarded with the json format to /v2/scrape. -->
-        <fieldset class="form-group options-fieldset">
-          <legend
-            class="collapsible-header"
-            @click="isScrapeOptionsCollapsed = !isScrapeOptionsCollapsed"
-          >
-            Scrape Options
-          </legend>
-          <div v-show="!isScrapeOptionsCollapsed">
-            <label class="checkbox-label">
-              <input v-model="scrapeOptions.onlyMainContent" type="checkbox" />
-              Only Main Content
-            </label>
+        <OptionsDisclosure
+          v-model:collapsed="isScrapeOptionsCollapsed"
+          class="extract-scrape-options"
+          title="Scrape Options"
+        >
+          <label class="checkbox-label">
+            <input v-model="scrapeOptions.onlyMainContent" type="checkbox" />
+            Only Main Content
+          </label>
 
+          <div class="form-group">
+            <label for="include-tags-input">Include Tags (comma separated)</label>
+            <input
+              id="include-tags-input"
+              v-model="scrapeOptions.includeTags"
+              type="text"
+              placeholder="e.g. p, div, span"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="exclude-tags-input">Exclude Tags (comma separated)</label>
+            <input
+              id="exclude-tags-input"
+              v-model="scrapeOptions.excludeTags"
+              type="text"
+              placeholder="e.g. script, style"
+            />
+          </div>
+
+          <div class="grid-layout">
             <div class="form-group">
-              <label for="include-tags-input">Include Tags (comma separated)</label>
+              <label for="wait-for-input">Wait For (ms)</label>
               <input
-                id="include-tags-input"
-                v-model="scrapeOptions.includeTags"
-                type="text"
-                placeholder="e.g. p, div, span"
+                id="wait-for-input"
+                v-model.number="scrapeOptions.waitFor"
+                type="number"
+                min="0"
               />
             </div>
-
             <div class="form-group">
-              <label for="exclude-tags-input">Exclude Tags (comma separated)</label>
+              <label for="timeout-input">Timeout (ms)</label>
               <input
-                id="exclude-tags-input"
-                v-model="scrapeOptions.excludeTags"
-                type="text"
-                placeholder="e.g. script, style"
+                id="timeout-input"
+                v-model.number="scrapeOptions.timeout"
+                type="number"
+                min="0"
               />
             </div>
-
-            <div class="grid-layout">
-              <div class="form-group">
-                <label for="wait-for-input">Wait For (ms)</label>
-                <input
-                  id="wait-for-input"
-                  v-model.number="scrapeOptions.waitFor"
-                  type="number"
-                  min="0"
-                />
-              </div>
-              <div class="form-group">
-                <label for="timeout-input">Timeout (ms)</label>
-                <input
-                  id="timeout-input"
-                  v-model.number="scrapeOptions.timeout"
-                  type="number"
-                  min="0"
-                />
-              </div>
-              <div class="form-group">
-                <label for="max-age-input">Max Age (ms)</label>
-                <input
-                  id="max-age-input"
-                  v-model.number="scrapeOptions.maxAge"
-                  type="number"
-                  min="0"
-                />
-              </div>
-              <div class="form-group">
-                <label for="proxy-select">Proxy</label>
-                <select id="proxy-select" v-model="scrapeOptions.proxy">
-                  <option value="auto">Auto</option>
-                  <option value="basic">Basic</option>
-                  <option value="enhanced">Enhanced</option>
-                  <option value="stealth">Stealth</option>
-                </select>
-              </div>
-            </div>
-
-            <label class="checkbox-label">
-              <input v-model="scrapeOptions.mobile" type="checkbox" />
-              Emulate Mobile Device
-            </label>
-            <label class="checkbox-label">
-              <input v-model="scrapeOptions.blockAds" type="checkbox" />
-              Block Ads & Popups
-            </label>
-            <label class="checkbox-label">
-              <input v-model="scrapeOptions.removeBase64Images" type="checkbox" />
-              Remove Base64 Images
-            </label>
-            <label class="checkbox-label">
-              <input v-model="scrapeOptions.skipTlsVerification" type="checkbox" />
-              Skip TLS Verification
-            </label>
-            <label class="checkbox-label">
-              <input v-model="scrapeOptions.storeInCache" type="checkbox" />
-              Store In Cache
-            </label>
-
-            <div class="grid-layout">
-              <div class="form-group">
-                <label for="location-country-input">Location Country</label>
-                <input
-                  id="location-country-input"
-                  v-model="scrapeOptions.locationCountry"
-                  type="text"
-                  placeholder="e.g. US"
-                />
-                <small v-if="countryError" class="error-message">{{ countryError }}</small>
-              </div>
-              <div class="form-group">
-                <label for="location-languages-input">Location Languages (comma separated)</label>
-                <input
-                  id="location-languages-input"
-                  v-model="scrapeOptions.locationLanguages"
-                  type="text"
-                  placeholder="e.g. en-US"
-                />
-              </div>
-            </div>
-
             <div class="form-group">
-              <label for="headers-input">HTTP Headers (JSON)</label>
-              <textarea
-                id="headers-input"
-                v-model="headersString"
-                rows="3"
-                placeholder='{"Authorization": "Bearer token"}'
-              ></textarea>
-              <small v-if="headersError" class="error-message">{{ headersError }}</small>
+              <label for="max-age-input">Max Age (ms)</label>
+              <input
+                id="max-age-input"
+                v-model.number="scrapeOptions.maxAge"
+                type="number"
+                min="0"
+              />
+            </div>
+            <div class="form-group">
+              <label for="proxy-select">Proxy</label>
+              <select id="proxy-select" v-model="scrapeOptions.proxy">
+                <option value="auto">Auto</option>
+                <option value="basic">Basic</option>
+                <option value="enhanced">Enhanced</option>
+                <option value="stealth">Stealth</option>
+              </select>
             </div>
           </div>
-        </fieldset>
+
+          <label class="checkbox-label">
+            <input v-model="scrapeOptions.mobile" type="checkbox" />
+            Emulate Mobile Device
+          </label>
+          <label class="checkbox-label">
+            <input v-model="scrapeOptions.blockAds" type="checkbox" />
+            Block Ads & Popups
+          </label>
+          <label class="checkbox-label">
+            <input v-model="scrapeOptions.removeBase64Images" type="checkbox" />
+            Remove Base64 Images
+          </label>
+          <label class="checkbox-label">
+            <input v-model="scrapeOptions.skipTlsVerification" type="checkbox" />
+            Skip TLS Verification
+          </label>
+          <label class="checkbox-label">
+            <input v-model="scrapeOptions.storeInCache" type="checkbox" />
+            Store In Cache
+          </label>
+
+          <div class="grid-layout">
+            <div class="form-group">
+              <label for="location-country-input">Location Country</label>
+              <input
+                id="location-country-input"
+                v-model="scrapeOptions.locationCountry"
+                type="text"
+                placeholder="e.g. US"
+              />
+              <small v-if="countryError" class="error-message">{{ countryError }}</small>
+            </div>
+            <div class="form-group">
+              <label for="location-languages-input">Location Languages (comma separated)</label>
+              <input
+                id="location-languages-input"
+                v-model="scrapeOptions.locationLanguages"
+                type="text"
+                placeholder="e.g. en-US"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="headers-input">HTTP Headers (JSON)</label>
+            <textarea
+              id="headers-input"
+              v-model="headersString"
+              rows="3"
+              placeholder='{"Authorization": "Bearer token"}'
+            ></textarea>
+            <small v-if="headersError" class="error-message">{{ headersError }}</small>
+          </div>
+        </OptionsDisclosure>
 
         <button type="submit" class="run-button" :disabled="loading || !!formError">
           {{ loading ? progressLabel : 'Extract' }}
@@ -248,6 +244,7 @@ import {
 } from '@/utils/extractRequest';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
 import CodeBlock from '../components/playground/CodeBlock.vue';
+import OptionsDisclosure from '@/components/OptionsDisclosure.vue';
 
 /** The Firecrawl adapter clients; extraction goes through `scraping`. */
 const api = useApi();
@@ -510,6 +507,8 @@ const downloadResult = (): void => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  /* The flex gap already spaces the option group. */
+  --disclosure-gap: 0;
 }
 
 .form-group {
@@ -564,37 +563,7 @@ const downloadResult = (): void => {
   color: var(--hue-danger);
 }
 
-/* ── Scrape Options fieldset ──────────────────────────────────── */
-
-/*
- * Collapsible glass card for the scrapeOptions group, matching the
- * .options-fieldset / .collapsible-header pattern used by ScrapeView so the
- * two playground forms read as one system.
- */
-.options-fieldset {
-  background: var(--glass-fill);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  border: 1px solid var(--glass-border);
-  padding: 1rem;
-  border-radius: var(--radius-md);
-}
-
-.options-fieldset legend {
-  font-weight: 700;
-  padding: 0 0.4rem;
-  color: var(--color-heading);
-}
-
-.collapsible-header {
-  cursor: pointer;
-  user-select: none;
-  transition: color var(--transition-fast);
-}
-
-.collapsible-header:hover {
-  color: var(--brand-strong);
-}
+/* ── Scrape Options group ─────────────────────────────────────── */
 
 .checkbox-label {
   display: flex;
@@ -617,9 +586,9 @@ const downloadResult = (): void => {
   gap: 1rem;
 }
 
-.options-fieldset input[type='text'],
-.options-fieldset input[type='number'],
-.options-fieldset select {
+.extract-scrape-options input[type='text'],
+.extract-scrape-options input[type='number'],
+.extract-scrape-options select {
   width: 100%;
   padding: 0.4rem 0.6rem;
   border: 1px solid var(--color-border);
