@@ -54,7 +54,7 @@ const capabilities: Capability[] = [
   },
   {
     title: 'Extract',
-    desc: "Pull structured data across many URLs. The legacy /v2/extract endpoint is deprecated; prefer Scrape's JSON format.",
+    desc: 'Pull structured data from one or more URLs with a prompt or JSON schema, using the JSON format of /v2/scrape.',
     paths: [
       'M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z',
       'M3.3 7 12 12l8.7-5',
