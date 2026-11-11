@@ -330,7 +330,7 @@
       <!-- Preview: markdown rendered to sanitized HTML; falls back to a raw
            dump when there is no markdown (e.g. HTML-only or JSON results). -->
       <div v-if="activeTab === 'preview'" class="preview-pane">
-        <!-- eslint-disable-next-line vue/no-v-html -- content is sanitized via DOMPurify in previewHtml -->
+        <!-- eslint-disable-next-line vue/no-v-html -- content is sanitized by renderMarkdown in previewHtml -->
         <div v-if="previewHtml" class="markdown-body" v-html="previewHtml"></div>
         <pre v-else>{{ previewContent }}</pre>
       </div>
@@ -372,8 +372,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { useApi } from '../plugins/api';
 import { describeRequestError, getErrorMessage, isUnauthorized } from '@/utils/errors';
 import { checkCountryCode, firstFormError } from '@/utils/formValidation';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
+import { renderMarkdown } from '@/utils/sanitize';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
 import CodeBlock from '../components/playground/CodeBlock.vue';
 import CopyButton from '../components/playground/CopyButton.vue';
@@ -667,16 +666,14 @@ export default defineComponent({
     /**
      * Preview markdown parsed to sanitized HTML for the rendered Preview tab.
      *
-     * The scraped markdown is untrusted content, so the HTML produced by
-     * `marked` is run through DOMPurify before it reaches `v-html` to prevent
-     * XSS from malicious page content. Returns an empty string when there is no
+     * The scraped markdown is untrusted content, so `renderMarkdown` runs the
+     * HTML produced by `marked` through DOMPurify with an explicit allowlist
+     * before it reaches `v-html`. Returns an empty string when there is no
      * markdown to render (the Preview pane then falls back to the raw dump).
      * @returns {string}
      */
     const previewHtml = computed<string>(() => {
-      if (!markdownContent.value) return '';
-      const rawHtml = marked.parse(markdownContent.value, { async: false }) as string;
-      return DOMPurify.sanitize(rawHtml);
+      return renderMarkdown(markdownContent.value);
     });
 
     /**
