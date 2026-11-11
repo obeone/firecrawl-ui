@@ -157,30 +157,7 @@ import { saveAs } from 'file-saver';
 import axios from 'axios';
 import PlaygroundLayout from './playground/PlaygroundLayout.vue';
 import CodeBlock from './playground/CodeBlock.vue';
-
-/**
- * Defines the structure for a single search result item.
- */
-interface SearchResult {
-  sourceType: 'web' | 'news' | 'images';
-  title: string;
-  url: string;
-  description?: string;
-  date?: string;
-  imageUrl?: string;
-  markdown?: string | null;
-  html?: string | null;
-  rawHtml?: string | null;
-  links?: string[];
-  screenshot?: string | null;
-  metadata?: {
-    title?: string;
-    description?: string;
-    sourceURL?: string;
-    statusCode?: number;
-    error?: string | null;
-  };
-}
+import { toSearchResults, type SearchResult } from '@/utils/searchResults';
 
 /**
  * Defines the structure for the search options.
@@ -313,103 +290,13 @@ async function onSearch(): Promise<void> {
   try {
     const response = await api.search.search(payload);
     requestedFormats.value = payload.scrapeOptions?.formats ?? [];
-    results.value = [
-      ...(response.data.web || []).map((item) =>
-        normalizeResult({ ...item, sourceType: 'web' } as SearchResult),
-      ),
-      ...(response.data.news || []).map((item) =>
-        normalizeResult({
-          ...item,
-          sourceType: 'news',
-          title: String(item.title || item.url || 'Untitled result'),
-          url: String(item.url || ''),
-          description: typeof item.snippet === 'string' ? item.snippet : undefined,
-          date: typeof item.date === 'string' ? item.date : undefined,
-          imageUrl: typeof item.imageUrl === 'string' ? item.imageUrl : undefined,
-        } as SearchResult),
-      ),
-      ...(response.data.images || []).map((item) =>
-        normalizeResult({
-          ...item,
-          sourceType: 'images',
-          title: String(item.title || item.url || 'Untitled image'),
-          url: String(item.url || ''),
-          imageUrl: typeof item.imageUrl === 'string' ? item.imageUrl : undefined,
-        } as SearchResult),
-      ),
-    ];
+    results.value = toSearchResults(response.data);
   } catch (err) {
     error.value = getErrorMessage(err, 'Search request failed');
   } finally {
     loading.value = false;
     durationMs.value = performance.now() - startTime;
   }
-}
-
-/**
- * Normalizes a search result item by fixing potential encoding issues in its string properties.
- * This ensures that displayed content is correctly rendered.
- *
- * @param item - The raw search result object received from the API.
- * @returns A new SearchResult object with string properties normalized.
- */
-function normalizeResult(item: SearchResult): SearchResult {
-  return {
-    ...item,
-    title: fixEncoding(item.title) ?? '',
-    description: fixEncoding(item.description),
-    date: fixEncoding(item.date),
-    imageUrl: fixEncoding(item.imageUrl),
-    markdown: fixEncoding(item.markdown),
-    html: fixEncoding(item.html),
-    rawHtml: fixEncoding(item.rawHtml),
-    metadata: item.metadata
-      ? {
-          ...item.metadata,
-          title: fixEncoding(item.metadata.title),
-          description: fixEncoding(item.metadata.description),
-        }
-      : undefined,
-  };
-}
-
-/**
- * Attempts to fix potential character encoding issues in a given string,
- * specifically trying to convert from Latin-1 to UTF-8 if misencoded.
- * It handles null or undefined input gracefully.
- *
- * @param value - The string that might have encoding issues. Can be null or undefined.
- * @returns The decoded string if successful, or the original value if decoding fails or is not needed.
- *          Returns `undefined` if the input `value` is `null` or `undefined`.
- */
-function fixEncoding(value?: string | null): string | undefined {
-  if (value == null) {
-    return undefined;
-  }
-  try {
-    // Attempt to decode assuming it was originally UTF-8 but escaped as Latin-1
-    const decoded = decodeURIComponent(escape(value));
-    // Check for replacement character (U+FFFD) which indicates decoding failure
-    if (!decoded.includes('�')) {
-      return decoded;
-    }
-  } catch (e) {
-    // Log or handle decoding errors if necessary, but for now, ignore and try next method
-    console.warn('First decoding attempt failed:', e);
-  }
-  try {
-    // Attempt to decode as UTF-8 from a byte array representation
-    const bytes = Uint8Array.from([...value].map((c) => c.charCodeAt(0)));
-    const decoded = new TextDecoder('utf-8').decode(bytes);
-    if (!decoded.includes('�')) {
-      return decoded;
-    }
-  } catch (e) {
-    // Log or handle decoding errors if necessary, but for now, ignore
-    console.warn('Second decoding attempt failed:', e);
-  }
-  // If all decoding attempts fail, return the original value
-  return value;
 }
 
 /**
