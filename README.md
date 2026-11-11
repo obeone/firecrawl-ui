@@ -127,8 +127,9 @@ The image is a multi-stage build (Node 24, then `nginx-unprivileged`). A custom
 ## 🔌 API
 
 The app targets the Firecrawl **v2** API (`/v2/*`) through the hand-written
-adapter in `src/services/firecrawl.ts`. The full spec lives in
-[`openapi_v2.yaml`](openapi_v2.yaml).
+adapter in `src/services/firecrawl.ts`. See the
+[Firecrawl v2 API reference](https://docs.firecrawl.dev/api-reference/v2-introduction)
+for the endpoints and payloads.
 
 > Firecrawl still exposes the legacy **v1** API alongside v2, so existing v1
 > integrations keep working, and this UI just builds its requests against v2.
