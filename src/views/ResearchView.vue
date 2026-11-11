@@ -20,64 +20,58 @@
       </div>
 
       <!-- Advanced options collapsible block -->
-      <div class="advanced-toggle">
-        <button type="button" class="toggle-button" @click="showAdvanced = !showAdvanced">
-          {{ showAdvanced ? 'Hide' : 'Show' }} Advanced Options
-        </button>
-      </div>
+      <OptionsDisclosure v-model:collapsed="advancedCollapsed" title="Advanced Options">
+        <div class="advanced-options">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="maxDepth">Max Depth (1–12):</label>
+              <input id="maxDepth" v-model.number="maxDepth" type="number" min="1" max="12" />
+              <small>How many research hops to perform.</small>
+            </div>
 
-      <div v-if="showAdvanced" class="advanced-options">
-        <div class="form-row">
-          <div class="form-group">
-            <label for="maxDepth">Max Depth (1–12):</label>
-            <input id="maxDepth" v-model.number="maxDepth" type="number" min="1" max="12" />
-            <small>How many research hops to perform.</small>
+            <div class="form-group">
+              <label for="timeLimit">Time Limit (seconds, 30–600):</label>
+              <input id="timeLimit" v-model.number="timeLimit" type="number" min="30" max="600" />
+              <small>Maximum wall-clock time for the job.</small>
+            </div>
+
+            <div class="form-group">
+              <label for="maxUrls">Max URLs (1–1000):</label>
+              <input id="maxUrls" v-model.number="maxUrls" type="number" min="1" max="1000" />
+              <small>Cap on total URLs visited.</small>
+            </div>
           </div>
 
           <div class="form-group">
-            <label for="timeLimit">Time Limit (seconds, 30–600):</label>
-            <input id="timeLimit" v-model.number="timeLimit" type="number" min="30" max="600" />
-            <small>Maximum wall-clock time for the job.</small>
+            <label for="analysisPrompt">Analysis Prompt (optional):</label>
+            <textarea
+              id="analysisPrompt"
+              v-model="analysisPrompt"
+              rows="3"
+              placeholder="Focus the final analysis on practical applications."
+            ></textarea>
+            <small>Guide the synthesis step with a custom prompt.</small>
           </div>
 
           <div class="form-group">
-            <label for="maxUrls">Max URLs (1–1000):</label>
-            <input id="maxUrls" v-model.number="maxUrls" type="number" min="1" max="1000" />
-            <small>Cap on total URLs visited.</small>
+            <label for="systemPrompt">System Prompt (optional):</label>
+            <textarea
+              id="systemPrompt"
+              v-model="systemPrompt"
+              rows="3"
+              placeholder="You are an expert researcher. Be concise and cite sources."
+            ></textarea>
+            <small>Override the default system prompt used during research.</small>
           </div>
-        </div>
 
-        <div class="form-group">
-          <label for="analysisPrompt">Analysis Prompt (optional):</label>
-          <textarea
-            id="analysisPrompt"
-            v-model="analysisPrompt"
-            rows="3"
-            placeholder="Focus the final analysis on practical applications."
-          ></textarea>
-          <small>Guide the synthesis step with a custom prompt.</small>
+          <ChipMultiSelect
+            v-model="selectedFormats"
+            legend="Output Formats"
+            :options="RESEARCH_FORMAT_OPTIONS"
+            hint="Select one or more output formats."
+          />
         </div>
-
-        <div class="form-group">
-          <label for="systemPrompt">System Prompt (optional):</label>
-          <textarea
-            id="systemPrompt"
-            v-model="systemPrompt"
-            rows="3"
-            placeholder="You are an expert researcher. Be concise and cite sources."
-          ></textarea>
-          <small>Override the default system prompt used during research.</small>
-        </div>
-
-        <div class="form-group">
-          <label for="formats">Output Formats:</label>
-          <select id="formats" v-model="selectedFormats" multiple>
-            <option value="markdown">Markdown</option>
-            <option value="json">JSON</option>
-          </select>
-          <small>Select one or more output formats.</small>
-        </div>
-      </div>
+      </OptionsDisclosure>
 
       <button type="submit" class="primary-button" :disabled="loading">
         {{ loading ? 'Starting…' : 'Start Deep Research' }}
@@ -204,6 +198,8 @@ import { describeRequestError } from '@/utils/errors';
 import { createLatestGuard, type IsCurrent } from '@/utils/latestGuard';
 import { isTerminalStatus } from '@/utils/polling';
 import DeprecationNotice from '@/components/DeprecationNotice.vue';
+import OptionsDisclosure from '@/components/OptionsDisclosure.vue';
+import ChipMultiSelect, { type ChipOption } from '@/components/ChipMultiSelect.vue';
 import type {
   FirecrawlApiVersion,
   DeepResearchStatus,
@@ -228,8 +224,8 @@ const api = useApi();
 
 /** The main research question entered by the user. */
 const query = ref('');
-/** Whether the advanced options block is expanded. */
-const showAdvanced = ref(false);
+/** Whether the advanced options block is folded. */
+const advancedCollapsed = ref(true);
 /** Maximum research depth (1–12). */
 const maxDepth = ref(7);
 /** Time limit in seconds (30–600). */
@@ -240,6 +236,11 @@ const maxUrls = ref(20);
 const analysisPrompt = ref('');
 /** Optional custom system prompt. */
 const systemPrompt = ref('');
+/** Output formats offered for a research job. */
+const RESEARCH_FORMAT_OPTIONS: readonly ChipOption[] = [
+  { value: 'markdown', label: 'Markdown' },
+  { value: 'json', label: 'JSON' },
+];
 /** Selected output formats. */
 const selectedFormats = ref<string[]>(['markdown']);
 
@@ -503,6 +504,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  /* The flex gap already spaces the options group. */
+  --disclosure-gap: 0;
 }
 
 .form-group {
@@ -544,32 +547,10 @@ input[type='number'] {
   margin-top: 3px;
 }
 
-.advanced-toggle {
-  margin-top: -0.25rem;
-}
-
-.toggle-button {
-  background: none;
-  border: none;
-  color: #007acc;
-  cursor: pointer;
-  font-size: 0.9rem;
-  padding: 0;
-  text-decoration: underline;
-}
-
-.toggle-button:hover {
-  color: #005fa3;
-}
-
 .advanced-options {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background-color: var(--color-background-soft);
 }
 
 .primary-button {
