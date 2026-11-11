@@ -39,8 +39,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, inject, onMounted } from 'vue';
-import type { CreditUsage, TokenUsage, FirecrawlBillingApi } from '@/services/firecrawl';
+import { ref, onMounted } from 'vue';
+import { useApi } from '@/plugins/api';
+import type { CreditUsage, TokenUsage } from '@/services/firecrawl';
 
 /**
  * BillingView Component
@@ -53,14 +54,8 @@ import type { CreditUsage, TokenUsage, FirecrawlBillingApi } from '@/services/fi
 /**
  * Injects the API instance provided by the API plugin.
  * This instance is expected to contain a `billing` property for credit queries.
- * @type {{ billing?: FirecrawlBillingApi } | undefined}
  */
-const api = inject('api') as { billing?: FirecrawlBillingApi } | undefined;
-if (!api?.billing) {
-  throw new Error(
-    'Billing API is not available. Ensure the API plugin is correctly configured and provides the billing service.',
-  );
-}
+const api = useApi();
 
 /**
  * Reactive credit usage data returned by the API, or `null` before the first load.
@@ -108,8 +103,8 @@ async function fetchUsage(): Promise<void> {
   try {
     // Fetch credit and token usage together; both belong to the Billing tag.
     const [creditResponse, tokenResponse] = await Promise.all([
-      api.billing!.getCreditUsage(),
-      api.billing!.getTokenUsage(),
+      api.billing.getCreditUsage(),
+      api.billing.getTokenUsage(),
     ]);
     usage.value = creditResponse.data;
     tokenUsage.value = tokenResponse.data;

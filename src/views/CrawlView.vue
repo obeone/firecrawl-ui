@@ -136,19 +136,19 @@
                 </select>
               </div>
               <label class="checkbox-label">
-                <input type="checkbox" v-model="formData.crawlerOptions.ignoreQueryParameters" />
+                <input v-model="formData.crawlerOptions.ignoreQueryParameters" type="checkbox" />
                 Ignore Query Parameters
               </label>
               <label class="checkbox-label">
-                <input type="checkbox" v-model="formData.crawlerOptions.allowExternalLinks" />
+                <input v-model="formData.crawlerOptions.allowExternalLinks" type="checkbox" />
                 Allow External Links
               </label>
               <label class="checkbox-label">
-                <input type="checkbox" v-model="formData.crawlerOptions.allowSubdomains" />
+                <input v-model="formData.crawlerOptions.allowSubdomains" type="checkbox" />
                 Allow Subdomains
               </label>
               <label class="checkbox-label">
-                <input type="checkbox" v-model="formData.crawlerOptions.navigateBacklinks" />
+                <input v-model="formData.crawlerOptions.navigateBacklinks" type="checkbox" />
                 Navigate Backlinks
               </label>
             </div>
@@ -183,7 +183,7 @@
               <small>Select one or more formats.</small>
             </div>
             <label class="checkbox-label">
-              <input type="checkbox" v-model="formData.scrapeOptions.onlyMainContent" />
+              <input v-model="formData.scrapeOptions.onlyMainContent" type="checkbox" />
               Only Main Content (exclude headers, footers, etc.)
             </label>
             <div class="form-group">
@@ -221,11 +221,11 @@
               />
             </div>
             <label class="checkbox-label">
-              <input type="checkbox" v-model="formData.scrapeOptions.skipTlsVerification" />
+              <input v-model="formData.scrapeOptions.skipTlsVerification" type="checkbox" />
               Skip TLS Verification
             </label>
             <label class="checkbox-label">
-              <input type="checkbox" v-model="formData.scrapeOptions.blockAds" />
+              <input v-model="formData.scrapeOptions.blockAds" type="checkbox" />
               Block Ads
             </label>
             <div class="form-group">
@@ -441,7 +441,7 @@
           <h2>Download Results</h2>
           <div class="download-buttons">
             <label class="checkbox-label">
-              <input type="checkbox" v-model="useSubfolders" />
+              <input v-model="useSubfolders" type="checkbox" />
               Use subfolders
             </label>
             <template v-for="fmt in activeFormats" :key="fmt">
@@ -449,8 +449,8 @@
                 Download {{ fmt }} Archive
               </button>
               <button
-                type="button"
                 v-if="fmt === 'markdown'"
+                type="button"
                 class="download-button"
                 @click="handleDownloadCompiledMarkdown()"
               >
@@ -485,7 +485,7 @@
             <h3>Download Results</h3>
             <div class="download-buttons">
               <label class="checkbox-label">
-                <input type="checkbox" v-model="useSubfolders" />
+                <input v-model="useSubfolders" type="checkbox" />
                 Use subfolders
               </label>
               <template v-for="fmt in selectedFormats" :key="fmt">
@@ -497,8 +497,8 @@
                   Download {{ fmt }} Archive
                 </button>
                 <button
-                  type="button"
                   v-if="fmt === 'markdown'"
+                  type="button"
                   class="download-button"
                   @click="handleDownloadCompiledMarkdown(selectedCrawl.id)"
                 >
@@ -581,21 +581,16 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, inject, onMounted, onUnmounted, computed, watch } from 'vue';
+import { defineComponent, ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import axios from 'axios';
 import { useRouter, useRoute } from 'vue-router';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
 import CodeBlock from '../components/playground/CodeBlock.vue';
-import {
-  type ActiveCrawl,
-  type CrawlError,
-  type FirecrawlCrawlingApi,
-  type FirecrawlExtractionApi,
-  type FirecrawlMappingApi,
-  type FirecrawlScrapingApi,
-} from '../services/firecrawl';
+import { type ActiveCrawl, type CrawlError } from '../services/firecrawl';
+import { useApi } from '../plugins/api';
+import { getErrorMessage } from '@/utils/errors';
 
 /**
  * Interface for Crawler Options section of the form.
@@ -629,21 +624,21 @@ interface ScrapeOptions {
   waitFor?: number;
   mobile?: boolean;
   removeBase64Images?: boolean;
-  actions?: any[]; // Based on OpenAPI, actions is an array of Action objects
+  actions?: Record<string, unknown>[];
   skipTlsVerification?: boolean;
   timeout?: number;
-  jsonOptions?: {
+  jsonOptions: {
     schema?: object;
     systemPrompt?: string;
     prompt?: string;
   };
-  location?: {
+  location: {
     country?: string;
     languages?: string[];
   };
   blockAds?: boolean;
   proxy?: string;
-  changeTrackingOptions?: {
+  changeTrackingOptions: {
     modes?: string[];
     schema?: object;
     prompt?: string;
@@ -656,8 +651,37 @@ interface ScrapeOptions {
 interface WebhookOptions {
   url?: string;
   headers?: Record<string, string>;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   events?: string[];
+}
+
+/**
+ * A page returned by the crawl status endpoint, as consumed by the downloads.
+ */
+interface CrawlPage {
+  url?: string;
+  markdown?: string;
+  html?: string;
+  rawHtml?: string;
+  links?: string[];
+  screenshot?: string;
+  llm_extraction?: unknown;
+  changeTracking?: unknown;
+  metadata?: { title?: string; sourceURL?: string; [key: string]: unknown };
+  [key: string]: unknown;
+}
+
+/**
+ * A crawl job remembered in local storage.
+ */
+interface CrawlHistoryItem {
+  id: string;
+  url: string;
+  createdAt: string;
+  status: string;
+  crawlerOptions?: CrawlerOptions;
+  scrapeOptions?: ScrapeOptions;
+  webhookOptions?: WebhookOptions;
 }
 
 /**
@@ -681,13 +705,7 @@ export default defineComponent({
   setup() {
     const router = useRouter();
     const route = useRoute();
-    // Define the type of the injected api object based on the structure provided in src/plugins/api.ts
-    const api = inject('api') as {
-      crawling: FirecrawlCrawlingApi;
-      extraction: FirecrawlExtractionApi;
-      mapping: FirecrawlMappingApi;
-      scraping: FirecrawlScrapingApi;
-    };
+    const api = useApi();
 
     // Reactive form data with explicit defaults to avoid undefined values.
     // Use undefined where appropriate to satisfy TypeScript types.
@@ -784,7 +802,7 @@ export default defineComponent({
       for (const pattern of patterns) {
         try {
           new RegExp(pattern);
-        } catch (e: any) {
+        } catch {
           includesError.value = `Invalid regex pattern: ${pattern}`;
           return;
         }
@@ -805,7 +823,7 @@ export default defineComponent({
       for (const pattern of patterns) {
         try {
           new RegExp(pattern);
-        } catch (e: any) {
+        } catch {
           excludesError.value = `Invalid regex pattern: ${pattern}`;
           return;
         }
@@ -846,8 +864,8 @@ export default defineComponent({
           ? JSON.parse(webhookHeadersInput.value)
           : {};
         webhookHeadersError.value = '';
-      } catch (e: any) {
-        webhookHeadersError.value = `Invalid JSON: ${e.message}`;
+      } catch (e) {
+        webhookHeadersError.value = `Invalid JSON: ${getErrorMessage(e)}`;
       }
     };
 
@@ -861,8 +879,8 @@ export default defineComponent({
           ? JSON.parse(webhookMetadataInput.value)
           : {};
         webhookMetadataError.value = '';
-      } catch (e: any) {
-        webhookMetadataError.value = `Invalid JSON: ${e.message}`;
+      } catch (e) {
+        webhookMetadataError.value = `Invalid JSON: ${getErrorMessage(e)}`;
       }
     };
 
@@ -889,8 +907,8 @@ export default defineComponent({
           ? JSON.parse(jsonOptionsSchemaInput.value)
           : undefined;
         jsonOptionsSchemaError.value = '';
-      } catch (e: any) {
-        jsonOptionsSchemaError.value = `Invalid JSON: ${e.message}`;
+      } catch (e) {
+        jsonOptionsSchemaError.value = `Invalid JSON: ${getErrorMessage(e)}`;
       }
     };
 
@@ -906,8 +924,8 @@ export default defineComponent({
           ? JSON.parse(changeTrackingSchemaInput.value)
           : undefined;
         changeTrackingSchemaError.value = '';
-      } catch (e: any) {
-        changeTrackingSchemaError.value = `Invalid JSON: ${e.message}`;
+      } catch (e) {
+        changeTrackingSchemaError.value = `Invalid JSON: ${getErrorMessage(e)}`;
       }
     };
 
@@ -941,9 +959,9 @@ export default defineComponent({
     const totalPages = ref(0);
     const crawlStatus = ref<string | undefined>('');
     const error = ref('');
-    const result = ref<any>(null);
+    const result = ref<{ id: string; url: string } | null>(null);
     const currentCrawlId = ref<string | null>(null);
-    const crawlHistory = ref<any[]>([]); // Initialize with empty array
+    const crawlHistory = ref<CrawlHistoryItem[]>([]); // Initialize with empty array
 
     // Duration (ms) of the crawl-submission request, surfaced in the playground status bar.
     const durationMs = ref<number | null>(null);
@@ -978,8 +996,9 @@ export default defineComponent({
      * @returns {string[]} An array of active formats.
      */
     const activeFormats = computed((): string[] => {
-      if (result.value && result.value.id) {
-        const historyItem = crawlHistory.value.find((c) => c.id === result.value.id);
+      const jobId = result.value?.id;
+      if (jobId) {
+        const historyItem = crawlHistory.value.find((c) => c.id === jobId);
         return historyItem?.scrapeOptions?.formats || [];
       }
       return [];
@@ -1083,11 +1102,10 @@ export default defineComponent({
         // Fetch files for the selected crawl via the API
         const response = await api.crawling.getCrawlStatus(id);
         simulatedFiles.value =
-          response.data.data?.map((page: any, index: number) => {
+          (response.data.data as CrawlPage[] | undefined)?.map((page, index) => {
             const base = sanitizeFilename(page.metadata?.sourceURL || page.url || index.toString());
             return `${index.toString().padStart(3, '0')}-${base}`;
           }) || [];
-        console.log(`Fetched files for crawl ID: ${id}`, response.data);
 
         // Sync text inputs with values from the selected crawl if available
         const crawl = crawlHistory.value.find((c) => c.id === id);
@@ -1108,21 +1126,21 @@ export default defineComponent({
           changeTrackingModesInput.value =
             crawl.scrapeOptions.changeTrackingOptions?.modes?.join(', ') || '';
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error(`Error fetching crawl files for ID ${id}:`, err);
-        error.value = `Failed to fetch crawl files for ID ${id}. ${err.message || err}`;
+        error.value = `Failed to fetch crawl files for ID ${id}. ${getErrorMessage(err)}`;
       }
     };
 
     /**
      * Retrieve all pages for a crawl job, following pagination if necessary.
      * @param {string} jobId - The crawl job identifier.
-     * @returns {Promise<any[]>} A promise that resolves to an array of page data objects.
+     * @returns {Promise<CrawlPage[]>} A promise that resolves to an array of page data objects.
      */
-    const fetchAllCrawlData = async (jobId: string): Promise<any[]> => {
-      const pages: any[] = [];
-      let response = await api.crawling.getCrawlStatus(jobId);
-      pages.push(...(response.data.data || []));
+    const fetchAllCrawlData = async (jobId: string): Promise<CrawlPage[]> => {
+      const pages: CrawlPage[] = [];
+      const response = await api.crawling.getCrawlStatus(jobId);
+      pages.push(...((response.data.data || []) as CrawlPage[]));
       let next = response.data.next;
       while (next) {
         const nextResp = await axios.get(next);
@@ -1217,7 +1235,6 @@ export default defineComponent({
      * @param {string} [jobIdParam] - Optional job ID to download specific crawl results from history.
      */
     const handleDownload = async (type: string, jobIdParam?: string) => {
-      console.log(`Handling download of ${type}.`);
       error.value = '';
 
       const jobId = jobIdParam || result.value?.id;
@@ -1271,7 +1288,7 @@ export default defineComponent({
             if (useSubfolders.value && folderSegments.length > 0) {
               let folder = zip;
               folderSegments.forEach((seg) => {
-                folder = folder.folder(seg);
+                folder = folder.folder(seg) ?? folder;
               });
               folder.file(pathInfo.filename, data);
             } else {
@@ -1326,9 +1343,9 @@ export default defineComponent({
         await Promise.all(fetches);
         const blob = await zip.generateAsync({ type: 'blob' });
         saveAs(blob, `crawl-${type}-archive-${jobId}.zip`);
-      } catch (err: any) {
+      } catch (err) {
         console.error(`Error during ${type} download for job ID ${jobId}:`, err);
-        error.value = `Failed to download ${type}. ${err.message || err}`;
+        error.value = `Failed to download ${type}. ${getErrorMessage(err)}`;
       }
     };
 
@@ -1353,7 +1370,7 @@ export default defineComponent({
      * @param title - Title for the compiled document.
      * @returns The compiled markdown string.
      */
-    const compileMarkdown = (pages: any[], title: string): string => {
+    const compileMarkdown = (pages: CrawlPage[], title: string): string => {
       const sections: string[] = [`# ${title}`];
       pages.forEach((page, index) => {
         const pageTitle =
@@ -1383,9 +1400,9 @@ export default defineComponent({
         const compiled = compileMarkdown(pages, 'Compiled Crawl Results');
         const blob = new Blob([compiled], { type: 'text/markdown' });
         saveAs(blob, `crawl-compiled-${jobId}.md`);
-      } catch (err: any) {
+      } catch (err) {
         console.error(`Error compiling markdown for job ID ${jobId}:`, err);
-        error.value = `Failed to compile markdown. ${err.message || err}`;
+        error.value = `Failed to compile markdown. ${getErrorMessage(err)}`;
       }
     };
 
@@ -1449,7 +1466,7 @@ export default defineComponent({
       }
 
       // Build the request payload and only include defined options
-      const payload: any = { url: formData.value.url };
+      const payload: Record<string, unknown> = { url: formData.value.url };
 
       const crawler = formData.value.crawlerOptions;
       if (crawler.excludes && crawler.excludes.length > 0) payload.excludePaths = crawler.excludes;
@@ -1468,7 +1485,7 @@ export default defineComponent({
       if (crawler.allowSubdomains) payload.allowSubdomains = true;
 
       const scrape = formData.value.scrapeOptions;
-      const scrapePayload: any = {};
+      const scrapePayload: Record<string, unknown> = {};
       if (scrape.formats && scrape.formats.length > 0) scrapePayload.formats = scrape.formats;
       // Only include onlyMainContent if it's explicitly false, as default is true
       if (scrape.onlyMainContent === false) scrapePayload.onlyMainContent = false;
@@ -1485,7 +1502,7 @@ export default defineComponent({
       if (scrape.skipTlsVerification) scrapePayload.skipTlsVerification = true;
       if (scrape.timeout !== undefined) scrapePayload.timeout = scrape.timeout;
       if (scrape.jsonOptions) {
-        const jsonOpts: any = {};
+        const jsonOpts: Record<string, unknown> = {};
         if (scrape.jsonOptions.schema) jsonOpts.schema = scrape.jsonOptions.schema;
         if (scrape.jsonOptions.systemPrompt)
           jsonOpts.systemPrompt = scrape.jsonOptions.systemPrompt;
@@ -1493,7 +1510,7 @@ export default defineComponent({
         if (Object.keys(jsonOpts).length > 0) scrapePayload.jsonOptions = jsonOpts;
       }
       if (scrape.location) {
-        const loc: any = {};
+        const loc: Record<string, unknown> = {};
         if (scrape.location.country) loc.country = scrape.location.country;
         if (scrape.location.languages && scrape.location.languages.length > 0)
           loc.languages = scrape.location.languages;
@@ -1503,7 +1520,7 @@ export default defineComponent({
       if (scrape.blockAds === false) scrapePayload.blockAds = false;
       if (scrape.proxy) scrapePayload.proxy = scrape.proxy;
       if (scrape.changeTrackingOptions) {
-        const change: any = {};
+        const change: Record<string, unknown> = {};
         if (scrape.changeTrackingOptions.modes && scrape.changeTrackingOptions.modes.length > 0)
           change.modes = scrape.changeTrackingOptions.modes;
         if (scrape.changeTrackingOptions.schema)
@@ -1517,27 +1534,28 @@ export default defineComponent({
 
       // Include webhook options only when a URL is provided
       if (formData.value.webhookOptions.url && formData.value.webhookOptions.url !== '') {
-        payload.webhook = {
+        const webhook: Record<string, unknown> = {
           url: formData.value.webhookOptions.url,
-        } as any;
+        };
+        payload.webhook = webhook;
 
         if (
           formData.value.webhookOptions.headers &&
           Object.keys(formData.value.webhookOptions.headers).length > 0
         ) {
-          payload.webhook.headers = formData.value.webhookOptions.headers;
+          webhook.headers = formData.value.webhookOptions.headers;
         }
         if (
           formData.value.webhookOptions.metadata &&
           Object.keys(formData.value.webhookOptions.metadata).length > 0
         ) {
-          payload.webhook.metadata = formData.value.webhookOptions.metadata;
+          webhook.metadata = formData.value.webhookOptions.metadata;
         }
         if (
           formData.value.webhookOptions.events &&
           formData.value.webhookOptions.events.length > 0
         ) {
-          payload.webhook.events = formData.value.webhookOptions.events;
+          webhook.events = formData.value.webhookOptions.events;
         }
       }
 
@@ -1621,8 +1639,8 @@ export default defineComponent({
           saveHistory();
         }
         currentCrawlId.value = null;
-      } catch (err: any) {
-        error.value = `Failed to cancel crawl: ${err.message || 'Unknown error'}`;
+      } catch (err) {
+        error.value = `Failed to cancel crawl: ${getErrorMessage(err)}`;
       }
     };
 
@@ -1649,9 +1667,9 @@ export default defineComponent({
         crawlErrors.value = response.data.errors;
         robotsBlocked.value = response.data.robotsBlocked;
         crawlErrorsLoaded.value = true;
-      } catch (err: any) {
+      } catch (err) {
         console.error(`Failed to fetch crawl errors for job ID ${jobId}:`, err);
-        error.value = `Failed to fetch crawl errors: ${err.message || 'Unknown error'}`;
+        error.value = `Failed to fetch crawl errors: ${getErrorMessage(err)}`;
       }
     };
 
@@ -1670,10 +1688,10 @@ export default defineComponent({
       try {
         const response = await api.crawling.getActiveCrawls();
         activeCrawls.value = response.data.crawls;
-      } catch (err: any) {
+      } catch (err) {
         console.error('Failed to fetch active crawls:', err);
         activeCrawls.value = [];
-        activeCrawlsError.value = `Failed to fetch active crawls: ${err.message || 'Unknown error'}`;
+        activeCrawlsError.value = `Failed to fetch active crawls: ${getErrorMessage(err)}`;
       }
     };
 
@@ -1716,10 +1734,6 @@ export default defineComponent({
             progress.value = 0; // Or handle as appropriate if total is 0 or completed is undefined/negative
           }
 
-          console.log(
-            `Crawl status for ${jobId}: ${data.status}, Completed: ${data.completed}/${data.total}`,
-          );
-
           const historyItem = crawlHistory.value.find((c) => c.id === jobId);
           if (historyItem) {
             historyItem.status = data.status;
@@ -1728,21 +1742,21 @@ export default defineComponent({
 
           // Stop polling when completed or failed
           if (data.status === 'completed' || data.status === 'failed') {
-            clearInterval(intervalId);
+            if (intervalId) clearInterval(intervalId);
             intervalId = null; // Clear intervalId after clearing interval
             crawling.value = false; // Update crawling state
             currentCrawlId.value = null;
             saveHistory(); // Save history when status changes to completed or failed
           }
-        } catch (err: any) {
+        } catch (err) {
           console.error('Failed to fetch crawl status:', err);
           // Stop polling on error
-          clearInterval(intervalId);
+          if (intervalId) clearInterval(intervalId);
           intervalId = null;
           crawling.value = false;
           crawlStatus.value = 'failed'; // Indicate failure in UI
           currentCrawlId.value = null;
-          error.value = `Failed to fetch crawl status: ${err.message || 'Unknown error'}`;
+          error.value = `Failed to fetch crawl status: ${getErrorMessage(err)}`;
           const historyItem = crawlHistory.value.find((c) => c.id === jobId);
           if (historyItem) {
             historyItem.status = 'failed';
@@ -1757,7 +1771,7 @@ export default defineComponent({
      * Starts polling if the crawl is still running.
      * @param crawl - History entry to check.
      */
-    const checkHistoryStatus = async (crawl: any) => {
+    const checkHistoryStatus = async (crawl: CrawlHistoryItem) => {
       try {
         const response = await api.crawling.getCrawlStatus(crawl.id);
         crawl.status = response.data.status;

@@ -43,19 +43,19 @@
           <label for="changeTrackingThreshold">Change Threshold (%):</label>
           <input
             id="changeTrackingThreshold"
+            v-model.number="formData.changeTrackingOptions.threshold"
             type="number"
             min="0"
             max="100"
-            v-model.number="formData.changeTrackingOptions.threshold"
           />
           <small>Minimum percentage change to trigger tracking.</small>
 
           <label for="changeTrackingFrequency">Check Frequency (minutes):</label>
           <input
             id="changeTrackingFrequency"
+            v-model.number="formData.changeTrackingOptions.frequency"
             type="number"
             min="1"
-            v-model.number="formData.changeTrackingOptions.frequency"
           />
           <small>Frequency to check for changes.</small>
         </div>
@@ -69,19 +69,19 @@
           </legend>
           <div v-show="!isScrapeOptionsCollapsed">
             <label>
-              <input type="checkbox" v-model="formData.scrapeOptions.onlyMainContent" />
+              <input v-model="formData.scrapeOptions.onlyMainContent" type="checkbox" />
               Only Main Content (exclude headers, footers, etc.)
             </label>
             <label>
-              <input type="checkbox" v-model="formData.scrapeOptions.onlyCleanContent" />
+              <input v-model="formData.scrapeOptions.onlyCleanContent" type="checkbox" />
               Only Clean Content (beta, extra LLM pass to remove residual boilerplate)
             </label>
             <div class="form-group">
               <label for="includeTags">Include Tags (comma separated):</label>
               <input
                 id="includeTags"
-                type="text"
                 v-model="formData.scrapeOptions.includeTags"
+                type="text"
                 placeholder="e.g. p, div, span"
               />
             </div>
@@ -89,8 +89,8 @@
               <label for="excludeTags">Exclude Tags (comma separated):</label>
               <input
                 id="excludeTags"
-                type="text"
                 v-model="formData.scrapeOptions.excludeTags"
+                type="text"
                 placeholder="e.g. script, style"
               />
             </div>
@@ -158,39 +158,39 @@
                 <small>Proxy type for request.</small>
               </div>
               <label class="checkbox-label">
-                <input type="checkbox" v-model="formData.pageOptions.mobile" />
+                <input v-model="formData.pageOptions.mobile" type="checkbox" />
                 Emulate Mobile Device
               </label>
               <label class="checkbox-label">
-                <input type="checkbox" v-model="formData.pageOptions.skipTlsVerification" />
+                <input v-model="formData.pageOptions.skipTlsVerification" type="checkbox" />
                 Skip TLS Verification
               </label>
               <label class="checkbox-label">
-                <input type="checkbox" v-model="formData.pageOptions.blockAds" />
+                <input v-model="formData.pageOptions.blockAds" type="checkbox" />
                 Block Ads & Popups
               </label>
               <label class="checkbox-label">
-                <input type="checkbox" v-model="formData.pageOptions.removeBase64Images" />
+                <input v-model="formData.pageOptions.removeBase64Images" type="checkbox" />
                 Remove Base64 Images
               </label>
               <label class="checkbox-label">
-                <input type="checkbox" v-model="formData.pageOptions.parsePDF" />
+                <input v-model="formData.pageOptions.parsePDF" type="checkbox" />
                 Parse PDF Files
               </label>
               <label class="checkbox-label">
-                <input type="checkbox" v-model="formData.pageOptions.storeInCache" />
+                <input v-model="formData.pageOptions.storeInCache" type="checkbox" />
                 Store In Cache *
               </label>
               <label class="checkbox-label">
-                <input type="checkbox" v-model="formData.pageOptions.lockdown" />
+                <input v-model="formData.pageOptions.lockdown" type="checkbox" />
                 Lockdown Mode *
               </label>
               <label class="checkbox-label">
-                <input type="checkbox" v-model="formData.pageOptions.redactPII" />
+                <input v-model="formData.pageOptions.redactPII" type="checkbox" />
                 Redact PII *
               </label>
               <label class="checkbox-label">
-                <input type="checkbox" v-model="formData.pageOptions.zeroDataRetention" />
+                <input v-model="formData.pageOptions.zeroDataRetention" type="checkbox" />
                 Zero Data Retention *
               </label>
             </div>
@@ -230,8 +230,8 @@
               <label for="languages">Languages (comma separated) *:</label>
               <input
                 id="languages"
-                type="text"
                 v-model="formData.pageOptions.languages"
+                type="text"
                 placeholder="e.g. en-US, fr-FR"
               />
               <small>Preferred languages emulated for the request.</small>
@@ -248,36 +248,36 @@
                 </select>
                 <template v-if="action.type === 'wait'">
                   <input
-                    type="number"
                     v-model.number="action.milliseconds"
+                    type="number"
                     placeholder="ms"
                     min="1"
                   />
-                  <input type="text" v-model="action.selector" placeholder="selector" />
+                  <input v-model="action.selector" type="text" placeholder="selector" />
                 </template>
                 <template v-else-if="action.type === 'screenshot'">
                   <label class="checkbox-label">
-                    <input type="checkbox" v-model="action.fullPage" /> Full Page
+                    <input v-model="action.fullPage" type="checkbox" /> Full Page
                   </label>
                 </template>
                 <template v-else-if="action.type === 'click'">
-                  <input type="text" v-model="action.selector" placeholder="selector" />
+                  <input v-model="action.selector" type="text" placeholder="selector" />
                   <label class="checkbox-label">
-                    <input type="checkbox" v-model="action.all" /> All
+                    <input v-model="action.all" type="checkbox" /> All
                   </label>
                 </template>
                 <template v-else-if="action.type === 'write'">
-                  <input type="text" v-model="action.text" placeholder="text" />
+                  <input v-model="action.text" type="text" placeholder="text" />
                 </template>
                 <template v-else-if="action.type === 'press'">
-                  <input type="text" v-model="action.key" placeholder="key" />
+                  <input v-model="action.key" type="text" placeholder="key" />
                 </template>
                 <template v-else-if="action.type === 'scroll'">
                   <select v-model="action.direction">
                     <option value="down">down</option>
                     <option value="up">up</option>
                   </select>
-                  <input type="text" v-model="action.selector" placeholder="selector" />
+                  <input v-model="action.selector" type="text" placeholder="selector" />
                 </template>
                 <template v-else-if="action.type === 'executeJavascript'">
                   <textarea v-model="action.script" rows="2" placeholder="script"></textarea>
@@ -394,9 +394,10 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, inject, watch, computed } from 'vue';
+import { defineComponent, ref, watch, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import type { FirecrawlScrapingApi } from '../services/firecrawl';
+import { useApi } from '../plugins/api';
+import { getErrorMessage } from '@/utils/errors';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
@@ -428,7 +429,7 @@ type ScrapeResult = {
  * @property {string} [action] - HTTP method for the request (e.g., 'GET', 'POST').
  * @property {string} [location] - Request location (e.g., 'US', 'EU', 'ASIA').
  * @property {string} [languages] - Comma-separated preferred languages for the request.
- * @property {any[]} [actions] - Actions to perform on the page prior to scraping.
+ * @property {PageAction[]} actions - Actions to perform on the page prior to scraping.
  */
 interface FormDataPageOptions {
   waitFor?: number;
@@ -449,7 +450,22 @@ interface FormDataPageOptions {
   action?: string;
   location?: string;
   languages?: string;
-  actions?: any[];
+  actions: PageAction[];
+}
+
+/**
+ * A browser action performed before scraping, as edited in the actions list.
+ */
+interface PageAction {
+  type: string;
+  milliseconds?: number;
+  selector?: string;
+  text?: string;
+  key?: string;
+  direction?: string;
+  script?: string;
+  fullPage?: boolean;
+  all?: boolean;
 }
 
 /**
@@ -526,7 +542,7 @@ export default defineComponent({
     const router = useRouter();
     const route = useRoute();
     // Inject the API client for scraping operations.
-    const api = inject('api') as { scraping: FirecrawlScrapingApi };
+    const api = useApi();
 
     /**
      * Reactive form data for scrape configuration.
@@ -831,10 +847,9 @@ export default defineComponent({
         ...(formData.value.pageOptions.zeroDataRetention === true && {
           zeroDataRetention: true,
         }),
-        ...(formData.value.pageOptions.proxy &&
-          formData.value.pageOptions.proxy !== '' && {
-            proxy: formData.value.pageOptions.proxy,
-          }),
+        ...(formData.value.pageOptions.proxy && {
+          proxy: formData.value.pageOptions.proxy,
+        }),
         ...(formData.value.pageOptions.headers &&
           Object.keys(formData.value.pageOptions.headers).length > 0 && {
             headers: formData.value.pageOptions.headers,
@@ -898,7 +913,6 @@ export default defineComponent({
       try {
         loading.value = true;
         error.value = '';
-        console.log('Sending scrape request:', JSON.stringify(requestPayload, null, 2));
         const response = await api.scraping.scrapeAndExtractFromUrl(requestPayload);
         result.value = response.data;
       } catch (err: unknown) {
@@ -1021,9 +1035,9 @@ export default defineComponent({
         try {
           jsonFormatSchema.value = JSON.parse(newVal);
           jsonFormatSchemaError.value = '';
-        } catch (e: any) {
+        } catch (e) {
           jsonFormatSchema.value = undefined;
-          jsonFormatSchemaError.value = `Invalid JSON: ${e.message}`;
+          jsonFormatSchemaError.value = `Invalid JSON: ${getErrorMessage(e)}`;
         }
       },
       { immediate: true },
@@ -1079,8 +1093,8 @@ export default defineComponent({
         try {
           formData.value.pageOptions.headers = newVal ? JSON.parse(newVal) : {};
           headersError.value = '';
-        } catch (e: any) {
-          headersError.value = `Invalid JSON: ${e.message}`;
+        } catch (e) {
+          headersError.value = `Invalid JSON: ${getErrorMessage(e)}`;
         }
       },
       { immediate: true },

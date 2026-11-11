@@ -31,7 +31,7 @@
       </div>
 
       <label class="checkbox-label">
-        <input type="checkbox" v-model="onlyMainContent" />
+        <input v-model="onlyMainContent" type="checkbox" />
         Only Main Content (exclude headers, footers, etc.)
       </label>
 
@@ -100,8 +100,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject, onUnmounted } from 'vue';
-import type { CrawlError, FirecrawlBatchScrapingApi } from '@/services/firecrawl';
+import { ref, computed, onUnmounted } from 'vue';
+import { useApi } from '@/plugins/api';
+import type { CrawlError } from '@/services/firecrawl';
 
 /**
  * BatchScrapeView Component
@@ -113,14 +114,8 @@ import type { CrawlError, FirecrawlBatchScrapingApi } from '@/services/firecrawl
 
 /**
  * Injects the API instance provided by the API plugin.
- * @type {{ batchScraping?: FirecrawlBatchScrapingApi } | undefined}
  */
-const api = inject('api') as { batchScraping?: FirecrawlBatchScrapingApi } | undefined;
-if (!api?.batchScraping) {
-  throw new Error(
-    'Batch scraping API is not available. Ensure the API plugin is correctly configured.',
-  );
-}
+const api = useApi();
 
 /** Raw multiline textarea content holding one URL per line. */
 const urlsInput = ref('');
@@ -209,7 +204,7 @@ function pollStatus(id: string): void {
   stopPolling();
   intervalId = setInterval(async () => {
     try {
-      const response = await api.batchScraping!.getBatchScrapeStatus(id);
+      const response = await api.batchScraping.getBatchScrapeStatus(id);
       const data = response.data;
       status.value = data.status;
       completed.value = data.completed;
@@ -257,7 +252,7 @@ async function handleSubmit(): Promise<void> {
   batchErrors.value = [];
   batchRobotsBlocked.value = [];
   try {
-    const response = await api.batchScraping!.batchScrape({
+    const response = await api.batchScraping.batchScrape({
       urls,
       formats: selectedFormats.value,
       onlyMainContent: onlyMainContent.value,
@@ -287,7 +282,7 @@ async function cancelJob(): Promise<void> {
   cancelling.value = true;
   error.value = '';
   try {
-    await api.batchScraping!.cancelBatchScrape(jobId.value);
+    await api.batchScraping.cancelBatchScrape(jobId.value);
     stopPolling();
     status.value = 'cancelled';
   } catch (err: unknown) {
@@ -312,7 +307,7 @@ async function loadErrors(): Promise<void> {
   }
   error.value = '';
   try {
-    const response = await api.batchScraping!.getBatchScrapeErrors(jobId.value);
+    const response = await api.batchScraping.getBatchScrapeErrors(jobId.value);
     batchErrors.value = response.data.errors;
     batchRobotsBlocked.value = response.data.robotsBlocked;
     errorsLoaded.value = true;

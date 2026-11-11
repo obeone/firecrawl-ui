@@ -12,6 +12,6 @@ declare module '*.vue' {
   /**
    * Represents a Vue component with any props, emits, and slots.
    */
-  const component: DefineComponent<{}, {}, any>;
+  const component: DefineComponent<object, object, unknown>;
   export default component;
 }

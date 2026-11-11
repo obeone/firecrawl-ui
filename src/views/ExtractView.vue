@@ -22,7 +22,7 @@
         extract structured data.
       </div>
 
-      <form @submit.prevent="runExtraction" class="extract-form">
+      <form class="extract-form" @submit.prevent="runExtraction">
         <div class="form-group">
           <label for="url-input">URLs (optional, one per line)</label>
           <small class="hint">Leave blank when providing only a prompt.</small>
@@ -61,27 +61,27 @@
 
         <div class="options">
           <label>
-            <input type="checkbox" v-model="options.enableWebSearch" />
+            <input v-model="options.enableWebSearch" type="checkbox" />
             Enable Web Search
           </label>
           <label>
-            <input type="checkbox" v-model="options.showSources" />
+            <input v-model="options.showSources" type="checkbox" />
             Show Sources
           </label>
           <label>
-            <input type="checkbox" v-model="options.allowExternalLinks" />
+            <input v-model="options.allowExternalLinks" type="checkbox" />
             Allow External Links
           </label>
           <label>
-            <input type="checkbox" v-model="options.ignoreSitemap" />
+            <input v-model="options.ignoreSitemap" type="checkbox" />
             Ignore Sitemap
           </label>
           <label>
-            <input type="checkbox" v-model="options.includeSubdomains" />
+            <input v-model="options.includeSubdomains" type="checkbox" />
             Include Subdomains
           </label>
           <label>
-            <input type="checkbox" v-model="options.ignoreInvalidURLs" />
+            <input v-model="options.ignoreInvalidURLs" type="checkbox" />
             Ignore Invalid URLs
           </label>
         </div>
@@ -104,14 +104,14 @@
                   :key="format.value"
                   class="checkbox-label"
                 >
-                  <input type="checkbox" :value="format.value" v-model="scrapeOptions.formats" />
+                  <input v-model="scrapeOptions.formats" type="checkbox" :value="format.value" />
                   {{ format.label }}
                 </label>
               </div>
             </div>
 
             <label class="checkbox-label">
-              <input type="checkbox" v-model="scrapeOptions.onlyMainContent" />
+              <input v-model="scrapeOptions.onlyMainContent" type="checkbox" />
               Only Main Content
             </label>
 
@@ -119,8 +119,8 @@
               <label for="include-tags-input">Include Tags (comma separated)</label>
               <input
                 id="include-tags-input"
-                type="text"
                 v-model="scrapeOptions.includeTags"
+                type="text"
                 placeholder="e.g. p, div, span"
               />
             </div>
@@ -129,8 +129,8 @@
               <label for="exclude-tags-input">Exclude Tags (comma separated)</label>
               <input
                 id="exclude-tags-input"
-                type="text"
                 v-model="scrapeOptions.excludeTags"
+                type="text"
                 placeholder="e.g. script, style"
               />
             </div>
@@ -140,27 +140,27 @@
                 <label for="wait-for-input">Wait For (ms)</label>
                 <input
                   id="wait-for-input"
+                  v-model.number="scrapeOptions.waitFor"
                   type="number"
                   min="0"
-                  v-model.number="scrapeOptions.waitFor"
                 />
               </div>
               <div class="form-group">
                 <label for="timeout-input">Timeout (ms)</label>
                 <input
                   id="timeout-input"
+                  v-model.number="scrapeOptions.timeout"
                   type="number"
                   min="0"
-                  v-model.number="scrapeOptions.timeout"
                 />
               </div>
               <div class="form-group">
                 <label for="max-age-input">Max Age (ms)</label>
                 <input
                   id="max-age-input"
+                  v-model.number="scrapeOptions.maxAge"
                   type="number"
                   min="0"
-                  v-model.number="scrapeOptions.maxAge"
                 />
               </div>
               <div class="form-group">
@@ -174,23 +174,23 @@
             </div>
 
             <label class="checkbox-label">
-              <input type="checkbox" v-model="scrapeOptions.mobile" />
+              <input v-model="scrapeOptions.mobile" type="checkbox" />
               Emulate Mobile Device
             </label>
             <label class="checkbox-label">
-              <input type="checkbox" v-model="scrapeOptions.blockAds" />
+              <input v-model="scrapeOptions.blockAds" type="checkbox" />
               Block Ads & Popups
             </label>
             <label class="checkbox-label">
-              <input type="checkbox" v-model="scrapeOptions.removeBase64Images" />
+              <input v-model="scrapeOptions.removeBase64Images" type="checkbox" />
               Remove Base64 Images
             </label>
             <label class="checkbox-label">
-              <input type="checkbox" v-model="scrapeOptions.skipTlsVerification" />
+              <input v-model="scrapeOptions.skipTlsVerification" type="checkbox" />
               Skip TLS Verification
             </label>
             <label class="checkbox-label">
-              <input type="checkbox" v-model="scrapeOptions.storeInCache" />
+              <input v-model="scrapeOptions.storeInCache" type="checkbox" />
               Store In Cache
             </label>
 
@@ -199,8 +199,8 @@
                 <label for="location-country-input">Location Country</label>
                 <input
                   id="location-country-input"
-                  type="text"
                   v-model="scrapeOptions.locationCountry"
+                  type="text"
                   placeholder="e.g. US"
                 />
               </div>
@@ -208,8 +208,8 @@
                 <label for="location-languages-input">Location Languages (comma separated)</label>
                 <input
                   id="location-languages-input"
-                  type="text"
                   v-model="scrapeOptions.locationLanguages"
+                  type="text"
                   placeholder="e.g. en-US"
                 />
               </div>
@@ -260,7 +260,7 @@
 
     <!-- ── RESPONSE actions (download button) ──────────────── -->
     <template #response-actions>
-      <button type="button" v-if="hasResult" class="action-button" @click="downloadResult">
+      <button v-if="hasResult" type="button" class="action-button" @click="downloadResult">
         Download JSON
       </button>
     </template>
@@ -314,19 +314,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { useApi } from '@/plugins/api';
+import { getErrorMessage } from '@/utils/errors';
 import { useRoute } from 'vue-router';
-import type { FirecrawlExtractResponse, FirecrawlExtractionApi } from '@/services/firecrawl';
+import type { FirecrawlExtractResponse } from '@/services/firecrawl';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
 import CodeBlock from '../components/playground/CodeBlock.vue';
 
 /**
  * Injection of the API client. The apiPlugin must provide an `extraction` instance.
  */
-const api = inject('api') as { extraction?: FirecrawlExtractionApi } | undefined;
-if (!api?.extraction) {
-  throw new Error('Extraction API is not available');
-}
+const api = useApi();
 
 const urlInput = ref(''); // Stores the URLs entered by the user.
 const promptInput = ref(''); // Stores the prompt for data extraction.
@@ -360,7 +359,7 @@ const loading = ref(false); // Indicates if an extraction request is in progress
 const error = ref(''); // Stores any error messages from the extraction process.
 const result = ref<FirecrawlExtractResponse['data'] | null>(null); // Stores the successful extraction result.
 const schemaError = ref<string | null>(null); // Stores error messages related to JSON schema parsing.
-const parsedSchema = ref<any>(undefined); // Holds the parsed schema object.
+const parsedSchema = ref<object | null | undefined>(undefined); // Holds the parsed schema object.
 const durationMs = ref<number | null>(null); // Request round-trip duration in milliseconds.
 
 /**
@@ -427,8 +426,8 @@ watch(
     try {
       parsedSchema.value = JSON.parse(newVal);
       schemaError.value = null;
-    } catch (e: any) {
-      schemaError.value = e.message;
+    } catch (e) {
+      schemaError.value = getErrorMessage(e);
       parsedSchema.value = null;
     }
   },
@@ -450,8 +449,8 @@ watch(
     try {
       parsedHeaders.value = JSON.parse(newVal);
       headersError.value = null;
-    } catch (e: any) {
-      headersError.value = e.message;
+    } catch (e) {
+      headersError.value = getErrorMessage(e);
       parsedHeaders.value = undefined;
     }
   },
@@ -516,8 +515,9 @@ function toSourceUrls(value: unknown): string[] {
   return value
     .map((entry) => {
       if (typeof entry === 'string') return entry;
-      if (entry && typeof entry === 'object' && typeof (entry as any).url === 'string') {
-        return (entry as any).url as string;
+      if (entry && typeof entry === 'object') {
+        const { url } = entry as { url?: unknown };
+        if (typeof url === 'string') return url;
       }
       return undefined;
     })
@@ -659,13 +659,13 @@ const runExtraction = async (): Promise<void> => {
     // Keep the full response around (invalidURLs, sources, ...) regardless of
     // outcome, so the response pane can surface it alongside the error state.
     fullResponse.value = respData;
-    if (respData.success && (respData as any).data) {
-      result.value = (respData as any).data;
+    if (respData.success && respData.data) {
+      result.value = respData.data;
     } else {
-      throw new Error((respData as any).error || 'Extraction failed');
+      throw new Error(respData.error || 'Extraction failed');
     }
-  } catch (err: any) {
-    error.value = err?.message || 'Request failed';
+  } catch (err) {
+    error.value = getErrorMessage(err, 'Request failed');
     result.value = null;
   } finally {
     loading.value = false;
@@ -719,8 +719,8 @@ const resumeExtraction = async (): Promise<void> => {
     } else {
       throw new Error(respData.error || 'No data returned for this job ID.');
     }
-  } catch (err: any) {
-    error.value = err?.message || 'Request failed';
+  } catch (err) {
+    error.value = getErrorMessage(err, 'Request failed');
     result.value = null;
   } finally {
     loading.value = false;
