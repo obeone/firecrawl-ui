@@ -61,6 +61,31 @@ describe('buildCompiledMarkdown', () => {
     expect(out).toContain('\n### Two\n');
     expect(out).toContain('\n#nospace');
   });
+  it('only closes a fence on a matching marker at least as long', () => {
+    const md = [
+      '````md',
+      '```',
+      '# inside four',
+      '```',
+      '````',
+      '# after',
+      '~~~',
+      '```',
+      '# inside tilde',
+      '~~~~',
+      '# after tilde',
+      '```js',
+      '``` not a closer',
+      '# still code',
+      '```',
+    ].join('\n');
+    const out = buildCompiledMarkdown('All', [{ markdown: md }]);
+    expect(out).toContain('\n# inside four\n');
+    expect(out).toContain('\n## after\n');
+    expect(out).toContain('\n# inside tilde\n');
+    expect(out).toContain('\n## after tilde\n');
+    expect(out).toContain('\n# still code\n');
+  });
   it('adds a placeholder when markdown is missing', () => {
     const out = buildCompiledMarkdown('All', [{ metadata: { title: 'Only' } }, {}]);
     expect(out).toContain('## Only\n\n_No Markdown content._');

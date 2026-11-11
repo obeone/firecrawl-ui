@@ -110,19 +110,29 @@ function documentMarkdown(doc: ExportDocument): string {
  * @returns Markdown with bumped headings.
  */
 function bumpHeadings(markdown: string): string {
-  let fence: string | null = null;
+  // Open fence: its character and length. Per CommonMark, a fence closes only
+  // on a line of the same character, at least as long, with nothing after it.
+  let fence: { char: string; length: number } | null = null;
   return markdown
     .split('\n')
     .map((line) => {
-      const fenceMatch = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+      const fenceMatch = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
       if (fenceMatch) {
         const marker = fenceMatch[1];
         if (fence === null) {
-          fence = marker[0];
-        } else if (marker[0] === fence) {
+          // A backtick fence's info string cannot contain a backtick.
+          if (marker[0] !== '`' || !fenceMatch[2].includes('`')) {
+            fence = { char: marker[0], length: marker.length };
+            return line;
+          }
+        } else if (
+          marker[0] === fence.char &&
+          marker.length >= fence.length &&
+          fenceMatch[2].trim() === ''
+        ) {
           fence = null;
+          return line;
         }
-        return line;
       }
       if (fence !== null) return line;
       return line.replace(/^(#{1,6})(?=\s|$)/, (hashes) =>
