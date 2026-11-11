@@ -301,6 +301,30 @@ export interface FirecrawlBillingApi {
 }
 
 /**
+ * `GET /v2/team/queue-status` response: the team's scrape queue metrics.
+ */
+export interface QueueStatus {
+  success?: boolean;
+  /** Jobs currently in the queue. */
+  jobsInQueue: number;
+  /** Jobs currently running. */
+  activeJobsInQueue: number;
+  /** Jobs waiting for a slot. */
+  waitingJobsInQueue: number;
+  /** Maximum number of concurrent jobs. */
+  maxConcurrency: number;
+  /** Timestamp of the most recent successful job, if any. */
+  mostRecentSuccess?: string | null;
+}
+
+/**
+ * Team-level endpoints.
+ */
+export interface FirecrawlTeamApi {
+  getQueueStatus(): Promise<WrappedResponse<QueueStatus>>;
+}
+
+/**
  * A single activity entry emitted while a deep research job progresses.
  */
 export interface ResearchActivity {
@@ -382,6 +406,7 @@ export interface FirecrawlApiClients {
   research: FirecrawlResearchApi;
   scraping: FirecrawlScrapingApi;
   search: FirecrawlSearchApi;
+  team: FirecrawlTeamApi;
 }
 
 /**
@@ -1001,6 +1026,17 @@ export function createFirecrawlApiClients(apiKey: string, baseUrl: string): Fire
           return { data: toTokenUsage(response.data.data) };
         } catch (error) {
           throw formatApiError(error, 'Failed to fetch token usage');
+        }
+      },
+    },
+    team: {
+      async getQueueStatus() {
+        try {
+          const response = await http.get<QueueStatus>('/v2/team/queue-status');
+
+          return { data: response.data };
+        } catch (error) {
+          throw formatApiError(error, 'Failed to fetch queue status');
         }
       },
     },
