@@ -7,15 +7,15 @@ const noGit = (): string => {
 
 describe('resolveAppVersion', () => {
   it('prefers APP_VERSION and strips the tag prefix', () => {
-    expect(resolveAppVersion('v2026.11.11', () => 'v1.0.0')).toBe('2026.11.11');
+    expect(resolveAppVersion('v2026.11.1', () => 'v1.0.0')).toBe('2026.11.1');
   });
 
-  it('keeps a commit-based CI version as is', () => {
-    expect(resolveAppVersion('sha-0943d27', noGit)).toBe('sha-0943d27');
+  it('keeps a bare commit hash, before any release, as is', () => {
+    expect(resolveAppVersion('0943d27', noGit)).toBe('0943d27');
   });
 
   it('falls back to git describe when APP_VERSION is empty', () => {
-    expect(resolveAppVersion('  ', () => 'v2026.11.11-3-g0943d27\n')).toBe('2026.11.11-3-g0943d27');
+    expect(resolveAppVersion('  ', () => 'v2026.11.1-3-g0943d27\n')).toBe('2026.11.1-3-g0943d27');
   });
 
   it('returns dev without APP_VERSION or Git', () => {

@@ -16,8 +16,8 @@ COPY --link package.json package-lock.json ./
 RUN npm ci
 
 # Copy the rest of the application source code and build it.
-# APP_VERSION is shown on the About page; CI sets it from the git tag or
-# commit, since .git is not part of the build context.
+# APP_VERSION is shown on the About page; CI sets it from git describe,
+# since .git is not part of the build context.
 COPY --link . .
 ARG APP_VERSION=dev
 RUN APP_VERSION="${APP_VERSION}" npm run build

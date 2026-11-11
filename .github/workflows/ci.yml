@@ -5,9 +5,6 @@ on:
     branches: [main]
     tags: ['v*']
   pull_request:
-  # Run by the Release workflow on the tag it creates: a tag pushed with
-  # GITHUB_TOKEN does not trigger the push event above.
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -17,8 +14,21 @@ permissions:
 jobs:
   node:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.value }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Full history and tags, so git describe finds the last release.
+          fetch-depth: 0
+      # The version shown on the About page, for Pages and the image alike:
+      # the release on a tag (v2026.11.1 -> 2026.11.1), otherwise the last
+      # release plus the commits since (2026.11.1-3-gabc1234).
+      - name: Compute app version
+        id: version
+        run: |
+          version="$(git describe --tags --match 'v[0-9]*' --always)"
+          echo "value=${version#v}" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
@@ -33,15 +43,9 @@ jobs:
       - name: Unit tests
         run: npm test
       - name: Build
-        # APP_VERSION is computed as in docker.yml, so Pages and the image
-        # show the same version.
-        run: |
-          if [ "${GITHUB_REF_TYPE}" = tag ]; then
-            export APP_VERSION="${GITHUB_REF_NAME#v}"
-          else
-            export APP_VERSION="sha-${GITHUB_SHA::7}"
-          fi
-          npm run build
+        run: npm run build
+        env:
+          APP_VERSION: ${{ steps.version.outputs.value }}
       - name: Copy 404 page
         run: cp public/404.html dist/404.html
       - name: Upload artifact
@@ -50,8 +54,7 @@ jobs:
           path: ./dist
 
   # Build the container image after CI passes. Pushes to main and version
-  # tags (pushed or released) publish it; pull requests only check that it
-  # builds.
+  # tags publish it; pull requests only check that it builds.
   image:
     needs: node
     permissions:
@@ -60,13 +63,18 @@ jobs:
       id-token: write
     uses: ./.github/workflows/docker.yml
     with:
-      push: ${{ github.event_name != 'pull_request' }}
+      push: ${{ github.event_name == 'push' }}
+      version: ${{ needs.node.outputs.version }}
     secrets: inherit
 
   deploy:
     needs: node
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    # main and release tags, so Pages always carries the release number.
+    if: github.event_name == 'push'
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

@@ -8,8 +8,8 @@
 /**
  * Pick the version string to inline into the bundle.
  *
- * CI passes `APP_VERSION` (the release tag, or `sha-<commit>` on `main`)
- * because the Docker build context has no `.git` directory. Local builds fall
+ * CI passes `APP_VERSION` (from `git describe`, see ci.yml) because the
+ * Docker build context has no `.git` directory. Local builds fall
  * back to `git describe`, and to `dev` when Git is unavailable.
  *
  * @param envVersion - Value of the `APP_VERSION` environment variable, if any.
@@ -33,7 +33,7 @@ export function resolveAppVersion(
 }
 
 /**
- * Drop the `v` that release tags carry (`v2026.11.11` becomes `2026.11.11`).
+ * Drop the `v` that release tags carry (`v2026.11.1` becomes `2026.11.1`).
  *
  * @param version - Raw version or tag name.
  * @returns The version without a leading `v` before a digit.
