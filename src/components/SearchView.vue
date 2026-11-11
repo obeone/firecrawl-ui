@@ -16,7 +16,7 @@
   >
     <!-- REQUEST pane: form + submit button -->
     <template #request>
-      <form @submit.prevent="onSearch" class="search-form">
+      <form class="search-form" @submit.prevent="onSearch">
         <label for="query" class="field-label">Search Query</label>
         <input
           id="query"
@@ -34,35 +34,35 @@
             <span class="field-label">Sources</span>
             <span class="source-flags">
               <label class="checkbox-label">
-                <input type="checkbox" v-model="options.sources.web" />
+                <input v-model="options.sources.web" type="checkbox" />
                 Web
               </label>
               <label class="checkbox-label">
-                <input type="checkbox" v-model="options.sources.news" />
+                <input v-model="options.sources.news" type="checkbox" />
                 News
               </label>
               <label class="checkbox-label">
-                <input type="checkbox" v-model="options.sources.images" />
+                <input v-model="options.sources.images" type="checkbox" />
                 Images
               </label>
             </span>
           </div>
 
           <label class="checkbox-label block">
-            <input type="checkbox" v-model="options.includeMetadata" />
+            <input v-model="options.includeMetadata" type="checkbox" />
             Include metadata in results
           </label>
           <label class="checkbox-label block">
-            <input type="checkbox" v-model="options.extractContent" />
+            <input v-model="options.extractContent" type="checkbox" />
             Enable content extraction
           </label>
 
           <label class="field-label" for="maxResults">Max results</label>
           <input
             id="maxResults"
+            v-model.number="options.maxResults"
             type="number"
             class="field-input field-input--short"
-            v-model.number="options.maxResults"
             min="1"
             max="100"
           />
@@ -70,21 +70,21 @@
           <label class="field-label" for="location">Location</label>
           <input
             id="location"
+            v-model="options.location"
             type="text"
             class="field-input"
-            v-model="options.location"
             placeholder="Paris, France"
           />
 
           <label class="field-label" for="tbs">Time range (tbs)</label>
-          <input id="tbs" type="text" class="field-input" v-model="options.tbs" />
+          <input id="tbs" v-model="options.tbs" type="text" class="field-input" />
 
           <label class="field-label" for="timeout">Timeout (ms)</label>
           <input
             id="timeout"
+            v-model.number="options.timeout"
             type="number"
             class="field-input field-input--short"
-            v-model.number="options.timeout"
             min="0"
           />
         </fieldset>
@@ -127,9 +127,9 @@
           <p class="download-label">Download Results</p>
           <div class="download-buttons">
             <button
-              type="button"
               v-for="fmt in activeFormats"
               :key="fmt"
+              type="button"
               class="download-button"
               @click="handleDownload(fmt)"
             >
@@ -149,8 +149,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, inject, computed } from 'vue';
-import type { FirecrawlSearchApi } from '@/services/firecrawl';
+import { ref, computed } from 'vue';
+import { useApi } from '@/plugins/api';
+import { getErrorMessage } from '@/utils/errors';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import axios from 'axios';
@@ -202,10 +203,7 @@ interface SearchOptions {
  * Injects the API client, specifically the search API.
  * Throws an error if the search API is not available.
  */
-const api = inject('api') as { search?: FirecrawlSearchApi } | undefined;
-if (!api?.search) {
-  throw new Error('Search API is not available');
-}
+const api = useApi();
 
 /**
  * Reactive reference for the search query input.
@@ -316,7 +314,9 @@ async function onSearch(): Promise<void> {
     const response = await api.search.search(payload);
     requestedFormats.value = payload.scrapeOptions?.formats ?? [];
     results.value = [
-      ...(response.data.web || []).map((item) => normalizeResult({ ...item, sourceType: 'web' })),
+      ...(response.data.web || []).map((item) =>
+        normalizeResult({ ...item, sourceType: 'web' } as SearchResult),
+      ),
       ...(response.data.news || []).map((item) =>
         normalizeResult({
           ...item,
@@ -338,8 +338,8 @@ async function onSearch(): Promise<void> {
         } as SearchResult),
       ),
     ];
-  } catch (err: any) {
-    error.value = err?.message || 'Search request failed';
+  } catch (err) {
+    error.value = getErrorMessage(err, 'Search request failed');
   } finally {
     loading.value = false;
     durationMs.value = performance.now() - startTime;
@@ -356,7 +356,7 @@ async function onSearch(): Promise<void> {
 function normalizeResult(item: SearchResult): SearchResult {
   return {
     ...item,
-    title: fixEncoding(item.title),
+    title: fixEncoding(item.title) ?? '',
     description: fixEncoding(item.description),
     date: fixEncoding(item.date),
     imageUrl: fixEncoding(item.imageUrl),

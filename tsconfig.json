@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ESNext", // Specifies the JavaScript language version for emitted JavaScript. "ESNext" targets the latest ECMAScript features.
-    "module": "NodeNext", // Specifies the module code generation. "NodeNext" is suitable for modern Node.js environments.
-    "moduleResolution": "NodeNext", // Determines how modules are resolved. "NodeNext" aligns with Node.js's module resolution strategy.
+    "module": "ESNext", // Specifies the module code generation. "ESNext" keeps native ES modules for Vite to bundle.
+    "moduleResolution": "Bundler", // Determines how modules are resolved. "Bundler" matches Vite, which accepts extensionless imports.
     "strict": true, // Enables all strict type-checking options. Highly recommended for robust code.
     "jsx": "preserve", // Specifies how JSX is emitted. "preserve" means JSX is left as is for Vue's compiler to handle.
     "sourceMap": true, // Generates corresponding .map files for debugging.

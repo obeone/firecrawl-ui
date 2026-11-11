@@ -8,18 +8,22 @@ Canonical project instructions for coding agents. Maintain shared guidance here.
 npm run dev        # Start dev server with hot reload (http://localhost:5173)
 npm run build      # Production build (output: dist/)
 npm run preview    # Preview production build locally
-npm run lint       # ESLint on .ts, .tsx, .js, .jsx, .vue files
+npm run typecheck  # vue-tsc type check (no emit)
+npm run lint       # ESLint (typescript-eslint + eslint-plugin-vue), zero warnings
+npm test           # Vitest unit tests (src/**/*.test.ts)
 npm run format     # Prettier formatting
 ```
 
-There are no automated tests in this project (`npm test` is a no-op).
-
-Before submitting changes, verify with:
+Before submitting changes, verify with (CI runs the same steps and blocks on
+each of them):
 
 ```sh
 npm ci
-npx prettier --check .
-npx eslint .
+npm run format:check
+npm run lint
+npm run typecheck
+npm test
+npm run build
 ```
 
 ## Architecture
@@ -176,9 +180,11 @@ function addNumbers(a: number, b: number): number {
 Always test the code with:
 
 - `npm ci`
-- `npx prettier --check .`
-- `npx eslint .`
-- `npm test --if-present`
+- `npm run format:check`
+- `npm run lint`
+- `npm run typecheck`
+- `npm test`
+- `npm run build`
 
 ### Branch naming
 

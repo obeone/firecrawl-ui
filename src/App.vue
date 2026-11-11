@@ -182,9 +182,9 @@ function toggleTheme(): void {
           <button
             type="button"
             class="icon-btn"
-            @click="toggleTheme"
             aria-label="Toggle color theme"
             title="Toggle theme"
+            @click="toggleTheme"
           >
             <svg
               v-if="theme === 'dark'"

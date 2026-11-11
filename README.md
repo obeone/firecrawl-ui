@@ -108,13 +108,15 @@ Precedence is `localStorage` > `VITE_*` env > default. Any trailing `/v1` or
 
 ## 🛠️ Commands
 
-| Command           | Description                          |
-| :---------------- | :----------------------------------- |
-| `npm run dev`     | Start the dev server with hot reload |
-| `npm run build`   | Type-check and build to `dist/`      |
-| `npm run preview` | Preview the production build locally |
-| `npm run lint`    | Run ESLint                           |
-| `npm run format`  | Format with Prettier                 |
+| Command             | Description                          |
+| :------------------ | :----------------------------------- |
+| `npm run dev`       | Start the dev server with hot reload |
+| `npm run build`     | Build to `dist/`                     |
+| `npm run preview`   | Preview the production build locally |
+| `npm run typecheck` | Type-check with `vue-tsc`            |
+| `npm run lint`      | Run ESLint                           |
+| `npm test`          | Run the Vitest unit tests            |
+| `npm run format`    | Format with Prettier                 |
 
 | Docker                                 | Description                  |
 | :------------------------------------- | :--------------------------- |
@@ -146,8 +148,9 @@ flowchart TB
 
 ## 🤝 Contributing
 
-Contributions are welcome. Run `npm run lint` and `npx prettier --check .`
-before opening a pull request. PR titles follow `[firecrawl-ui] <Title>`.
+Contributions are welcome. Run `npm run format:check`, `npm run lint`,
+`npm run typecheck` and `npm test` before opening a pull request; CI blocks on
+each of them. PR titles follow `[firecrawl-ui] <Title>`.
 
 ## 📝 License
 

@@ -427,7 +427,7 @@ async function requestWithVersionFallback<T>(
 
       if (version !== API_VERSION_PREFERENCE[0]) {
         // Surface the downgrade: self-hosted installs land here on every run.
-        console.info(
+        console.warn(
           `[firecrawl] "${feature}" is not exposed under /${API_VERSION_PREFERENCE[0]}; ` +
             `falling back to /${version} (self-hosted install).`,
         );

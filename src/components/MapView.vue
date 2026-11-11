@@ -16,7 +16,7 @@
   >
     <!-- ── Request pane ─────────────────────────────────────────────────── -->
     <template #request>
-      <form @submit.prevent="handleSubmit" class="map-form">
+      <form class="map-form" @submit.prevent="handleSubmit">
         <div class="form-group">
           <label for="baseUrl">Base URL</label>
           <input
@@ -44,7 +44,7 @@
 
         <div class="form-group form-group--checkbox">
           <label class="checkbox-label">
-            <input type="checkbox" v-model="includeSubdomains" />
+            <input v-model="includeSubdomains" type="checkbox" />
             Include Subdomains
           </label>
         </div>
@@ -109,9 +109,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { useApi } from '@/plugins/api';
+import { getErrorMessage } from '@/utils/errors';
 import { useRoute } from 'vue-router';
-import type { FirecrawlMappingApi } from '@/services/firecrawl';
 import PlaygroundLayout from './playground/PlaygroundLayout.vue';
 import CodeBlock from './playground/CodeBlock.vue';
 import CopyButton from './playground/CopyButton.vue';
@@ -127,14 +128,8 @@ import CopyButton from './playground/CopyButton.vue';
 /**
  * Injects the API instance provided by the API plugin.
  * This instance is expected to contain a `mapping` property for URL mapping operations.
- * @type {{ mapping?: FirecrawlMappingApi } | undefined}
  */
-const api = inject('api') as { mapping?: FirecrawlMappingApi } | undefined;
-if (!api?.mapping) {
-  throw new Error(
-    'Mapping API is not available. Ensure the API plugin is correctly configured and provides the mapping service.',
-  );
-}
+const api = useApi();
 
 /**
  * Reactive variable for the base URL entered by the user.
@@ -273,9 +268,8 @@ async function handleSubmit(): Promise<void> {
   try {
     const response = await api.mapping.mapUrls(payload);
     urls.value = response.data.links ?? [];
-  } catch (err: any) {
-    // Cast err to any to access message property safely
-    error.value = err?.message || 'Failed to map URLs. Please check the URL and try again.';
+  } catch (err) {
+    error.value = getErrorMessage(err, 'Failed to map URLs. Please check the URL and try again.');
     urls.value = [];
   } finally {
     durationMs.value = performance.now() - t0;

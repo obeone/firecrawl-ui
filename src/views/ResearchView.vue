@@ -186,10 +186,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject, onUnmounted } from 'vue';
+import { ref, computed, onUnmounted } from 'vue';
+import { useApi } from '@/plugins/api';
 import type {
   FirecrawlApiVersion,
-  FirecrawlResearchApi,
   DeepResearchStatus,
   ResearchActivity,
   ResearchSource,
@@ -205,12 +205,8 @@ import type {
 
 /**
  * Injects the API instance provided by the API plugin.
- * @type {{ research?: FirecrawlResearchApi } | undefined}
  */
-const api = inject('api') as { research?: FirecrawlResearchApi } | undefined;
-if (!api?.research) {
-  throw new Error('Research API is not available. Ensure the API plugin is correctly configured.');
-}
+const api = useApi();
 
 // --- Form state ---
 
@@ -319,7 +315,7 @@ function pollStatus(id: string): void {
   stopPolling();
   intervalId = setInterval(async () => {
     try {
-      const response = await api.research!.getDeepResearchStatus(id);
+      const response = await api.research.getDeepResearchStatus(id);
       applyStatus(response.data);
 
       if (response.data.status === 'completed' || response.data.status === 'failed') {
@@ -445,7 +441,7 @@ async function handleSubmit(): Promise<void> {
   };
 
   try {
-    const response = await api.research!.startDeepResearch(payload);
+    const response = await api.research.startDeepResearch(payload);
     jobId.value = response.data.id;
     apiVersion.value = response.data.apiVersion;
     jobStatus.value = 'processing';

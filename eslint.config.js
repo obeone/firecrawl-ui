@@ -1,43 +1,35 @@
 /**
- * ESLint configuration file for the project.
+ * ESLint flat configuration.
  *
- * This configuration supports linting for TypeScript, Vue, and JavaScript files.
- * It uses the Vue ESLint parser and TypeScript parser, along with relevant plugins.
- * The configuration also integrates Prettier to disable conflicting ESLint rules.
+ * - typescript-eslint `recommended` for TypeScript, in `.ts` files and in
+ *   `<script lang="ts">` blocks of Vue single-file components.
+ * - eslint-plugin-vue `flat/recommended` for Vue 3 templates and SFCs.
+ * - `no-console` so debugging output (and request payloads) cannot ship;
+ *   `console.warn` and `console.error` stay allowed for real diagnostics.
+ * - eslint-config-prettier last, to turn off rules that conflict with Prettier.
  */
 
+import { defineConfig, globalIgnores } from 'eslint/config';
 import eslintConfigPrettier from 'eslint-config-prettier/flat';
-import vue from 'eslint-plugin-vue';
-import tsPlugin from '@typescript-eslint/eslint-plugin';
-import tsParser from '@typescript-eslint/parser';
-import vueParser from 'vue-eslint-parser';
+import pluginVue from 'eslint-plugin-vue';
+import tseslint from 'typescript-eslint';
 
-export default [
+export default defineConfig(
+  globalIgnores(['node_modules/', 'dist/', 'coverage/', '.history/']),
+  tseslint.configs.recommended,
+  pluginVue.configs['flat/recommended'],
   {
-    // Ignore linting for files in node_modules directory
-    ignores: ['node_modules/**', '.history/**'],
-  },
-  {
-    // Apply these settings to TypeScript, Vue, and JavaScript files
-    files: ['**/*.ts', '**/*.vue', '**/*.js'],
+    files: ['**/*.vue'],
     languageOptions: {
-      // Use Vue parser to support Vue SFC files
-      parser: vueParser,
       parserOptions: {
-        // Use TypeScript parser for script blocks inside Vue files and TS files
-        parser: tsParser,
-        ecmaVersion: 2020, // Support modern ECMAScript features up to ES2020
-        sourceType: 'module', // Enable ECMAScript modules
+        parser: tseslint.parser,
       },
     },
-    plugins: {
-      vue, // Vue.js specific linting rules
-      '@typescript-eslint': tsPlugin, // TypeScript specific linting rules
-    },
+  },
+  {
     rules: {
-      // Custom rules can be added here
+      'no-console': ['error', { allow: ['warn', 'error'] }],
     },
   },
-  // Integrate Prettier configuration to disable ESLint rules that conflict with Prettier formatting
   eslintConfigPrettier,
-];
+);

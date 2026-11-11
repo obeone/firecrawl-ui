@@ -17,7 +17,7 @@
       </div>
 
       <label class="checkbox-label">
-        <input type="checkbox" v-model="showFullText" />
+        <input v-model="showFullText" type="checkbox" />
         Generate full-text version (llms-full.txt)
       </label>
 
@@ -81,8 +81,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, inject, onUnmounted } from 'vue';
-import type { FirecrawlApiVersion, FirecrawlLlmsTxtApi, LlmsTxtStatus } from '@/services/firecrawl';
+import { ref, onUnmounted } from 'vue';
+import { useApi } from '@/plugins/api';
+import type { FirecrawlApiVersion, LlmsTxtStatus } from '@/services/firecrawl';
 
 /**
  * LlmsTxtView Component
@@ -94,12 +95,8 @@ import type { FirecrawlApiVersion, FirecrawlLlmsTxtApi, LlmsTxtStatus } from '@/
 
 /**
  * Injects the API instance provided by the API plugin.
- * @type {{ llmsTxt?: FirecrawlLlmsTxtApi } | undefined}
  */
-const api = inject('api') as { llmsTxt?: FirecrawlLlmsTxtApi } | undefined;
-if (!api?.llmsTxt) {
-  throw new Error('LLMs.txt API is not available. Ensure the API plugin is correctly configured.');
-}
+const api = useApi();
 
 /** The website URL to generate the LLMs.txt for. */
 const url = ref('');
@@ -150,7 +147,7 @@ function pollStatus(id: string): void {
   stopPolling();
   intervalId = setInterval(async () => {
     try {
-      const response = await api.llmsTxt!.getLlmsTxtStatus(id);
+      const response = await api.llmsTxt.getLlmsTxtStatus(id);
       const data = response.data;
       generationStatus.value = data.status;
       apiVersion.value = data.apiVersion;
@@ -191,7 +188,7 @@ async function handleSubmit(): Promise<void> {
   fullTextExpanded.value = false;
 
   try {
-    const response = await api.llmsTxt!.generateLlmsTxt({
+    const response = await api.llmsTxt.generateLlmsTxt({
       url: url.value,
       maxUrls: maxUrls.value,
       showFullText: showFullText.value,

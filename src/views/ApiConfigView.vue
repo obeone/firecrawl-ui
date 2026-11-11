@@ -17,7 +17,7 @@
       </div>
       <ApiKeyInput />
       <div class="actions">
-        <button type="button" @click="handleContinue" class="primary">
+        <button type="button" class="primary" @click="handleContinue">
           Continue to application
         </button>
       </div>
