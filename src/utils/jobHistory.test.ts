@@ -115,6 +115,37 @@ describe('jobHistory', () => {
     );
   });
 
+  it('never persists tokens carried by the URL query string or fragment', () => {
+    const s = memoryStorage();
+    recordJob(entry('a', { sourceUrl: 'https://example.com/x?access_token=query-secret' }), s);
+    recordJob(entry('b', { sourceUrl: 'https://example.com/y#access_token=hash-secret' }), s);
+    recordJob(entry('c', { sourceUrl: 'not a url?sig=raw-secret' }), s);
+    const raw = s.raw() as string;
+    expect(raw).not.toContain('secret');
+    expect(loadJobHistory(s).map((e) => e.sourceUrl)).toEqual([
+      'not a url',
+      'https://example.com/y',
+      'https://example.com/x',
+    ]);
+  });
+
+  it('rewrites entries stored by older versions on load', () => {
+    const legacy = [
+      { ...entry('a'), sourceUrl: 'https://u:p@example.com/x?token=old-secret', apiKey: 'fc-key' },
+    ];
+    const s = memoryStorage(JSON.stringify(legacy));
+    expect(loadJobHistory(s)[0].sourceUrl).toBe('https://example.com/x');
+    expect(s.raw()).not.toContain('old-secret');
+    expect(s.raw()).not.toContain('fc-key');
+    expect(s.raw()).not.toContain('u:p@');
+  });
+
+  it('removes unreadable history data', () => {
+    const s = memoryStorage('{"sourceUrl":"https://example.com/?token=x"');
+    expect(loadJobHistory(s)).toEqual([]);
+    expect(s.raw()).toBeNull();
+  });
+
   it('strips userinfo, truncates and normalizes counts', () => {
     const s = memoryStorage();
     recordJob(

@@ -550,6 +550,13 @@ import { checkCountryCode } from '@/utils/formValidation';
 import { buildCompiledMarkdown } from '@/utils/jobExport';
 import { isTerminalStatus } from '@/utils/polling';
 import { loadJobHistory, recordJob, updateJob } from '@/utils/jobHistory';
+import {
+  clearCrawlHistory,
+  loadCrawlHistory,
+  sanitizeCrawlHistoryItem,
+  saveCrawlHistory,
+  type CrawlHistoryItem,
+} from '@/utils/crawlHistory';
 import { useJobPoller, useKeyedJobPoller } from '@/composables/useJobPoller';
 import {
   CRAWL_FORMAT_OPTIONS,
@@ -632,19 +639,6 @@ interface CrawlPage {
   changeTracking?: unknown;
   metadata?: { title?: string; sourceURL?: string; [key: string]: unknown };
   [key: string]: unknown;
-}
-
-/**
- * A crawl job remembered in local storage.
- */
-interface CrawlHistoryItem {
-  id: string;
-  url: string;
-  createdAt: string;
-  status: string;
-  crawlerOptions?: CrawlerOptions;
-  scrapeOptions?: ScrapeOptions;
-  webhookOptions?: WebhookOptions;
 }
 
 /**
@@ -962,9 +956,6 @@ export default defineComponent({
     const activeCrawls = ref<ActiveCrawl[]>([]);
     const activeCrawlsError = ref('');
 
-    // LocalStorage key for crawl history
-    const HISTORY_STORAGE_KEY = 'crawlHistory';
-
     // Computed property to get the selected crawl details
     const selectedCrawl = computed(() => {
       return crawlHistory.value.find((crawl) => crawl.id === selectedCrawlId.value);
@@ -1049,10 +1040,11 @@ export default defineComponent({
     });
 
     /**
-     * Save the current crawl history to LocalStorage.
+     * Save the current crawl history to LocalStorage. Entries are sanitized on
+     * write, so webhook options, request headers and actions never persist.
      */
     const saveHistory = () => {
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(crawlHistory.value));
+      saveCrawlHistory(crawlHistory.value);
     };
 
     /**
@@ -1062,7 +1054,7 @@ export default defineComponent({
       stopAllHistoryPolling();
       crawlHistory.value = [];
       selectedCrawlId.value = null;
-      localStorage.removeItem(HISTORY_STORAGE_KEY);
+      clearCrawlHistory();
     };
 
     /**
@@ -1517,17 +1509,20 @@ export default defineComponent({
         // Add the submitted job to history
         if (response.data && response.data.id) {
           currentCrawlId.value = response.data.id;
-          crawlHistory.value.unshift({
-            // Add to the beginning of the array
+          // Keep only whitelisted fields: webhook options, request headers and
+          // actions must never reach the in-memory list nor storage.
+          const historyEntry = sanitizeCrawlHistoryItem({
             id: response.data.id,
             url: formData.value.url,
-            createdAt: new Date().toISOString(), // Use current time for creation date
-            status: 'started', // Initial status
-            crawlerOptions: { ...formData.value.crawlerOptions }, // Store a copy of options
-            scrapeOptions: { ...formData.value.scrapeOptions },
-            webhookOptions: { ...formData.value.webhookOptions },
+            createdAt: new Date().toISOString(),
+            status: 'started',
+            crawlerOptions: formData.value.crawlerOptions,
+            scrapeOptions: formData.value.scrapeOptions,
           });
-          saveHistory(); // Save history after adding a new job
+          if (historyEntry) {
+            crawlHistory.value.unshift(historyEntry);
+            saveHistory();
+          }
           recordJob({
             kind: 'crawl',
             id: response.data.id,
@@ -1777,15 +1772,9 @@ export default defineComponent({
         fetchCrawlStatus(reopenId);
         void selectCrawl(reopenId);
       }
-      // Load history from LocalStorage on component mount
-      const savedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
-      if (savedHistory) {
-        try {
-          crawlHistory.value = JSON.parse(savedHistory);
-        } catch (e) {
-          console.error('Failed to parse crawl history from LocalStorage:', e);
-        }
-      }
+      // Load history from LocalStorage on component mount; entries saved by
+      // older versions are sanitized and rewritten without their secrets.
+      crawlHistory.value = loadCrawlHistory();
       await Promise.all([
         ...crawlHistory.value.map((c) => checkHistoryStatus(c)),
         // Seed the Active Crawls list so the History tab is meaningful before

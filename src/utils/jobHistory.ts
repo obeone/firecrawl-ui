@@ -17,7 +17,7 @@ export interface JobHistoryEntry {
   id: string;
   /** Creation time, ISO 8601. */
   createdAt: string;
-  /** URL the job started from, without credentials. */
+  /** URL the job started from, without credentials, query or fragment. */
   sourceUrl: string;
   /** Number of results, or null when unknown. */
   resultCount: number | null;
@@ -57,22 +57,28 @@ function resolveStorage(storage?: StorageLike): StorageLike | null {
 }
 
 /**
- * Remove user:password@ from a URL string when it parses as a URL.
+ * Reduce a URL to the form kept in history: no user:password@, no query
+ * string and no fragment, since any of them can carry a credential (access
+ * tokens, signatures, session IDs).
  *
  * @param value - Raw URL text.
- * @returns The text without userinfo; unchanged when it does not parse.
+ * @returns The URL without userinfo, query or fragment; unchanged when there
+ *   is nothing to remove. Text that does not parse as a URL is cut at its
+ *   first `?` or `#`.
  */
-function stripUserinfo(value: string): string {
+export function historyUrl(value: string): string {
   try {
     const url = new URL(value);
-    if (!url.username && !url.password) {
+    if (!url.username && !url.password && !url.search && !url.hash && !/[?#]/.test(value)) {
       return value;
     }
     url.username = '';
     url.password = '';
+    url.search = '';
+    url.hash = '';
     return url.toString();
   } catch {
-    return value;
+    return value.split(/[?#]/, 1)[0];
   }
 }
 
@@ -96,7 +102,7 @@ export function sanitizeEntry(input: unknown): JobHistoryEntry | null {
   const createdAt =
     typeof raw.createdAt === 'string' ? raw.createdAt.slice(0, MAX_DATE_LENGTH) : '';
   const sourceUrl =
-    typeof raw.sourceUrl === 'string' ? stripUserinfo(raw.sourceUrl).slice(0, MAX_URL_LENGTH) : '';
+    typeof raw.sourceUrl === 'string' ? historyUrl(raw.sourceUrl).slice(0, MAX_URL_LENGTH) : '';
   const count = raw.resultCount;
   const resultCount =
     typeof count === 'number' && Number.isFinite(count) && count >= 0 ? Math.floor(count) : null;
@@ -114,6 +120,10 @@ export function sanitizeEntry(input: unknown): JobHistoryEntry | null {
 /**
  * Load the history, tolerating missing, corrupted or partly invalid data.
  *
+ * When the stored text differs from the clean list (data written by an older
+ * version, such as a URL with a token in its query string), storage is
+ * rewritten with the clean list; unreadable data is removed.
+ *
  * @param storage - Storage to read; defaults to `localStorage`.
  * @returns Valid entries, newest first.
  */
@@ -122,18 +132,33 @@ export function loadJobHistory(storage?: StorageLike): JobHistoryEntry[] {
   if (!store) {
     return [];
   }
+  let raw: string | null;
   try {
-    const parsed: unknown = JSON.parse(store.getItem(JOB_HISTORY_STORAGE_KEY) ?? '[]');
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-    return parsed
-      .map(sanitizeEntry)
-      .filter((entry): entry is JobHistoryEntry => entry !== null)
-      .slice(0, JOB_HISTORY_MAX_ENTRIES);
+    raw = store.getItem(JOB_HISTORY_STORAGE_KEY);
   } catch {
     return [];
   }
+  if (raw === null) {
+    return [];
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    parsed = undefined;
+  }
+  if (!Array.isArray(parsed)) {
+    clearJobHistory(store);
+    return [];
+  }
+  const list = parsed
+    .map(sanitizeEntry)
+    .filter((entry): entry is JobHistoryEntry => entry !== null)
+    .slice(0, JOB_HISTORY_MAX_ENTRIES);
+  if (JSON.stringify(list) !== raw) {
+    save(list, store);
+  }
+  return list;
 }
 
 /**
