@@ -19,24 +19,11 @@
           <input id="url" v-model="formData.url" type="text" required />
         </div>
 
-        <div class="form-group">
-          <label for="formats">Output Formats:</label>
-          <select id="formats" v-model="formData.scrapeOptions.formats" multiple>
-            <option value="markdown">Markdown</option>
-            <option value="html">HTML</option>
-            <option value="rawHtml">Raw HTML</option>
-            <option value="links">Links</option>
-            <option value="images">Images</option>
-            <option value="summary">Summary †</option>
-            <option value="screenshot">Screenshot (Viewport)</option>
-            <option value="screenshot@fullPage">Screenshot (Full Page)</option>
-            <option value="json">JSON (Structured Extraction) †</option>
-            <option value="attributes">Attributes</option>
-            <option value="branding">Branding *</option>
-            <option value="changeTracking">Change Tracking (Requires Markdown) *</option>
-          </select>
-          <small>Select one or more formats.</small>
-        </div>
+        <ScrapeOptionsForm
+          v-model="formData.scrapeOptions"
+          :format-options="formatOptions"
+          part="formats"
+        />
 
         <fieldset class="form-group options-fieldset">
           <legend
@@ -46,32 +33,16 @@
             Scrape Options
           </legend>
           <div v-show="!isScrapeOptionsCollapsed">
-            <label>
-              <input v-model="formData.scrapeOptions.onlyMainContent" type="checkbox" />
-              Only Main Content (exclude headers, footers, etc.)
-            </label>
-            <label>
-              <input v-model="formData.scrapeOptions.onlyCleanContent" type="checkbox" />
-              Only Clean Content (beta, extra LLM pass to remove residual boilerplate)
-            </label>
-            <div class="form-group">
-              <label for="includeTags">Include Tags (comma separated):</label>
-              <input
-                id="includeTags"
-                v-model="formData.scrapeOptions.includeTags"
-                type="text"
-                placeholder="e.g. p, div, span"
-              />
-            </div>
-            <div class="form-group">
-              <label for="excludeTags">Exclude Tags (comma separated):</label>
-              <input
-                id="excludeTags"
-                v-model="formData.scrapeOptions.excludeTags"
-                type="text"
-                placeholder="e.g. script, style"
-              />
-            </div>
+            <ScrapeOptionsForm
+              v-model="formData.scrapeOptions"
+              :format-options="formatOptions"
+              part="filters"
+            >
+              <label>
+                <input v-model="formData.scrapeOptions.onlyCleanContent" type="checkbox" />
+                Only Clean Content (beta, extra LLM pass to remove residual boilerplate)
+              </label>
+            </ScrapeOptionsForm>
           </div>
         </fieldset>
 
@@ -376,6 +347,12 @@ import { renderMarkdown } from '@/utils/sanitize';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
 import CodeBlock from '../components/playground/CodeBlock.vue';
 import CopyButton from '../components/playground/CopyButton.vue';
+import ScrapeOptionsForm from '@/components/ScrapeOptionsForm.vue';
+import {
+  SCRAPE_FORMAT_OPTIONS,
+  buildTagFilters,
+  type ScrapeOptionsFormValue,
+} from '@/utils/scrapeOptions';
 
 type ScrapeResult = {
   success: boolean;
@@ -440,19 +417,13 @@ interface PageAction {
 }
 
 /**
+ * Shared scrape options (formats, main content, tag filters) plus the
+ * Scrape-only clean content toggle.
  * @typedef {object} FormDataScrapeOptions
- * @property {string[]} formats - Array of output formats (e.g., "json", "markdown").
- * @property {boolean} [onlyMainContent] - Scrape only the main content, excluding headers, footers, etc.
  * @property {boolean} [onlyCleanContent] - Run an extra LLM pass to remove residual boilerplate.
- * @property {string} [includeTags] - Comma-separated list of HTML tags to include.
- * @property {string} [excludeTags] - Comma-separated list of HTML tags to exclude.
  */
-interface FormDataScrapeOptions {
-  formats: string[];
-  onlyMainContent?: boolean;
+interface FormDataScrapeOptions extends ScrapeOptionsFormValue {
   onlyCleanContent?: boolean;
-  includeTags?: string;
-  excludeTags?: string;
 }
 
 /**
@@ -491,6 +462,7 @@ export default defineComponent({
     PlaygroundLayout,
     CodeBlock,
     CopyButton,
+    ScrapeOptionsForm,
   },
   /**
    * Setup function for the ScrapeView component.
@@ -842,20 +814,7 @@ export default defineComponent({
         ...(formData.value.scrapeOptions.onlyCleanContent === true && {
           onlyCleanContent: true,
         }),
-        ...(formData.value.scrapeOptions.includeTags &&
-          formData.value.scrapeOptions.includeTags.trim() !== '' && {
-            includeTags: formData.value.scrapeOptions.includeTags
-              .split(',')
-              .map((tag) => tag.trim())
-              .filter((tag) => tag !== ''),
-          }),
-        ...(formData.value.scrapeOptions.excludeTags &&
-          formData.value.scrapeOptions.excludeTags.trim() !== '' && {
-            excludeTags: formData.value.scrapeOptions.excludeTags
-              .split(',')
-              .map((tag) => tag.trim())
-              .filter((tag) => tag !== ''),
-          }),
+        ...buildTagFilters(formData.value.scrapeOptions),
 
         // Build the JSON format object (prompt and/or schema) when 'json' is selected.
         ...(formData.value.scrapeOptions.formats.includes('json') &&
@@ -1121,6 +1080,7 @@ export default defineComponent({
       metadataContent,
       previewContent,
       previewHtml,
+      formatOptions: SCRAPE_FORMAT_OPTIONS,
     };
   },
 });
@@ -1130,7 +1090,8 @@ export default defineComponent({
 /* ---------------------------------------------------------------------------
  * Form layout — spacing and field groups.
  * --------------------------------------------------------------------------- */
-.form-group {
+/* :deep() so the fields rendered by ScrapeOptionsForm keep the same spacing. */
+:deep(.form-group) {
   margin-bottom: 1.25rem;
 }
 
@@ -1195,8 +1156,8 @@ export default defineComponent({
   gap: 0.4rem;
 }
 
-/* Helper text under form fields. */
-.form-group small {
+/* Helper text under form fields, shared form fields included. */
+:deep(.form-group small) {
   display: block;
   font-size: 0.8em;
   color: var(--color-text-mute);

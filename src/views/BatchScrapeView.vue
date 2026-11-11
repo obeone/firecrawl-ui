@@ -16,24 +16,7 @@
         <small>Each non-empty line is treated as a URL to scrape.</small>
       </div>
 
-      <div class="form-group">
-        <label for="formats">Output Formats:</label>
-        <select id="formats" v-model="selectedFormats" multiple>
-          <option value="markdown">Markdown</option>
-          <option value="html">HTML</option>
-          <option value="rawHtml">Raw HTML</option>
-          <option value="links">Links</option>
-          <option value="summary">Summary</option>
-          <option value="screenshot">Screenshot (Viewport)</option>
-          <option value="screenshot@fullPage">Screenshot (Full Page)</option>
-        </select>
-        <small>Select one or more formats.</small>
-      </div>
-
-      <label class="checkbox-label">
-        <input v-model="onlyMainContent" type="checkbox" />
-        Only Main Content (exclude headers, footers, etc.)
-      </label>
+      <ScrapeOptionsForm v-model="scrapeOptions" :format-options="BATCH_FORMAT_OPTIONS" />
 
       <button type="submit" class="primary-button" :disabled="loading">
         {{ loading ? 'Submitting…' : 'Start Batch Scrape' }}
@@ -107,6 +90,13 @@ import { describeRequestError } from '@/utils/errors';
 import { createLatestGuard, type IsCurrent } from '@/utils/latestGuard';
 import { isTerminalStatus } from '@/utils/polling';
 import { useJobPoller } from '@/composables/useJobPoller';
+import ScrapeOptionsForm from '@/components/ScrapeOptionsForm.vue';
+import {
+  BATCH_FORMAT_OPTIONS,
+  buildBatchScrapePayload,
+  defaultScrapeOptionsFormValue,
+  type ScrapeOptionsFormValue,
+} from '@/utils/scrapeOptions';
 
 /**
  * BatchScrapeView Component
@@ -123,10 +113,8 @@ const api = useApi();
 
 /** Raw multiline textarea content holding one URL per line. */
 const urlsInput = ref('');
-/** Selected output formats for the scrape. */
-const selectedFormats = ref<string[]>(['markdown']);
-/** Whether to restrict extraction to the main content of each page. */
-const onlyMainContent = ref(true);
+/** Scrape options applied to every URL: formats, main content, tag filters. */
+const scrapeOptions = ref<ScrapeOptionsFormValue>(defaultScrapeOptionsFormValue());
 
 /** Whether a submission request is currently in flight. */
 const loading = ref(false);
@@ -265,7 +253,7 @@ async function handleSubmit(): Promise<void> {
     error.value = 'Please enter at least one URL.';
     return;
   }
-  if (selectedFormats.value.length === 0) {
+  if (scrapeOptions.value.formats.length === 0) {
     error.value = 'Please select at least one output format.';
     return;
   }
@@ -283,11 +271,9 @@ async function handleSubmit(): Promise<void> {
   batchErrors.value = [];
   batchRobotsBlocked.value = [];
   try {
-    const response = await api.batchScraping.batchScrape({
-      urls,
-      formats: selectedFormats.value,
-      onlyMainContent: onlyMainContent.value,
-    });
+    const response = await api.batchScraping.batchScrape(
+      buildBatchScrapePayload(urls, scrapeOptions.value),
+    );
     if (!isCurrent()) {
       return;
     }
@@ -408,18 +394,20 @@ onUnmounted(() => {
   gap: 1rem;
 }
 
-.form-group {
+/* :deep() so the fields rendered by ScrapeOptionsForm get the same layout. */
+:deep(.form-group) {
   display: flex;
   flex-direction: column;
 }
 
-label {
+:deep(label) {
   font-weight: bold;
   margin-bottom: 0.25rem;
 }
 
-textarea,
-select {
+:deep(textarea),
+:deep(select),
+:deep(input[type='text']) {
   padding: 0.5rem;
   font-size: 1rem;
   border: 1px solid var(--color-border);
@@ -428,14 +416,14 @@ select {
   color: var(--color-text);
 }
 
-.form-group small {
+:deep(.form-group small) {
   font-size: 0.8em;
   color: var(--color-text);
   opacity: 0.7;
   margin-top: 3px;
 }
 
-.checkbox-label {
+:deep(.checkbox-label) {
   display: flex;
   align-items: center;
   gap: 0.5rem;

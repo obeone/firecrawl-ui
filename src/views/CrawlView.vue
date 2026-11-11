@@ -164,53 +164,7 @@
             {{ scrapeOptionsArrow }} Scrape Options
           </legend>
           <div v-show="!isScrapeOptionsCollapsed">
-            <div class="form-group">
-              <label for="formats">Output Formats:</label>
-              <select id="formats" v-model="formData.scrapeOptions.formats" multiple>
-                <option value="markdown">Markdown</option>
-                <option value="html">HTML</option>
-                <option value="rawHtml">Raw HTML</option>
-                <option value="links">Links</option>
-                <option value="images">Images</option>
-                <option value="summary">Summary †</option>
-                <option value="screenshot">Screenshot (Viewport)</option>
-                <option value="screenshot@fullPage">Screenshot (Full Page)</option>
-                <option value="json">JSON †</option>
-                <option value="attributes">Attributes</option>
-                <option value="branding">Branding *</option>
-                <option value="changeTracking">Change Tracking *</option>
-              </select>
-              <small>Select one or more formats.</small>
-            </div>
-            <label class="checkbox-label">
-              <input v-model="formData.scrapeOptions.onlyMainContent" type="checkbox" />
-              Only Main Content (exclude headers, footers, etc.)
-            </label>
-            <div class="form-group">
-              <label for="includeTags">Include Tags (CSS Selectors):</label>
-              <input
-                id="includeTags"
-                v-model="includeTagsInput"
-                type="text"
-                placeholder="article, .main-content"
-                @blur="parseIncludeTags"
-              />
-              <small
-                >Comma-separated CSS selectors. Only content within these tags will be
-                included.</small
-              >
-            </div>
-            <div class="form-group">
-              <label for="excludeTags">Exclude Tags (CSS Selectors):</label>
-              <input
-                id="excludeTags"
-                v-model="excludeTagsInput"
-                type="text"
-                placeholder="footer, .sidebar"
-                @blur="parseExcludeTags"
-              />
-              <small>Comma-separated CSS selectors to exclude content within these tags.</small>
-            </div>
+            <ScrapeOptionsForm v-model="scrapeOptionsForm" :format-options="formatOptions" />
             <div class="form-group">
               <label for="timeout">Timeout (ms):</label>
               <input
@@ -588,12 +542,18 @@ import axios from 'axios';
 import { useRouter, useRoute } from 'vue-router';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
 import CodeBlock from '../components/playground/CodeBlock.vue';
+import ScrapeOptionsForm from '@/components/ScrapeOptionsForm.vue';
 import { type ActiveCrawl, type CrawlError } from '../services/firecrawl';
 import { useApi } from '../plugins/api';
 import { describeRequestError, getErrorMessage, isUnauthorized } from '@/utils/errors';
 import { checkCountryCode } from '@/utils/formValidation';
 import { isTerminalStatus } from '@/utils/polling';
 import { useJobPoller, useKeyedJobPoller } from '@/composables/useJobPoller';
+import {
+  CRAWL_FORMAT_OPTIONS,
+  splitCommaList,
+  type ScrapeOptionsFormValue,
+} from '@/utils/scrapeOptions';
 
 /**
  * Interface for Crawler Options section of the form.
@@ -702,7 +662,7 @@ interface FormData {
  */
 export default defineComponent({
   name: 'CrawlView',
-  components: { PlaygroundLayout, CodeBlock },
+  components: { PlaygroundLayout, CodeBlock, ScrapeOptionsForm },
   setup() {
     const router = useRouter();
     const route = useRoute();
@@ -841,10 +801,7 @@ export default defineComponent({
      * and updates the formData.scrapeOptions.includeTags array.
      */
     const parseIncludeTags = () => {
-      formData.value.scrapeOptions.includeTags = includeTagsInput.value
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean);
+      formData.value.scrapeOptions.includeTags = splitCommaList(includeTagsInput.value);
     };
 
     /**
@@ -852,11 +809,28 @@ export default defineComponent({
      * and updates the formData.scrapeOptions.excludeTags array.
      */
     const parseExcludeTags = () => {
-      formData.value.scrapeOptions.excludeTags = excludeTagsInput.value
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean);
+      formData.value.scrapeOptions.excludeTags = splitCommaList(excludeTagsInput.value);
     };
+
+    /**
+     * The shared scrape options form bound to this view's state: formats and
+     * main-content toggle live in formData, tag filters in their text inputs
+     * (parsed into formData on submit, as before).
+     */
+    const scrapeOptionsForm = computed<ScrapeOptionsFormValue>({
+      get: () => ({
+        formats: formData.value.scrapeOptions.formats,
+        onlyMainContent: formData.value.scrapeOptions.onlyMainContent ?? true,
+        includeTags: includeTagsInput.value,
+        excludeTags: excludeTagsInput.value,
+      }),
+      set: (value) => {
+        formData.value.scrapeOptions.formats = value.formats;
+        formData.value.scrapeOptions.onlyMainContent = value.onlyMainContent;
+        includeTagsInput.value = value.includeTags;
+        excludeTagsInput.value = value.excludeTags;
+      },
+    });
 
     /**
      * Parses the webhookHeadersInput string as JSON and updates
@@ -1825,8 +1799,8 @@ export default defineComponent({
       formData,
       includesInput,
       excludesInput,
-      includeTagsInput,
-      excludeTagsInput,
+      scrapeOptionsForm,
+      formatOptions: CRAWL_FORMAT_OPTIONS,
       webhookHeadersInput,
       webhookMetadataInput,
       locationLanguagesInput,
@@ -1840,8 +1814,6 @@ export default defineComponent({
       jsonOptionsSchemaError,
       locationCountryError,
       changeTrackingSchemaError,
-      parseIncludeTags,
-      parseExcludeTags,
       parseLocationLanguages,
       parseChangeTrackingModes,
       loading,
@@ -1901,11 +1873,12 @@ export default defineComponent({
   gap: 1.25rem;
 }
 
-.form-group {
+/* :deep() so the fields rendered by ScrapeOptionsForm get the same layout. */
+:deep(.form-group) {
   margin-bottom: 0;
 }
 
-.form-group > label {
+:deep(.form-group > label) {
   display: block;
   margin-bottom: 0.35rem;
   font-weight: 600;
@@ -1913,9 +1886,9 @@ export default defineComponent({
 }
 
 /* All text-like inputs inside the crawl form span the full width. */
-.crawl-config-form input,
-.crawl-config-form select,
-.crawl-config-form textarea {
+.crawl-config-form :deep(input),
+.crawl-config-form :deep(select),
+.crawl-config-form :deep(textarea) {
   width: 100%;
 }
 
@@ -1972,19 +1945,19 @@ export default defineComponent({
 }
 
 /* Checkbox rows: the checkbox and its label share one flex row. */
-.checkbox-label {
+:deep(.checkbox-label) {
   display: flex;
   align-items: center;
   gap: 0.4rem;
 }
 
 /* Prevent the checkbox from stretching to 100% width. */
-.checkbox-label input {
+:deep(.checkbox-label input) {
   width: auto;
 }
 
 /* Helper text under form fields. */
-.form-group small {
+:deep(.form-group small) {
   display: block;
   font-size: 0.8em;
   color: var(--color-text-mute);
