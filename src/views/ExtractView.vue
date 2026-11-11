@@ -237,13 +237,14 @@ import { describeRequestError, getErrorMessage, isUnauthorized } from '@/utils/e
 import { checkCountryCode, firstFormError } from '@/utils/formValidation';
 import { createLatestGuard } from '@/utils/latestGuard';
 import {
-  buildExtractScrapePayload,
+  buildExtractRun,
   combineExtractResults,
   defaultExtractScrapeOptions,
   parseExtractUrls,
-  toExtractPageResult,
+  runExtractRequests,
   toResultRows,
   type ExtractPageResult,
+  type ExtractRunRequest,
 } from '@/utils/extractRequest';
 import PlaygroundLayout from '../components/playground/PlaygroundLayout.vue';
 import CodeBlock from '../components/playground/CodeBlock.vue';
@@ -405,9 +406,19 @@ const runExtraction = async (): Promise<void> => {
     error.value = 'Please provide at least one URL.';
     return;
   }
-  const prompt = promptInput.value.trim();
-  if (!prompt && !parsedSchema.value) {
-    error.value = 'Please provide a prompt or a JSON schema.';
+
+  // Build every request now: the form stays editable while the run is going,
+  // and every page of the run must use the values of this click.
+  let requests: ExtractRunRequest[];
+  try {
+    requests = buildExtractRun(urls, {
+      prompt: promptInput.value,
+      schema: parsedSchema.value,
+      headers: parsedHeaders.value,
+      options: scrapeOptions.value,
+    });
+  } catch (err) {
+    error.value = getErrorMessage(err);
     return;
   }
 
@@ -417,33 +428,23 @@ const runExtraction = async (): Promise<void> => {
   result.value = null;
   pages.value = [];
   durationMs.value = null;
-  progress.value = { done: 0, total: urls.length };
+  progress.value = { done: 0, total: requests.length };
   const startedAt = performance.now();
-  const outcomes: ExtractPageResult[] = [];
 
   try {
-    for (const url of urls) {
-      const payload = buildExtractScrapePayload({
-        url,
-        prompt,
-        schema: parsedSchema.value,
-        headers: parsedHeaders.value,
-        options: scrapeOptions.value,
-      });
-      try {
-        const response = await api.scraping.scrapeAndExtractFromUrl(payload);
-        if (!isCurrent()) return;
-        outcomes.push(toExtractPageResult(url, response.data.data));
-      } catch (err) {
-        if (!isCurrent()) return;
-        if (isUnauthorized(err)) {
-          router.push({ name: 'api-config' });
-          return;
-        }
-        outcomes.push({ url, ok: false, error: describeRequestError(err) });
-      }
-      progress.value = { done: outcomes.length, total: urls.length };
-    }
+    const outcomes = await runExtractRequests(
+      requests,
+      async (payload) => (await api.scraping.scrapeAndExtractFromUrl(payload)).data.data,
+      {
+        isCurrent,
+        isFatal: isUnauthorized,
+        describeError: describeRequestError,
+        onProgress: (done, total) => {
+          progress.value = { done, total };
+        },
+      },
+    );
+    if (outcomes === null) return;
 
     pages.value = outcomes;
     result.value = combineExtractResults(outcomes);
@@ -453,6 +454,13 @@ const runExtraction = async (): Promise<void> => {
           ? (outcomes[0].error ?? 'Extraction failed')
           : outcomes.map((page) => `${page.url}: ${page.error}`).join('\n');
     }
+  } catch (err) {
+    if (!isCurrent()) return;
+    if (isUnauthorized(err)) {
+      router.push({ name: 'api-config' });
+      return;
+    }
+    error.value = describeRequestError(err);
   } finally {
     if (isCurrent()) {
       durationMs.value = performance.now() - startedAt;

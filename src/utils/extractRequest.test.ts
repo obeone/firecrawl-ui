@@ -3,11 +3,13 @@ import { SCRAPE_REQUEST_KEYS, createFirecrawlApiClients } from '@/services/firec
 import { stubHttp } from '@/test/httpStub';
 import {
   EXTRACT_SCRAPE_DEFAULTS,
+  buildExtractRun,
   buildExtractScrapePayload,
   combineExtractResults,
   defaultExtractScrapeOptions,
   formatResultValue,
   parseExtractUrls,
+  runExtractRequests,
   toExtractPageResult,
   toResultRows,
   type ExtractRequestInput,
@@ -273,5 +275,106 @@ describe('result display', () => {
     expect(formatResultValue(undefined)).toBe('—');
     expect(formatResultValue({ a: 1 })).toBe('{"a":1}');
     expect(formatResultValue(true)).toBe('true');
+  });
+});
+
+describe('extraction run', () => {
+  const hooks = {
+    isCurrent: () => true,
+    isFatal: (err: unknown) => err instanceof Error && err.message === 'fatal',
+    describeError: (err: unknown) => (err instanceof Error ? err.message : String(err)),
+  };
+
+  it('freezes the form values for the whole run', async () => {
+    const options = defaultExtractScrapeOptions();
+    const input = { schema: SCHEMA as Record<string, unknown> | undefined, options };
+    const requests = buildExtractRun(['https://a.test', 'https://b.test'], input);
+
+    // The user clears the schema and changes an option while page 1 is in flight.
+    input.schema = undefined;
+    options.proxy = 'stealth';
+
+    const sent: Record<string, unknown>[] = [];
+    const outcomes = await runExtractRequests(
+      requests,
+      async (payload) => {
+        sent.push(payload);
+        return { json: { ok: true } };
+      },
+      hooks,
+    );
+
+    expect(sent.map((payload) => payload.url)).toEqual(['https://a.test', 'https://b.test']);
+    for (const payload of sent) {
+      expect(payload.extract).toEqual({ schema: SCHEMA });
+      expect(payload).not.toHaveProperty('proxy');
+    }
+    expect(outcomes?.every((page) => page.ok)).toBe(true);
+  });
+
+  it('rejects the run before any request without a prompt or schema', () => {
+    expect(() =>
+      buildExtractRun(['https://a.test'], { prompt: ' ', options: defaultExtractScrapeOptions() }),
+    ).toThrow('Provide a prompt or a JSON schema.');
+  });
+
+  it('records a failed page and carries on, reporting progress', async () => {
+    const progress: string[] = [];
+    const requests = buildExtractRun(['https://a.test', 'https://b.test'], {
+      prompt: 'p',
+      options: defaultExtractScrapeOptions(),
+    });
+    const outcomes = await runExtractRequests(
+      requests,
+      async (payload) => {
+        if (payload.url === 'https://a.test') throw new Error('boom');
+        return { json: { b: 1 } };
+      },
+      { ...hooks, onProgress: (done, total) => progress.push(`${done}/${total}`) },
+    );
+    expect(outcomes).toEqual([
+      { url: 'https://a.test', ok: false, error: 'boom' },
+      { url: 'https://b.test', ok: true, json: { b: 1 } },
+    ]);
+    expect(progress).toEqual(['1/2', '2/2']);
+  });
+
+  it('stops the run on a fatal error', async () => {
+    const sent: unknown[] = [];
+    const requests = buildExtractRun(['https://a.test', 'https://b.test'], {
+      prompt: 'p',
+      options: defaultExtractScrapeOptions(),
+    });
+    await expect(
+      runExtractRequests(
+        requests,
+        async (payload) => {
+          sent.push(payload.url);
+          throw new Error('fatal');
+        },
+        hooks,
+      ),
+    ).rejects.toThrow('fatal');
+    expect(sent).toEqual(['https://a.test']);
+  });
+
+  it('yields null once the run is stale', async () => {
+    let current = true;
+    const requests = buildExtractRun(['https://a.test', 'https://b.test'], {
+      prompt: 'p',
+      options: defaultExtractScrapeOptions(),
+    });
+    const sent: unknown[] = [];
+    const outcomes = await runExtractRequests(
+      requests,
+      async (payload) => {
+        sent.push(payload.url);
+        current = false;
+        return { json: {} };
+      },
+      { ...hooks, isCurrent: () => current },
+    );
+    expect(outcomes).toBeNull();
+    expect(sent).toEqual(['https://a.test']);
   });
 });

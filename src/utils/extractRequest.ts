@@ -276,3 +276,76 @@ export function toResultRows(value: unknown): ResultRow[] | null {
     value: formatResultValue(entry),
   }));
 }
+
+/**
+ * One request of an extraction run: the URL and its ready-to-send payload.
+ */
+export interface ExtractRunRequest {
+  /** The page to extract from. */
+  url: string;
+  /** The payload accepted by `api.scraping.scrapeAndExtractFromUrl`. */
+  payload: Record<string, unknown>;
+}
+
+/**
+ * Build every request of a run up front, so the whole run uses the form as it
+ * was when the user clicked Extract, even if the form is edited meanwhile.
+ *
+ * @param urls - The URLs to extract from.
+ * @param input - The prompt, schema, headers and scrape options shared by all URLs.
+ * @returns One request per URL, in order.
+ * @throws {Error} When neither a prompt nor a schema is given.
+ */
+export function buildExtractRun(
+  urls: readonly string[],
+  input: Omit<ExtractRequestInput, 'url'>,
+): ExtractRunRequest[] {
+  return urls.map((url) => ({ url, payload: buildExtractScrapePayload({ ...input, url }) }));
+}
+
+/**
+ * Hooks of {@link runExtractRequests}.
+ */
+export interface ExtractRunHooks {
+  /** Whether the run is still the latest one; a stale run stops and yields `null`. */
+  isCurrent: () => boolean;
+  /** Errors that abort the whole run instead of failing one page (e.g. a 401). */
+  isFatal: (error: unknown) => boolean;
+  /** Turn a page error into the message shown to the user. */
+  describeError: (error: unknown) => string;
+  /** Called after each page with the number of pages processed. */
+  onProgress?: (done: number, total: number) => void;
+}
+
+/**
+ * Send the requests of a run one at a time and collect the page results.
+ *
+ * A page that fails is recorded and the run moves on; a fatal error is
+ * rethrown and stops the run.
+ *
+ * @param requests - The requests built by {@link buildExtractRun}.
+ * @param scrape - Sends one payload and resolves to the scraped document.
+ * @param hooks - Staleness check, fatal-error predicate, error formatting, progress.
+ * @returns The page results in request order, or `null` when the run went stale.
+ * @throws The first error for which `hooks.isFatal` returns true.
+ */
+export async function runExtractRequests(
+  requests: readonly ExtractRunRequest[],
+  scrape: (payload: Record<string, unknown>) => Promise<unknown>,
+  hooks: ExtractRunHooks,
+): Promise<ExtractPageResult[] | null> {
+  const outcomes: ExtractPageResult[] = [];
+  for (const { url, payload } of requests) {
+    try {
+      const document = await scrape(payload);
+      if (!hooks.isCurrent()) return null;
+      outcomes.push(toExtractPageResult(url, document));
+    } catch (err) {
+      if (!hooks.isCurrent()) return null;
+      if (hooks.isFatal(err)) throw err;
+      outcomes.push({ url, ok: false, error: hooks.describeError(err) });
+    }
+    hooks.onProgress?.(outcomes.length, requests.length);
+  }
+  return outcomes;
+}
