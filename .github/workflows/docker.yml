@@ -9,6 +9,10 @@ on:
         description: Push and sign the image (false only builds it, for pull requests).
         type: boolean
         default: false
+      version:
+        description: App version shown on the About page (computed by CI).
+        type: string
+        default: dev
 
 jobs:
   docker:
@@ -64,6 +68,8 @@ jobs:
           push: ${{ inputs.push }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            APP_VERSION=${{ inputs.version }}
       - name: Set up cosign
         if: inputs.push
         uses: sigstore/cosign-installer@v3

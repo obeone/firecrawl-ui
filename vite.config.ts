@@ -1,8 +1,10 @@
 /// <reference types="vitest/config" />
+import { execSync } from 'node:child_process';
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { injectCspMeta } from './src/config/csp';
+import { resolveAppVersion } from './src/config/version';
 
 /**
  * Vite configuration file.
@@ -11,6 +13,17 @@ import { injectCspMeta } from './src/config/csp';
  * @see https://vitejs.dev/config/
  */
 export default defineConfig({
+  define: {
+    // Shown on the About page; see src/config/version.ts for the sources.
+    __APP_VERSION__: JSON.stringify(
+      resolveAppVersion(process.env.APP_VERSION, () =>
+        execSync('git describe --tags --always --dirty', {
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'ignore'],
+        }),
+      ),
+    ),
+  },
   plugins: [
     // Vue plugin for Vite, enabling Vue 3 SFC support.
     vue(),

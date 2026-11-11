@@ -21,6 +21,9 @@ interface Capability {
 }
 
 /** Capabilities shown as a card grid. Icons mirror the HomeView launcher. */
+/** Build version, inlined by Vite (see src/config/version.ts). */
+const appVersion = __APP_VERSION__;
+
 const capabilities: Capability[] = [
   {
     title: 'Scrape',
@@ -122,6 +125,7 @@ const links: ExternalLink[] = [
          A <div> (not <header>) so the app's global header/nav styles don't apply. -->
     <div class="hero">
       <h1>Firecrawl UI</h1>
+      <p class="version">Version {{ appVersion }}</p>
       <p class="tagline">
         A fast, self-hostable interface for the Firecrawl API. Scrape, crawl, map, and extract the
         web from one place.
@@ -267,6 +271,13 @@ const links: ExternalLink[] = [
   margin: 0 auto;
   font-size: 1.05rem;
   line-height: 1.6;
+  color: var(--color-text-soft);
+}
+
+.version {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
   color: var(--color-text-soft);
 }
 
