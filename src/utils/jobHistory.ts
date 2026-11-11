@@ -62,7 +62,7 @@ function resolveStorage(storage?: StorageLike): StorageLike | null {
  * @param value - Raw URL text.
  * @returns The text without userinfo; unchanged when it does not parse.
  */
-function stripUserinfo(value: string): string {
+export function stripUserinfo(value: string): string {
   try {
     const url = new URL(value);
     if (!url.username && !url.password) {
