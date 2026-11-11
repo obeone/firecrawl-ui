@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import DOMPurify from 'dompurify';
 import { describe, expect, it } from 'vitest';
 import { renderMarkdown, sanitizeHtml } from './sanitize';
 
@@ -69,6 +70,55 @@ describe('sanitizeHtml', () => {
       null,
     ]);
     expect(images[0].getAttribute('referrerpolicy')).toBe('no-referrer');
+  });
+
+  it('drops data: links and srcset, keeping data: only for images', () => {
+    const root = parse(
+      sanitizeHtml(
+        '<a href="data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==">a</a>' +
+          '<img src="https://example.com/a.png" srcset="javascript:alert(1) 1x, https://evil.test/b.png 2x">',
+      ),
+    );
+    expect(root.querySelector('a')?.getAttribute('href')).toBeNull();
+    expect(root.querySelector('img')?.hasAttribute('srcset')).toBe(false);
+  });
+
+  it('drops obfuscated javascript: URLs', () => {
+    const root = parse(
+      sanitizeHtml(
+        '<a href="JaVaScRiPt:alert(1)">a</a>' +
+          '<a href="&#106;avascript&#58;alert(1)">b</a>' +
+          '<a href=" \tjavascript:alert(1)">c</a>' +
+          '<a href="java&#x09;script:alert(1)">d</a>',
+      ),
+    );
+    const hrefs = Array.from(root.querySelectorAll('a')).map((a) => a.getAttribute('href'));
+    expect(hrefs).toEqual([null, null, null, null]);
+  });
+
+  it('strips svg and mathml namespace confusion', () => {
+    const html = sanitizeHtml(
+      '<math><mi><a href="javascript:alert(1)">m</a></mi></math>' +
+        '<svg><a href="javascript:alert(2)"><text>s</text></a></svg>' +
+        '<math><mtext><table><mglyph><style><img src=x onerror=alert(3)></style></mglyph></table></mtext></math>',
+    );
+    expect(html).not.toMatch(/<(math|mi|mtext|mglyph|svg|style)\b|javascript:|onerror|alert/i);
+  });
+
+  it('overrides target and rel set by the input', () => {
+    const link = parse(
+      sanitizeHtml('<a href="https://example.com/" target="_self" rel="opener">x</a>'),
+    ).querySelector('a')!;
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer nofollow');
+  });
+
+  it('leaves the default DOMPurify instance untouched', () => {
+    sanitizeHtml('<a href="https://example.com/">x</a>');
+    const html = DOMPurify.sanitize(
+      '<a href="https://example.com/">x</a><img src="https://example.com/a.png">',
+    );
+    expect(html).not.toMatch(/target=|rel=|referrerpolicy=|loading=/);
   });
 });
 
