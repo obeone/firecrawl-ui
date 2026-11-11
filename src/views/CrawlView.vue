@@ -1100,9 +1100,9 @@ export default defineComponent({
 
       try {
         // Fetch files for the selected crawl via the API
-        const response = await api.crawling.getCrawlStatus(id);
+        const pages = await fetchAllCrawlData(id);
         simulatedFiles.value =
-          (response.data.data as CrawlPage[] | undefined)?.map((page, index) => {
+          pages.map((page, index) => {
             const base = sanitizeFilename(page.metadata?.sourceURL || page.url || index.toString());
             return `${index.toString().padStart(3, '0')}-${base}`;
           }) || [];
@@ -1138,16 +1138,8 @@ export default defineComponent({
      * @returns {Promise<CrawlPage[]>} A promise that resolves to an array of page data objects.
      */
     const fetchAllCrawlData = async (jobId: string): Promise<CrawlPage[]> => {
-      const pages: CrawlPage[] = [];
-      const response = await api.crawling.getCrawlStatus(jobId);
-      pages.push(...((response.data.data || []) as CrawlPage[]));
-      let next = response.data.next;
-      while (next) {
-        const nextResp = await axios.get(next);
-        pages.push(...(nextResp.data.data || []));
-        next = nextResp.data.next;
-      }
-      return pages;
+      const response = await api.crawling.getCrawlResults(jobId);
+      return response.data.data as CrawlPage[];
     };
 
     /**

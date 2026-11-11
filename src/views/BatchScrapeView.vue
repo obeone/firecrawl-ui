@@ -213,8 +213,9 @@ function pollStatus(id: string): void {
       progress.value = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
 
       if (data.status === 'completed' || data.status === 'failed') {
-        results.value = data.data;
         stopPolling();
+        const all = await api.batchScraping.getBatchScrapeResults(id);
+        results.value = all.data.data;
       }
     } catch (err: unknown) {
       error.value = err instanceof Error ? err.message : 'Failed to fetch batch status.';
