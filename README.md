@@ -160,7 +160,7 @@ built only after CI passes and signed with cosign.
 
 Releases use CalVer `vYYYY.M.REV`, where `REV` counts the releases of the
 month from 1. Pushing such a tag runs CI, which publishes the images above
-and deploys the site:
+and deploys the site (the site only changes on a release):
 
 ```sh
 git tag v2026.11.1

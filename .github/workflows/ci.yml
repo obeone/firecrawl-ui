@@ -49,6 +49,7 @@ jobs:
       - name: Copy 404 page
         run: cp public/404.html dist/404.html
       - name: Upload artifact
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-pages-artifact@v5
         with:
           path: ./dist
@@ -70,8 +71,10 @@ jobs:
   deploy:
     needs: node
     runs-on: ubuntu-latest
-    # main and release tags, so Pages always carries the release number.
-    if: github.event_name == 'push'
+    # Release tags only: Pages keys a deployment on the commit SHA, so once
+    # main has deployed a commit, a tag on that same commit is silently
+    # skipped and the site would never show the release number.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     concurrency:
       group: pages
       cancel-in-progress: false
