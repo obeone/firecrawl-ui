@@ -15,7 +15,14 @@ import pluginVue from 'eslint-plugin-vue';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
-  globalIgnores(['node_modules/', 'dist/', 'coverage/', '.history/']),
+  globalIgnores([
+    'node_modules/',
+    'dist/',
+    'coverage/',
+    '.history/',
+    // Generated from the v2 OpenAPI spec by `npm run api:types`.
+    'src/types/firecrawl-v2.generated.ts',
+  ]),
   tseslint.configs.recommended,
   pluginVue.configs['flat/recommended'],
   {
