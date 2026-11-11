@@ -725,8 +725,11 @@ function toScrapeRequest(payload: Record<string, unknown>): {
       : {}),
   };
 
-  if (payload.parsePDF === true) {
-    options.parsers = [{ type: 'pdf', mode: 'auto' }];
+  // v2 parses PDFs and images by default and turns off every parser missing
+  // from an explicit list, so only the opt-out is sent: an empty list returns
+  // PDFs as base64.
+  if (payload.parsePDF === false) {
+    options.parsers = [];
   }
 
   return { url, options };
@@ -770,6 +773,9 @@ function toCrawlRequest(payload: Record<string, unknown>): {
       : {}),
     ...(typeof payload.allowSubdomains === 'boolean'
       ? { allowSubdomains: payload.allowSubdomains }
+      : {}),
+    ...(typeof payload.crawlEntireDomain === 'boolean'
+      ? { crawlEntireDomain: payload.crawlEntireDomain }
       : {}),
     ...(typeof payload.delay === 'number' ? { delay: payload.delay } : {}),
     ...(typeof payload.maxConcurrency === 'number'
