@@ -79,7 +79,7 @@ Create a `.env` file in the project root. These are optional — the app also st
 
 Multi-stage build: Node 26 slim for building (major version pinned in `.nvmrc`, `package.json` `engines` and the `Dockerfile`), `nginxinc/nginx-unprivileged:stable-alpine` for serving. Nginx listens on port 8080. Custom `nginx.conf` routes all unknown paths to `index.html` for client-side routing and sends the security headers (see above).
 
-`.github/workflows/docker.yml` is a reusable workflow called by `ci.yml` after the `node` job: pull requests only build the image (amd64), pushes to `main` and `v*` tags publish it, tagged `latest` (main only), `sha-<commit>`, and `YYYY.M.REV` plus `YYYY.M` on a release tag. GitHub Pages is deployed on pushes to `main` and on release tags.
+`.github/workflows/docker.yml` is a reusable workflow called by `ci.yml` after the `node` job: pull requests only build the image (amd64), pushes to `main` and `v*` tags publish it, tagged `latest` (main only), `sha-<commit>`, and `YYYY.M.REV` plus `YYYY.M` on a release tag. GitHub Pages is deployed on release tags only: Pages keys a deployment on the commit SHA, so a tag on a commit `main` already deployed would be skipped.
 
 ### Versioning and releases
 
